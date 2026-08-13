@@ -19,7 +19,8 @@
 """
 
 import logging
-from .models import Paper, ScoredPaper
+import re
+from .models import Paper, ScoredPaper, QueryEntry
 from .engine import ScopusSearchEngine
 from .llm import LLMBackend
 from .relevance import RelevanceFilter
@@ -28,6 +29,18 @@ from .query_population import QueryPopulation
 from .coverage_map import CoverageMap
 
 logger = logging.getLogger(__name__)
+
+
+def dedup_key(paper: Paper) -> str:
+    """跨源去重键：优先规范化 DOI，否则用标题+年份。
+
+    Scopus 用 EID、OpenAlex 用 openalex:ID，同一篇论文两处 ID 不同。
+    用 DOI 作为统一键才能正确去重。
+    """
+    if paper.doi:
+        return "doi:" + paper.doi.strip().lower().rstrip(".")
+    title = re.sub(r"[^a-z0-9]+", "", (paper.title or "").lower())
+    return f"title:{title}:{paper.year}"
 
 GAP_QUERY_PROMPT = """You are a materials science literature search strategist. Generate queries to fill COVERAGE GAPS.
 
@@ -92,7 +105,8 @@ class IterativeSearcher:
         Returns:
             list[ScoredPaper] 按分数降序，最多 target_count 篇
         """
-        all_scored: dict[str, ScoredPaper] = {}  # paper_id -> ScoredPaper
+        all_scored: dict[str, ScoredPaper] = {}  # dedup_key -> ScoredPaper
+        known_routes: set[str] = set()           # 已见路线（跨查询去重计数）
         used_queries: list[str] = []
 
         # 1. 生成术语矩阵
@@ -118,10 +132,20 @@ class IterativeSearcher:
                     logger.warning("搜索失败: %s — %s", query[:80], e)
                     continue
 
-                # 去重
-                new_papers = [p for p in result.papers if p.paper_id not in all_scored]
+                n_returned = len(result.papers)
+
+                # 去重（用 dedup_key 跨源统一）
+                new_papers = [p for p in result.papers if dedup_key(p) not in all_scored]
+                new_candidates = len(new_papers)
+                duplicate_rate = 1.0 - new_candidates / max(n_returned, 1)
+
                 if not new_papers:
-                    self.population.record(qid, [], 0, 0, 1.0, 0.0)
+                    self.population.record(
+                        qid, [p.paper_id for p in result.papers],
+                        new_candidates=0, new_scored=0, new_relevant=0,
+                        new_routes=0, duplicate_rate=1.0, cost=result.time_taken,
+                        n_returned=n_returned,
+                    )
                     continue
 
                 # 快筛
@@ -139,34 +163,45 @@ class IterativeSearcher:
                     research_question=research_question,
                     threshold=0,
                     top_k=len(new_papers),
-                    existing_routes=list(self.coverage.routes.keys()),
+                    existing_routes=list(known_routes),
                 )
 
-                # 计算收益指标
-                before_routes = set(self.coverage.routes.keys())
+                # 计算指标（拆分为候选/评分/相关）
+                new_scored = len(scored)
+                new_relevant = sum(1 for sp in scored if sp.score >= threshold)
+
+                # 新增路线（用实时 known_routes 避免同轮重复计数）
+                new_routes = 0
                 for sp in scored:
-                    all_scored[sp.paper.paper_id] = sp
-                after_routes = set(self.coverage.routes.keys()) | {
-                    sp.route for sp in scored if sp.route
-                }
-                new_routes = len(after_routes - before_routes)
-                duplicate_rate = 1.0 - len(new_papers) / max(len(result.papers), 1)
+                    if sp.route and sp.route not in known_routes:
+                        known_routes.add(sp.route)
+                        new_routes += 1
+
+                # 存入 all_scored
+                for sp in scored:
+                    key = dedup_key(sp.paper)
+                    if key not in all_scored:
+                        all_scored[key] = sp
 
                 self.population.record(
                     qid,
                     [p.paper_id for p in new_papers],
-                    new_papers=len(scored),
+                    new_candidates=new_candidates,
+                    new_scored=new_scored,
+                    new_relevant=new_relevant,
                     new_routes=new_routes,
                     duplicate_rate=duplicate_rate,
                     cost=result.time_taken,
+                    n_returned=n_returned,
                 )
 
             # 3.5 引文通道：对高相关种子论文做向前/向后/共被引扩展
             if self.citation_tracker:
                 await self._expand_via_citations(all_scored, research_question, threshold)
 
-            # 4. 构建覆盖地图
-            self.coverage.build(list(all_scored.values()))
+            # 4. 构建覆盖地图 — 只用达标论文，避免无关论文污染路线聚类
+            coverage_papers = [sp for sp in all_scored.values() if sp.score >= threshold]
+            self.coverage.build(coverage_papers)
             logger.info("第 %d 轮覆盖地图:\n%s", round_num, self.coverage.summarize())
 
             # 5. 识别缺口 + 检查停止
@@ -180,7 +215,7 @@ class IterativeSearcher:
                          round_num, len(qualified), target_count, len(gaps))
 
             if len(qualified) >= target_count and not gaps:
-                logger.info("覆盖充分，停止")
+                logger.info("覆盖启发式满足，停止")
                 break
 
             # 6. 缺口驱动生成下一轮查询
@@ -237,6 +272,12 @@ class IterativeSearcher:
             for q in items:
                 if isinstance(q, str) and q.strip():
                     qid = f"gap_{len(used_queries)}_{len(queries)}"
+                    # 加入查询种群，使后续 record() 能记录收益
+                    self.population.queries[qid] = QueryEntry(
+                        query_id=qid,
+                        query=q.strip(),
+                        strategy="gap_filling",
+                    )
                     queries.append((qid, q.strip(), "gap_filling"))
         except (json.JSONDecodeError, ValueError):
             logger.warning("缺口查询解析失败")
@@ -276,12 +317,12 @@ class IterativeSearcher:
                 forward = await self.citation_tracker.forward(doi, limit=15)
                 related = await self.citation_tracker.related(doi, limit=10)
                 for p in backward + forward + related:
-                    candidates[p.paper_id] = p
+                    candidates[dedup_key(p)] = p
             except Exception as e:
                 logger.debug("引文追踪失败 %s: %s", doi, e)
 
-        # 去重：排除已有论文
-        new_papers = [p for p in candidates.values() if p.paper_id not in all_scored]
+        # 去重：排除已有论文（用 dedup_key）
+        new_papers = [p for p in candidates.values() if dedup_key(p) not in all_scored]
         if not new_papers:
             return
 
@@ -296,5 +337,6 @@ class IterativeSearcher:
             existing_routes=list(self.coverage.routes.keys()),
         )
         for sp in scored:
-            if sp.paper.paper_id not in all_scored:
-                all_scored[sp.paper.paper_id] = sp
+            key = dedup_key(sp.paper)
+            if key not in all_scored:
+                all_scored[key] = sp

@@ -118,10 +118,11 @@ class RelevanceFilter:
 
             batch_items = self._parse_scores(response, batch_start, len(batch))
             for item in batch_items:
-                idx = item["index"]
-                if 0 <= idx < len(batch):
+                # LLM 返回的是全局编号（_format_batch 用 offset+i），需转成批内编号
+                local_idx = item["index"] - batch_start
+                if 0 <= local_idx < len(batch):
                     all_scored.append(ScoredPaper(
-                        paper=batch[idx],
+                        paper=batch[local_idx],
                         score=item["raw_score"],
                         raw_score=item["raw_score"],
                         reason=item["reason"],

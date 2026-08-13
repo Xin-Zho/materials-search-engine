@@ -1,13 +1,14 @@
 """QueryPopulation — 查询种群管理，从术语矩阵组合生成多条互补查询并记录收益。
 
 核心：不做单条查询，而是维护一个查询种群，记录每条查询的收益
-（新增相关论文、新增路线、重复率、成本），据此选择下一轮查询。
+（新增候选/评分/相关论文、新增路线、重复率、成本），据此选择下一轮查询。
 
 使用方式:
     pop = QueryPopulation(backend)
     queries = await pop.generate_queries(matrix, question)   # 从矩阵组合生成
     ...
-    pop.record(query_id, papers, new_papers, new_routes, duplicate_rate, cost)
+    pop.record(query_id, result_papers, new_candidates, new_scored,
+               new_relevant, new_routes, duplicate_rate, cost)
     top = pop.top_queries()  # 高收益查询
 """
 
@@ -54,13 +55,6 @@ JSON array of objects, each with "strategy" (which dimension combination) and "q
 
 class QueryPopulation:
     """查询种群管理器。"""
-
-    # 查询收益权重（用户方案第二节）
-    W_NEW_PAPERS = 2.0      # 新增相关论文
-    W_NEW_ROUTES = 3.0      # 新增技术路线
-    W_NEW_TERMS = 1.0       # 新增关键术语
-    W_DUPLICATE = -0.5      # 重复
-    W_COST = -0.05          # 成本
 
     def __init__(self, backend: LLMBackend):
         self.backend = backend
@@ -117,32 +111,54 @@ class QueryPopulation:
         self,
         query_id: str,
         result_papers: list[str],
-        new_papers: int,
+        new_candidates: int,
+        new_scored: int,
+        new_relevant: int,
         new_routes: int,
         duplicate_rate: float,
         cost: float,
-        new_terms: int = 0,
+        n_returned: int | None = None,
     ):
-        """记录一次查询的执行结果。"""
+        """记录一次查询的执行结果。
+
+        Args:
+            n_returned: 查询返回的论文总数（用于计算比例指标），None 则用 result_papers 长度
+        """
         entry = self.queries.get(query_id)
         if not entry:
             return
 
         entry.result_papers = result_papers
-        entry.new_papers = new_papers
+        entry.new_candidates = new_candidates
+        entry.new_scored = new_scored
+        entry.new_relevant = new_relevant
         entry.new_routes = new_routes
         entry.duplicate_rate = duplicate_rate
         entry.cost = cost
-        entry.return_score = self.score(entry, new_terms)
+        entry.return_score = self.score(entry, n_returned=n_returned)
 
-    def score(self, entry: QueryEntry, new_terms: int = 0) -> float:
-        """计算查询收益得分。"""
+    def score(self, entry: QueryEntry, n_returned: int | None = None) -> float:
+        """计算查询收益得分（比例指标，避免数量尺度不一致）。
+
+        S = 40·(R/N) + 20·(U/N) + 25·min(F/2,1) − 10·(C/Cmax) − 5·(1−S/U)
+        """
+        n = n_returned if n_returned is not None else len(entry.result_papers)
+        if n == 0:
+            return 0.0
+
+        r = entry.new_relevant          # 相关论文数
+        u = entry.new_candidates        # 新增候选数
+        f = entry.new_routes            # 新增路线数
+        s = entry.new_scored            # 成功评分数
+        c = entry.cost                  # 成本（秒）
+        c_max = 120.0                   # 成本归一化上限（秒）
+
         return (
-            self.W_NEW_PAPERS * entry.new_papers
-            + self.W_NEW_ROUTES * entry.new_routes
-            + self.W_NEW_TERMS * new_terms
-            + self.W_DUPLICATE * entry.duplicate_rate
-            + self.W_COST * entry.cost
+            40.0 * (r / n)
+            + 20.0 * (u / n)
+            + 25.0 * min(f / 2.0, 1.0)
+            - 10.0 * min(c / c_max, 1.0)
+            - 5.0 * (1.0 - (s / u) if u > 0 else 0.0)
         )
 
     def top_queries(self, k: int = 5) -> list[QueryEntry]:

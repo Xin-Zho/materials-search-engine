@@ -146,8 +146,10 @@ class QueryEntry:
     query: str
     strategy: str = ""              # 生成策略（main_route / term_discovery / counter_example / ...）
     parent_query: str | None = None # 派生自哪条查询
-    result_papers: list[str] = field(default_factory=list)  # 命中的 paper_id
-    new_papers: int = 0             # 新增相关论文数
+    result_papers: list[str] = field(default_factory=list)  # 查询返回的全部 paper_id（去重前）
+    new_candidates: int = 0         # 去重后的新增候选论文数
+    new_scored: int = 0             # 成功评分的论文数
+    new_relevant: int = 0           # score ≥ 阈值的新增相关论文数
     new_routes: int = 0             # 新增技术路线数
     duplicate_rate: float = 0.0     # 重复率 0-1
     cost: float = 0.0               # 成本（时间秒）

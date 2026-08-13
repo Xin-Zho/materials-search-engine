@@ -1,0 +1,47 @@
+{
+  "version": "1.0",
+  "created": "2026-08-13",
+  "description": "基准集 Pilot：光固化材料研究问题（考试卷），用于评估搜索策略的覆盖度和相关性。",
+  "questions": [
+    {
+      "id": "pc_001",
+      "question": "光固化复合材料的聚合收缩研究",
+      "question_en": "Polymerization shrinkage of photocurable composites",
+
+      "research_routes": [
+        "低收缩单体设计（silorane、开环单体）",
+        "活性稀释剂/分子量调节",
+        "填料改性与高填料量",
+        "膨胀单体补偿",
+        "光引发体系优化（影响转化率与收缩）"
+      ],
+
+      "key_papers": [
+      ],
+
+      "required_fields": [
+        "单体体系",
+        "光引发剂",
+        "转化率 degree of conversion",
+        "聚合收缩率 shrinkage",
+        "收缩应力 shrinkage stress",
+        "力学性能 mechanical properties"
+      ],
+
+      "counter_examples": [
+        "Bis-GMA 高黏度需 TEGDMA 稀释，但 TEGDMA 增加收缩",
+        "高填料量提高力学性能但降低固化深度",
+        "快速固化 → 高收缩应力 → 界面间隙"
+      ],
+
+      "irrelevant": [
+        "光催化降解",
+        "太阳能电池 / 光吸收",
+        "荧光成像",
+        "光致变色"
+      ],
+
+      "stop_criterion": "覆盖 ≥4 条技术路线 + 找到 ≥2 个反例/限制 + 最近 2 次搜索无新增"
+    }
+  ]
+}
