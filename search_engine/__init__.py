@@ -20,6 +20,7 @@ from .query_population import QueryPopulation
 from .coverage_map import CoverageMap
 from .iterative_searcher import IterativeSearcher
 from .citation_tracker import CitationTracker
+from .mmr import MMRReranker
 
 __all__ = [
     "Paper",
@@ -46,4 +47,5 @@ __all__ = [
     "CoverageMap",
     "IterativeSearcher",
     "CitationTracker",
+    "MMRReranker",
 ]

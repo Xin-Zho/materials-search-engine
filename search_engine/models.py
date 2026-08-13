@@ -96,7 +96,7 @@ class ScoredPaper:
     承载"相关性"和"覆盖"两个维度的信息，供覆盖地图和缺口分析使用。
     """
     paper: Paper
-    score: int              # 最终分数（含年代加权）
+    score: int              # 最终分数（等于 LLM 原始相关性分数）
     raw_score: int = 0      # LLM 原始相关性分数 0-100
     reason: str = ""        # 中文理由
     category: str = ""      # 中文分类（与问题哪方面相关）

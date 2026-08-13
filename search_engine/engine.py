@@ -230,17 +230,34 @@ class ScopusSearchEngine:
         # Step 1: 发起导出
         result = await self._page.evaluate(f"""
             async () => {{
-                const res = await fetch('{base_url}/bulk-job/initiate', {{
-                    method: 'POST',
-                    headers: {{ 'content-type': 'application/json' }},
-                    body: JSON.stringify({json.dumps(body)}),
-                }});
-                return await res.json();
+                try {{
+                    const res = await fetch('{base_url}/bulk-job/initiate', {{
+                        method: 'POST',
+                        headers: {{ 'content-type': 'application/json' }},
+                        body: JSON.stringify({json.dumps(body)}),
+                        credentials: 'include',
+                    }});
+                    if (!res.ok) {{
+                        return {{ error: 'HTTP ' + res.status }};
+                    }}
+                    return await res.json();
+                }} catch (e) {{
+                    return {{ error: e.message }};
+                }}
             }}
         """)
+        if not result or result.get("error"):
+            err = (result or {}).get("error", "未知错误")
+            logger.error("导出发起失败: %s (可能是 Scopus 会话过期，请重新 login)", err)
+            if "Failed to fetch" in str(err) or "HTTP 401" in str(err) or "HTTP 403" in str(err):
+                raise ScopusAccessError(
+                    "Scopus 导出失败：会话可能已过期。\n"
+                    "请运行: python -m search_engine login 重新登录。"
+                )
+            return ""
         job_id = result.get("bulkExportId")
         if not job_id:
-            logger.error("导出发起失败: %s", result)
+            logger.error("导出发起失败: 未返回 bulkExportId，%s", result)
             return ""
         logger.debug("导出 job: %s", job_id)
 

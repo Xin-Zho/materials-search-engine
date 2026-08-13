@@ -83,8 +83,6 @@ class RelevanceFilter:
         research_question: str,
         threshold: int = 70,
         top_k: int = 20,
-        year_bonus: bool = True,
-        current_year: int = 2026,
         existing_routes: list[str] | None = None,
     ) -> list[ScoredPaper]:
         """筛选论文，输出结构化标签（route + info_gain）。
@@ -136,39 +134,13 @@ class RelevanceFilter:
                          batch_start, batch_start + len(batch) - 1,
                          len(batch_items))
 
-        # 年代加权
-        if year_bonus:
-            for sp in all_scored:
-                bonus = self._year_bonus(sp.paper.year, current_year)
-                sp.score = sp.raw_score + bonus
-
         # 按分数排序，过滤低于阈值
         all_scored.sort(key=lambda x: x.score, reverse=True)
         result = [sp for sp in all_scored if sp.score >= threshold][:top_k]
 
-        logger.info("相关性筛选: %d → %d 篇 (阈值 ≥%d%%, top %d, 年代加权=%s)",
-                     len(papers), len(result), threshold, top_k, year_bonus)
+        logger.info("相关性筛选: %d → %d 篇 (阈值 ≥%d%%, top %d)",
+                     len(papers), len(result), threshold, top_k)
         return result
-
-    @staticmethod
-    def _year_bonus(year: int | None, current_year: int) -> int:
-        """年代加权：3 年内重点加权，超过 5 年惩罚。"""
-        if year is None:
-            return 0
-        diff = current_year - year
-        if diff <= 0:
-            return 15   # 当年
-        elif diff == 1:
-            return 12
-        elif diff == 2:
-            return 9
-        elif diff == 3:
-            return 6    # 3 年内（含）
-        elif diff == 4:
-            return 3
-        elif diff == 5:
-            return 0
-        return -10      # 超过 5 年惩罚
 
     async def pre_filter(
         self,

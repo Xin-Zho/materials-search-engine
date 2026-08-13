@@ -193,7 +193,10 @@ class IterativeSearcher:
                 if not round_queries:
                     break
 
-        return qualified[:target_count]
+        # 7. MMR 多样性重排（避免 top-k 被同类论文占满）
+        from .mmr import MMRReranker
+        reranker = MMRReranker(lambda_param=0.7)
+        return reranker.rerank(qualified, top_k=target_count)
 
     async def _generate_gap_queries(
         self,
