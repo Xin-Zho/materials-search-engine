@@ -33,8 +33,11 @@ FILTER_PROMPT = """You are a materials science literature reviewer. Your task is
 - Be strict: if the abstract clearly doesn't address the question, give a low score
 - Write "reason" and "category" in Chinese.
 - "category" is a short Chinese label (2-6 字) describing WHICH ASPECT this paper addresses (e.g. "单体配方", "填料改性", "收缩测量", "光引发剂体系").
-- "route" is the TECHNICAL ROUTE this paper belongs to — a slightly broader Chinese label (2-8 字) describing its approach, e.g. "分子量调节", "双网络", "动态共价网络", "相分离增韧", "颗粒增强", "后固化控制", "新型工艺". Papers with the same route should be grouped together; the goal is a set of routes that covers the field.
+- "route" is the TECHNICAL ROUTE this paper belongs to — a slightly broader Chinese label (2-8 字) describing its approach, e.g. "分子量调节", "双网络", "动态共价网络", "相分离增韧", "颗粒增强", "后固化控制", "新型工艺".
+- IMPORTANT for route consistency: if this paper belongs to one of the "Already Found Routes" listed below, you MUST reuse that exact route name (do NOT invent a synonym like "双网络增韧" when "双网络" already exists). Only create a new route name when the paper genuinely represents a route not in the list.
 - "info_gain" (0.0-1.0): how much NEW information this paper adds relative to the already-found routes. 1.0 = a completely new route/angle, 0.0 = fully redundant with existing routes.
+- "evidence_type": one of "original_experiment", "review", "simulation", "perspective", "patent", "unknown". Infer from the title/abstract: does it report original experimental data, is it a review/survey, is it a modeling/simulation study, or an opinion/perspective piece?
+- "has_limitation" (true/false): does this paper report limitations, failure modes, trade-offs, or negative results (e.g. viscosity increase, reduced resolution, reduced depth of cure, shrinkage stress)? Reviews that discuss limitations also count as true.
 
 ## Already Found Routes
 {existing_routes}
@@ -49,7 +52,7 @@ FILTER_PROMPT = """You are a materials science literature reviewer. Your task is
 
 ## Output Format
 ```json
-[{{"index": 0, "score": 85, "reason": "直接研究该复合体系的填料改性", "category": "填料改性", "route": "颗粒增强", "info_gain": 0.8}}]
+[{{"index": 0, "score": 85, "reason": "直接研究该复合体系的填料改性", "category": "填料改性", "route": "颗粒增强", "info_gain": 0.8, "evidence_type": "original_experiment", "has_limitation": false}}]
 ```"""
 
 
@@ -129,6 +132,8 @@ class RelevanceFilter:
                         category=item["category"],
                         route=item["route"],
                         info_gain=item["info_gain"],
+                        evidence_type=item["evidence_type"],
+                        has_limitation=item["has_limitation"],
                     ))
 
             logger.debug("批次 %d-%d: %d 篇评分",
@@ -253,6 +258,8 @@ class RelevanceFilter:
                         "category": "",
                         "route": "",
                         "info_gain": 0.0,
+                        "evidence_type": "unknown",
+                        "has_limitation": False,
                     })
 
         result = []
@@ -268,6 +275,8 @@ class RelevanceFilter:
                 "category": item.get("category", "") or item.get("aspect", ""),
                 "route": item.get("route", ""),
                 "info_gain": float(item.get("info_gain", 0.0) or 0.0),
+                "evidence_type": item.get("evidence_type", "unknown") or "unknown",
+                "has_limitation": bool(item.get("has_limitation", False)),
             })
 
         return result

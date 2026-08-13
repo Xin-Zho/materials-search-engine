@@ -102,6 +102,8 @@ class ScoredPaper:
     category: str = ""      # 中文分类（与问题哪方面相关）
     route: str = ""         # 技术路线（如"相分离增韧"）
     info_gain: float = 0.0  # 信息增益 0-1（相对当前集合新增了什么）
+    evidence_type: str = "" # 证据类型: original_experiment / review / simulation / perspective / patent
+    has_limitation: bool = False  # 是否报告限制/反例/权衡
 
 
 @dataclass

@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 class CoverageMap:
     """覆盖地图管理器。"""
 
-    def __init__(self):
+    def __init__(self, current_year: int = 2026):
+        self.current_year = current_year
         self.routes: dict[str, RouteCoverage] = {}
 
     def build(self, scored_papers: list[ScoredPaper]):
@@ -38,14 +39,13 @@ class CoverageMap:
             if sp.paper.year and (rc.latest_year is None or sp.paper.year > rc.latest_year):
                 rc.latest_year = sp.paper.year
 
-            # 类型判断
-            doc_type = (sp.paper.document_type or "").lower()
-            if "review" in doc_type or "综述" in (sp.category or ""):
+            # 类型判断（用 evidence_type，不再依赖脆弱的关键词匹配）
+            if sp.evidence_type == "review":
                 rc.has_review = True
-            if sp.category and ("反例" in sp.category or "限制" in sp.category or "失效" in sp.category):
-                rc.has_counter_example = True
-            if sp.info_gain >= 0.5:
+            if sp.evidence_type == "original_experiment":
                 rc.has_original = True
+            if sp.has_limitation:
+                rc.has_counter_example = True
 
         logger.info("覆盖地图: %d 条技术路线", len(self.routes))
 
@@ -63,7 +63,7 @@ class CoverageMap:
                 gaps.append(f"{name}（缺综述）")
             elif not rc.has_counter_example and rc.paper_count >= 3:
                 gaps.append(f"{name}（缺反例/限制）")
-            if rc.latest_year and rc.latest_year < 2023:
+            if rc.latest_year and (self.current_year - rc.latest_year) > 3:
                 gaps.append(f"{name}（最新仅 {rc.latest_year} 年）")
 
         return gaps
@@ -86,7 +86,7 @@ class CoverageMap:
                 status.append("缺综述")
             if not rc.has_counter_example and rc.paper_count >= 3:
                 status.append("缺反例")
-            if rc.latest_year and rc.latest_year < 2023:
+            if rc.latest_year and (self.current_year - rc.latest_year) > 3:
                 status.append(f"最新{rc.latest_year}年")
 
             if status:
