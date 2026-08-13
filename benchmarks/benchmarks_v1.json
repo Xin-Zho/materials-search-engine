@@ -1,37 +1,53 @@
 {
   "version": "1.0",
   "created": "2026-08-13",
-  "description": "基准集 Pilot：光固化材料研究问题（考试卷），用于评估搜索策略的覆盖度和相关性。",
+  "description": "基准集 Pilot：光固化聚合物降低聚合收缩/收缩应力的机制（考试卷），测试搜索系统能否跨子领域（牙科树脂→通用光聚合网络→3D打印光敏树脂）搜全。",
   "questions": [
     {
       "id": "pc_001",
-      "question": "光固化复合材料的聚合收缩研究",
-      "question_en": "Polymerization shrinkage of photocurable composites",
+      "question": "光固化聚合物降低聚合收缩与收缩应力的机制",
+      "question_en": "Mechanisms to reduce polymerization shrinkage and shrinkage stress in photocurable polymers",
 
       "research_routes": [
-        "低收缩单体设计（silorane、开环单体）",
-        "活性稀释剂/分子量调节",
-        "填料改性与高填料量",
-        "膨胀单体补偿",
-        "光引发体系优化（影响转化率与收缩）"
+        "Silorane/阳离子开环低收缩单体",
+        "Spiro-orthocarbonate 膨胀单体",
+        "Thiol-ene 步增长延迟凝胶",
+        "AFCT 网络重排释放应力",
+        "无机填料高填充"
       ],
 
       "key_papers": [
+        {"doi": "10.1016/s0300-5712(96)00063-2", "title": "Polymerization shrinkage and polymerization shrinkage stress in polymer-based restoratives", "authors": "Davidson CL, Feilzer AJ", "year": 1997, "route": "理论基准", "role": "奠基", "must_hit": true},
+        {"doi": "10.1016/j.dental.2005.04.018", "title": "Factors involved in the development of polymerization shrinkage stress in resin-composites: A systematic review", "authors": "Braga RR, Ballester RY, Ferracane JL", "year": 2005, "route": "理论基准", "role": "综述", "must_hit": true},
+        {"doi": "10.1016/j.dental.2004.10.004", "title": "Developing a more complete understanding of stresses produced in dental composites during polymerization", "authors": "Ferracane JL", "year": 2005, "route": "理论基准", "role": "综述", "must_hit": false},
+        {"doi": "10.1016/j.dental.2004.10.007", "title": "Siloranes in dental composites", "authors": "Weinmann W, Thalacker C, Guggenberger R", "year": 2005, "route": "Silorane/阳离子开环", "role": "奠基", "must_hit": true},
+        {"doi": "10.1002/app.23961", "title": "Photopolymerization of a novel tetraoxaspiroundecane and silicon-containing oxiranes", "authors": "Chappelow CC, Pinzino CS, Chen SS, Jeang L, Eick JD", "year": 2007, "route": "Silorane/阳离子开环", "role": "代表", "must_hit": false},
+        {"doi": "10.1016/j.matlet.2011.07.097", "title": "Shrinkage properties of a modified dental resin composites containing a novel spiro-orthocarbonate expanding monomer", "authors": "Sun X, Li Y, Xiong J, Hu X, Chen J", "year": 2011, "route": "Spiro-orthocarbonate 膨胀单体", "role": "代表", "must_hit": true},
+        {"doi": "10.1002/pi.2755", "title": "Novel diol spiro orthocarbonates derived from glycerol as anti-shrinkage additives for the cationic photopolymerization of epoxy monomers", "authors": "Acosta Ortiz R, Berlanga Duarte ML, Savage Gomez AG, Sangermano M, Garcia Valdez AE", "year": 2010, "route": "Spiro-orthocarbonate 膨胀单体", "role": "代表", "must_hit": false},
+        {"doi": "10.1016/j.eurpolymj.2024.112876", "title": "3D printable aliphatic polycarbonate networks from cationic ring-opening photopolymerization of spiro-orthocarbonates", "authors": "Kojic D, Wolff R, Mete Y, Koch T, Stampfl J", "year": 2024, "route": "Spiro-orthocarbonate 膨胀单体", "role": "3D打印代表", "must_hit": true},
+        {"doi": "10.1016/j.dental.2009.08.004", "title": "Investigation of thiol-ene and thiol-ene-methacrylate based resins as dental restorative materials", "authors": "Cramer NB, Couch CL, Schreck KM, Carioscia JA, Boulden JE, Stansbury JW, Bowman CN", "year": 2010, "route": "Thiol-ene 步增长延迟凝胶", "role": "代表", "must_hit": true},
+        {"doi": "10.1021/ma0624954", "title": "Thiol-Allyl Ether-Methacrylate Ternary Systems. Evolution Mechanism of Polymerization-Induced Shrinkage Stress and Mechanical Properties", "authors": "Lee TY, Bowman CN", "year": 2007, "route": "Thiol-ene 步增长延迟凝胶", "role": "代表", "must_hit": true},
+        {"doi": "10.1002/anie.200903924", "title": "Thiol-Ene Click Chemistry", "authors": "Hoyle CE, Bowman CN", "year": 2010, "route": "Thiol-ene 步增长延迟凝胶", "role": "综述", "must_hit": false},
+        {"doi": "10.1021/ma802771b", "title": "Stress Relaxation via Addition-Fragmentation Chain Transfer in a Thiol-ene Photopolymerization", "authors": "Kloxin CJ, Scott TF, Bowman CN", "year": 2009, "route": "AFCT 网络重排", "role": "奠基", "must_hit": true},
+        {"doi": "10.1039/c7py00702g", "title": "Application of an addition-fragmentation-chain transfer monomer in di(meth)acrylate network formation to reduce polymerization shrinkage stress", "authors": "Shah PK, Stansbury JW, Bowman CN", "year": 2017, "route": "AFCT 网络重排", "role": "代表", "must_hit": true},
+        {"doi": "10.1016/j.dental.2011.10.015", "title": "Nano-porous thermally sintered nano silica as novel fillers for dental composites", "authors": "Atai M, Pahlavan A, Moin N", "year": 2012, "route": "无机填料高填充", "role": "代表", "must_hit": true},
+        {"doi": "10.1016/j.dental.2016.12.006", "title": "Application of close-packed structures in dental resin composites", "authors": "Wang R, Habib E, Zhu XX", "year": 2017, "route": "无机填料高填充", "role": "代表", "must_hit": false}
       ],
 
       "required_fields": [
-        "单体体系",
-        "光引发剂",
-        "转化率 degree of conversion",
+        "单体/树脂体系",
+        "聚合机理（链增长/步增长/开环）",
         "聚合收缩率 shrinkage",
         "收缩应力 shrinkage stress",
+        "转化率 degree of conversion",
         "力学性能 mechanical properties"
       ],
 
       "counter_examples": [
-        "Bis-GMA 高黏度需 TEGDMA 稀释，但 TEGDMA 增加收缩",
-        "高填料量提高力学性能但降低固化深度",
-        "快速固化 → 高收缩应力 → 界面间隙"
+        "高填料量提高力学但降低固化深度，且黏度升高、光散射增强",
+        "快速固化 → 高收缩应力 → 界面间隙",
+        "Bis-GMA 高黏度需 TEGDMA 稀释但增加收缩",
+        "体积收缩 ≠ 收缩应力（网络刚度与约束决定应力）"
       ],
 
       "irrelevant": [
@@ -41,7 +57,7 @@
         "光致变色"
       ],
 
-      "stop_criterion": "覆盖 ≥4 条技术路线 + 找到 ≥2 个反例/限制 + 最近 2 次搜索无新增"
+      "stop_criterion": "覆盖 ≥4 条机制路线 + 找到 ≥2 个反例/限制 + 命中 ≥8 篇 gold set 文献 + 最近 2 次搜索无新增"
     }
   ]
 }
