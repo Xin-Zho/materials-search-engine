@@ -1,0 +1,25 @@
+[project]
+name = "materials-search-engine"
+version = "0.1.0"
+description = "材料学科知识库 — Scopus 自动化搜索组件"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+dependencies = [
+    "cloakbrowser>=0.5.0",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.0",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.setuptools.packages.find]
+include = ["search_engine*"]
+
+[project.scripts]
+scopus-search = "search_engine.cli:main"

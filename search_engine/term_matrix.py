@@ -1,0 +1,109 @@
+"""TermMatrixGenerator — 把研究问题拆解成多维度术语矩阵。
+
+这是"覆盖驱动"的第一环：不再让 AI 直接生成一条长查询，
+而是先拆解成 8 个维度的术语，再组合成多条互补查询。
+
+使用方式:
+    gen = TermMatrixGenerator(backend)
+    matrix = await gen.generate("光固化弹性体的低黏度高伸长研究", domain_context=...)
+    # matrix.dimensions["material_system"] = ["elastomer", "resin", ...]
+"""
+
+import json
+import logging
+from .models import TermMatrix
+from .llm import LLMBackend
+
+logger = logging.getLogger(__name__)
+
+MATRIX_PROMPT = """You are a materials science information retrieval strategist.
+
+Decompose the research question into a TERM MATRIX across 8 dimensions.
+Each dimension is one aspect of the question; each contains candidate search terms (English).
+
+## The 8 Dimensions
+1. material_system — the class of material (elastomer, hydrogel, resin, polymer network...)
+2. composition — chemical constituents (monomer, oligomer, crosslinker, photoinitiator, filler...)
+3. structure_mechanism — structural features or mechanisms (dynamic bond, phase separation, IPN, hydrogen bonding...)
+4. process — fabrication methods (DLP, SLA, UV curing, post-curing, reactive diluent...)
+5. target_properties — desired properties (stretchability, toughness, low viscosity, high resolution...)
+6. application — use cases (soft robot, wearable, actuator, coating, dental...)
+7. failure_problem — failure modes or challenges (brittleness, shrinkage, oxygen inhibition, degradation...)
+8. metrics — measurable quantities (elongation at break, fracture energy, storage modulus, conversion...)
+
+## Rules
+- For each dimension, list 3-8 terms (English, lowercase except proper nouns/acronyms)
+- Include synonyms and variants — this is what enables comprehensive search
+- Base terms on BOTH the question AND the domain knowledge provided
+- If a dimension doesn't apply to this question, return an empty list
+- Return ONLY valid JSON object, no markdown, no explanation
+
+## Research Question
+{question}
+
+## Domain Knowledge (AUTHORITATIVE)
+{domain_context}
+
+## Output Format
+{{"material_system": [...], "composition": [...], "structure_mechanism": [...],
+  "process": [...], "target_properties": [...], "application": [...],
+  "failure_problem": [...], "metrics": [...]}}"""
+
+
+class TermMatrixGenerator:
+    """研究问题 → 术语矩阵。"""
+
+    def __init__(self, backend: LLMBackend):
+        self.backend = backend
+
+    async def generate(
+        self,
+        research_question: str,
+        domain_context: str = "",
+    ) -> TermMatrix:
+        """生成术语矩阵。"""
+        prompt = MATRIX_PROMPT.format(
+            question=research_question,
+            domain_context=domain_context,
+        )
+
+        response = await self.backend.chat(
+            system_prompt="You are a literature search strategist. Output only valid JSON.",
+            user_message=prompt,
+            temperature=0.3,
+            max_tokens=2048,
+        )
+
+        matrix = self._parse(response)
+        total_terms = sum(len(v) for v in matrix.dimensions.values())
+        logger.info("术语矩阵: %d 维度, %d 术语",
+                     len([v for v in matrix.dimensions.values() if v]),
+                     total_terms)
+        return matrix
+
+    @staticmethod
+    def _parse(response: str) -> TermMatrix:
+        """解析术语矩阵 JSON。"""
+        text = response.strip()
+        if text.startswith("```"):
+            lines = text.split("\n")
+            text = "\n".join(lines[1:])
+            if text.endswith("```"):
+                text = text[:-3]
+
+        matrix = TermMatrix()
+        try:
+            start = text.index("{")
+            end = text.rindex("}") + 1
+            data = json.loads(text[start:end])
+        except (json.JSONDecodeError, ValueError):
+            logger.warning("术语矩阵解析失败，返回空矩阵")
+            return matrix
+
+        # 只保留标准维度
+        for dim in TermMatrix.DIMENSIONS:
+            if dim in data and isinstance(data[dim], list):
+                matrix.dimensions[dim] = [t.strip() for t in data[dim]
+                                           if isinstance(t, str) and t.strip()]
+
+        return matrix
