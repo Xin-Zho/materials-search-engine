@@ -91,6 +91,7 @@ class IterativeSearcher:
         self.population = QueryPopulation(backend)
         self.coverage = CoverageMap()
         self._relevance_filter = RelevanceFilter(backend)
+        self.last_qualified: list[ScoredPaper] = []  # 最后一次搜索的全部达标论文
 
     async def search(
         self,
@@ -229,6 +230,8 @@ class IterativeSearcher:
                     break
 
         # 7. MMR 多样性重排（避免 top-k 被同类论文占满）
+        # 保存达标全集供覆盖度评估（评估应看"找到的所有相关论文"，不是 top-k）
+        self.last_qualified = qualified
         from .mmr import MMRReranker
         reranker = MMRReranker(lambda_param=0.7)
         return reranker.rerank(qualified, top_k=target_count)

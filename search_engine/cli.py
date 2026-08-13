@@ -429,7 +429,7 @@ async def cmd_generate(args):
                 print(f"\n总计: {len(scored)} 篇达标 | "
                       f"{cost.queries} 查询 | {cost.total_browser_time:.0f}s")
 
-                # 基准集覆盖度评估
+                # 基准集覆盖度评估（用全部达标论文，不是 MMR 后的 top-k）
                 if args.benchmark:
                     from .evaluator import Benchmark
                     path_qid = args.benchmark.rsplit(":", 1)
@@ -437,7 +437,9 @@ async def cmd_generate(args):
                     qid = path_qid[1] if len(path_qid) == 2 else "pc_001"
                     try:
                         benchmark = Benchmark(bench_path)
-                        report = benchmark.evaluate(qid, scored)
+                        all_qualified = searcher.last_qualified or scored
+                        print(f"\n[评估] 全部达标论文 {len(all_qualified)} 篇")
+                        report = benchmark.evaluate(qid, all_qualified)
                         print()
                         print(benchmark.format_report(report))
                     except Exception as e:
