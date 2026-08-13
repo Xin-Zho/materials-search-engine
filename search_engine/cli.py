@@ -429,6 +429,20 @@ async def cmd_generate(args):
                 print(f"\n总计: {len(scored)} 篇达标 | "
                       f"{cost.queries} 查询 | {cost.total_browser_time:.0f}s")
 
+                # 基准集覆盖度评估
+                if args.benchmark:
+                    from .evaluator import Benchmark
+                    path_qid = args.benchmark.rsplit(":", 1)
+                    bench_path = path_qid[0]
+                    qid = path_qid[1] if len(path_qid) == 2 else "pc_001"
+                    try:
+                        benchmark = Benchmark(bench_path)
+                        report = benchmark.evaluate(qid, scored)
+                        print()
+                        print(benchmark.format_report(report))
+                    except Exception as e:
+                        print(f"\n[评估失败] {e}")
+
             else:
                 # 无过滤：简单多查询搜索
                 all_papers: list = []
@@ -586,6 +600,7 @@ def main():
     p_gen.add_argument("--top-k", type=int, default=20, help="最多保留篇数")
     p_gen.add_argument("--citations", action="store_true", help="启用引文追踪（OpenAlex 向前/向后/共被引）")
     p_gen.add_argument("--mailto", help="OpenAlex polite pool 邮箱")
+    p_gen.add_argument("--benchmark", help="基准集 JSON 路径 + 问题 ID（如 benchmarks/benchmarks_v1.json:pc_001）")
 
     # check
     p_check = sub.add_parser("check", help="检查 Scopus 连接/登录状态")

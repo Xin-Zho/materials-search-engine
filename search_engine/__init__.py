@@ -21,6 +21,7 @@ from .coverage_map import CoverageMap
 from .iterative_searcher import IterativeSearcher
 from .citation_tracker import CitationTracker
 from .mmr import MMRReranker
+from .evaluator import Benchmark, normalize_doi
 
 __all__ = [
     "Paper",
@@ -48,4 +49,6 @@ __all__ = [
     "IterativeSearcher",
     "CitationTracker",
     "MMRReranker",
+    "Benchmark",
+    "normalize_doi",
 ]
