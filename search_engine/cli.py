@@ -461,12 +461,12 @@ async def cmd_check(args):
             data_dir=args.data_dir,
             headless=not args.visible,
         ) as engine:
-            print("✅ Scopus 可访问（机构 IP 已识别）")
+            print("[OK] Scopus 可访问（机构 IP 已识别）")
     except ScopusAccessError as e:
-        print(f"❌ {e}")
+        print(f"[FAIL] {e}")
         sys.exit(1)
     except ImportError as e:
-        print(f"❌ {e}")
+        print(f"[FAIL] {e}")
         sys.exit(1)
 
 

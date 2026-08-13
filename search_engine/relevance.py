@@ -226,6 +226,45 @@ class RelevanceFilter:
         return "\n".join(lines)
 
     @staticmethod
+    def _extract_json_objects(text: str) -> list[dict]:
+        """从文本中提取所有平衡的 JSON 对象，容忍数组格式错误。
+
+        小模型（如 Qwen 7B）常输出 `[{...}], {...}]` 这种错误格式，
+        整体 json.loads 会失败。这里用括号平衡扫描逐个提取 `{...}`。
+        """
+        objects = []
+        depth = 0
+        start = -1
+        in_string = False
+        escape = False
+        for i, ch in enumerate(text):
+            if in_string:
+                if escape:
+                    escape = False
+                elif ch == "\\":
+                    escape = True
+                elif ch == '"':
+                    in_string = False
+                continue
+            if ch == '"':
+                in_string = True
+            elif ch == "{":
+                if depth == 0:
+                    start = i
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0 and start >= 0:
+                    try:
+                        obj = json.loads(text[start:i + 1])
+                        if isinstance(obj, dict):
+                            objects.append(obj)
+                    except json.JSONDecodeError:
+                        pass
+                    start = -1
+        return objects
+
+    @staticmethod
     def _parse_scores(response: str, offset: int, count: int) -> list[dict]:
         """从 LLM 响应中解析评分列表，返回 dict 列表（index/score/reason/category/route/info_gain）。"""
         text = response.strip()
@@ -237,30 +276,16 @@ class RelevanceFilter:
             if text.endswith("```"):
                 text = text[:-3]
 
+        # 优先整体解析，失败则逐个提取对象（容忍格式错误）
+        items: list[dict] = []
         try:
             start = text.index("[")
             end = text.rindex("]") + 1
-            items = json.loads(text[start:end])
+            parsed = json.loads(text[start:end])
+            if isinstance(parsed, list):
+                items = [it for it in parsed if isinstance(it, dict)]
         except (json.JSONDecodeError, ValueError):
-            # 宽松解析：逐行匹配
-            import re
-            items = []
-            for line in text.split("\n"):
-                match = re.search(
-                    r'"index"\s*:\s*(\d+).*?"score"\s*:\s*(\d+)',
-                    line
-                )
-                if match:
-                    items.append({
-                        "index": int(match.group(1)),
-                        "score": int(match.group(2)),
-                        "reason": "",
-                        "category": "",
-                        "route": "",
-                        "info_gain": 0.0,
-                        "evidence_type": "unknown",
-                        "has_limitation": False,
-                    })
+            items = RelevanceFilter._extract_json_objects(text)
 
         result = []
         for item in items:
