@@ -440,23 +440,40 @@ async def cmd_generate(args):
                 print(f"\n总计: {len(scored)} 篇达标 | "
                       f"{cost.queries} 查询 | {cost.total_browser_time:.0f}s")
 
-                # 根基文献溯源（对代表论文做引用链回溯）
+                # 根基文献溯源（对代表论文做引用链回溯，depth=2）
                 if args.foundational:
                     from .foundational_recovery import FoundationalRecovery
                     if citation_tracker:
                         fr = FoundationalRecovery(citation_tracker, backend)
                         seed_papers = [sp.paper for sp in scored if sp.paper.doi]
-                        print("\n=== Foundational Recovery ===")
+                        print(f"\n=== Foundational Recovery (depth=2, {len(seed_papers)} 篇种子) ===")
                         foundational = await fr.recover(
-                            seed_papers, research_question=args.question, early_year=2015
+                            seed_papers, research_question=args.question,
+                            early_year=2015, depth=2,
                         )
                         for item in foundational:
                             p = item["paper"]
-                            print(f"  [{item['role']}] ({p.year}, cited {p.citation_count or 0}) {p.title[:80]}")
+                            print(f"  [{item['role']}] d{item['depth']} ({p.year}, cited {p.citation_count or 0}) {p.title[:80]}")
                             if item.get("why"):
                                 print(f"      {item['why']}")
                         if not foundational:
                             print("  (未找到早期/奠基论文)")
+
+                        # 对照基准集计算 Foundational Recall
+                        if args.benchmark:
+                            from .evaluator import Benchmark as _B
+                            _bp, _qid = args.benchmark.rsplit(":", 1)
+                            try:
+                                _bench = _B(_bp)
+                                ev = fr.evaluate(_bench, _qid, foundational, early_year=2015)
+                                print(f"\n  [Foundational Recall] {ev['foundational_recall']*100:.0f}% "
+                                      f"({ev['found']}/{ev['target_total']} 篇根基论文找回)")
+                                if ev["missed_papers"]:
+                                    print("  仍遗漏的根基论文:")
+                                    for k in ev["missed_papers"]:
+                                        print(f"    - [{k.get('year')}] {k.get('title','')[:60]}")
+                            except Exception as e:
+                                print(f"  [Foundational 评估失败] {e}")
                     else:
                         print("\n[Foundational Recovery] 需要 --citations（引文追踪）")
 

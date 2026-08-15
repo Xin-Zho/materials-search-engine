@@ -50,37 +50,58 @@ class FoundationalRecovery:
         seed_papers: list[Paper],
         research_question: str = "",
         early_year: int = 2015,
+        depth: int = 2,
         top_n: int = 30,
+        per_layer_limit: int = 50,
     ) -> list[dict]:
-        """从种子论文回溯引用链，找到奠基/早期/综述论文。
+        """从种子论文回溯引用链（depth 层），找到奠基/早期/综述论文。
 
         Args:
             seed_papers: 主搜索找到的代表论文（需有 DOI）
             early_year: 只保留该年份及之前的论文（根基论文通常较早）
+            depth: 回溯层数（1 = 种子的参考文献，2 = 参考文献的参考文献）
             top_n: LLM 分类前最多保留的候选数（按被引排序）
+            per_layer_limit: 每层每篇种子最多回溯的参考文献数
 
         Returns:
-            [{paper, role, why}, ...] 按被引降序
+            [{paper, role, why, depth}, ...] 按被引降序
         """
-        # 1. Backward citation：收集所有种子的参考文献
-        candidates: dict[str, Paper] = {}
-        for seed in seed_papers:
-            if not seed.doi:
-                continue
-            try:
-                backward = await self.citation_tracker.backward(seed.doi, limit=50)
-                for p in backward:
-                    key = normalize_doi(p.doi) or p.paper_id
-                    candidates[key] = p
-            except Exception as e:
-                logger.debug("backward 失败 %s: %s", seed.doi, e)
+        # 1. Backward citation，逐层回溯
+        # candidates: dedup_key -> (paper, depth)
+        candidates: dict[str, tuple[Paper, int]] = {}
+        seen_dois: set[str] = set()
 
-        logger.info("Foundational Recovery: %d 篇种子 → %d 篇参考文献",
-                     len(seed_papers), len(candidates))
+        # 第 1 层：所有种子
+        frontier: list[Paper] = list(seed_papers)
+
+        for layer in range(1, depth + 1):
+            next_frontier: list[Paper] = []
+            for paper in frontier:
+                if not paper.doi:
+                    continue
+                doi_key = normalize_doi(paper.doi)
+                if doi_key in seen_dois:
+                    continue
+                seen_dois.add(doi_key)
+                try:
+                    backward = await self.citation_tracker.backward(paper.doi, limit=per_layer_limit)
+                except Exception as e:
+                    logger.debug("backward 失败 %s: %s", paper.doi, e)
+                    continue
+                for bp in backward:
+                    key = normalize_doi(bp.doi) or bp.paper_id
+                    if key not in candidates:
+                        candidates[key] = (bp, layer)
+                        next_frontier.append(bp)
+            frontier = next_frontier
+            logger.debug("第 %d 层: 累计 %d 篇候选", layer, len(candidates))
+
+        logger.info("Foundational Recovery: %d 篇种子 → depth=%d → %d 篇候选",
+                     len(seed_papers), depth, len(candidates))
 
         # 2. 筛选早期 + 高被引
-        early = [p for p in candidates.values() if p.year and p.year <= early_year]
-        early.sort(key=lambda p: p.citation_count or 0, reverse=True)
+        early = [(p, d) for (p, d) in candidates.values() if p.year and p.year <= early_year]
+        early.sort(key=lambda x: x[0].citation_count or 0, reverse=True)
         early = early[:top_n]
 
         if not early:
@@ -88,7 +109,57 @@ class FoundationalRecovery:
             return []
 
         # 3. LLM 判断历史角色
-        return await self._classify_roles(early, research_question)
+        roles = await self._classify_roles([p for p, _ in early], research_question)
+        role_map = {item["paper"].paper_id: item for item in roles}
+
+        result = []
+        for paper, d in early:
+            item = role_map.get(paper.paper_id, {"role": "OTHER", "why": ""})
+            result.append({
+                "paper": paper,
+                "role": item["role"],
+                "why": item["why"],
+                "depth": d,
+            })
+
+        return result
+
+    def evaluate(
+        self,
+        benchmark,
+        question_id: str,
+        recovered: list[dict],
+        early_year: int = 2015,
+    ) -> dict:
+        """对比基准集，计算 Foundational Recall / Candidate Recall。
+
+        Args:
+            recovered: recover() 的返回（[{paper, role, why, depth}, ...]）
+
+        Returns:
+            {foundational_recall, candidate_recall, target_total, found, missed}
+        """
+        question = benchmark.get_question(question_id)
+        if not question:
+            return {}
+
+        # 目标根基论文 = key_papers 里 year <= early_year 的
+        target = [k for k in question.get("key_papers", [])
+                  if (k.get("year") or 9999) <= early_year]
+
+        recovered_dois = {normalize_doi(item["paper"].doi) for item in recovered
+                          if item["paper"].doi}
+
+        found = [k for k in target if normalize_doi(k.get("doi")) in recovered_dois]
+        missed = [k for k in target if normalize_doi(k.get("doi")) not in recovered_dois]
+
+        return {
+            "foundational_recall": len(found) / len(target) if target else 0.0,
+            "target_total": len(target),
+            "found": len(found),
+            "found_papers": found,
+            "missed_papers": missed,
+        }
 
     async def _classify_roles(self, papers: list[Paper], question: str) -> list[dict]:
         """LLM 判断每篇论文的历史角色。"""
