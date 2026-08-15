@@ -440,6 +440,26 @@ async def cmd_generate(args):
                 print(f"\n总计: {len(scored)} 篇达标 | "
                       f"{cost.queries} 查询 | {cost.total_browser_time:.0f}s")
 
+                # 根基文献溯源（对代表论文做引用链回溯）
+                if args.foundational:
+                    from .foundational_recovery import FoundationalRecovery
+                    if citation_tracker:
+                        fr = FoundationalRecovery(citation_tracker, backend)
+                        seed_papers = [sp.paper for sp in scored if sp.paper.doi]
+                        print("\n=== Foundational Recovery ===")
+                        foundational = await fr.recover(
+                            seed_papers, research_question=args.question, early_year=2015
+                        )
+                        for item in foundational:
+                            p = item["paper"]
+                            print(f"  [{item['role']}] ({p.year}, cited {p.citation_count or 0}) {p.title[:80]}")
+                            if item.get("why"):
+                                print(f"      {item['why']}")
+                        if not foundational:
+                            print("  (未找到早期/奠基论文)")
+                    else:
+                        print("\n[Foundational Recovery] 需要 --citations（引文追踪）")
+
                 # 基准集覆盖度评估（用全部达标论文，不是 MMR 后的 top-k）
                 if args.benchmark:
                     from .evaluator import Benchmark
@@ -618,6 +638,7 @@ def main():
     p_gen.add_argument("--citations", action="store_true", help="启用引文追踪（OpenAlex 向前/向后/共被引）")
     p_gen.add_argument("--mailto", help="OpenAlex polite pool 邮箱")
     p_gen.add_argument("--benchmark", help="基准集 JSON 路径 + 问题 ID（如 benchmarks/benchmarks_v1.json:pc_001）")
+    p_gen.add_argument("--foundational", action="store_true", help="启用根基文献溯源（对代表论文做引用链回溯）")
 
     # check
     p_check = sub.add_parser("check", help="检查 Scopus 连接/登录状态")

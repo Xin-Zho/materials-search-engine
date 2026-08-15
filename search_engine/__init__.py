@@ -22,6 +22,7 @@ from .iterative_searcher import IterativeSearcher
 from .citation_tracker import CitationTracker
 from .mmr import MMRReranker
 from .evaluator import Benchmark, normalize_doi
+from .foundational_recovery import FoundationalRecovery
 
 __all__ = [
     "Paper",
@@ -51,4 +52,5 @@ __all__ = [
     "MMRReranker",
     "Benchmark",
     "normalize_doi",
+    "FoundationalRecovery",
 ]
