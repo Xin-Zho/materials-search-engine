@@ -443,7 +443,7 @@ async def cmd_generate(args):
                         print()
                         print(benchmark.format_report(report))
                         print()
-                        print(searcher.analyze_retrieval_failures(benchmark, qid))
+                        print(await searcher.deep_diagnose(benchmark, qid))
                     except Exception as e:
                         print(f"\n[评估失败] {e}")
 

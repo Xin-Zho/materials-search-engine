@@ -98,6 +98,7 @@ class IterativeSearcher:
         self.prefilter_dois: set[str] = set()    # 快筛后保留
         self.scored_dois: set[str] = set()       # 精筛后（有评分）
         self.qualified_dois: set[str] = set()    # 达标（score >= threshold）
+        self.used_queries: list[str] = []        # 所有发出的查询（判断 semantic exploration）
 
     async def search(
         self,
@@ -115,6 +116,7 @@ class IterativeSearcher:
         all_scored: dict[str, ScoredPaper] = {}  # dedup_key -> ScoredPaper
         known_routes: set[str] = set()           # 已见路线（跨查询去重计数）
         used_queries: list[str] = []
+        self.used_queries = used_queries          # 供诊断用
 
         # 1. 生成术语矩阵
         logger.info("=== 生成术语矩阵 ===")
@@ -252,6 +254,94 @@ class IterativeSearcher:
         from .mmr import MMRReranker
         reranker = MMRReranker(lambda_param=0.7)
         return reranker.rerank(qualified, top_k=target_count)
+
+    # route → 英文关键词（用于判断 query 是否覆盖该机制）
+    ROUTE_KEYWORDS = {
+        "Silorane/阳离子开环": ["silorane", "oxirane", "ring opening", "ring-opening", "cationic"],
+        "Spiro-orthocarbonate 膨胀单体": ["spiro", "orthocarbonate", "expanding monomer", "soc"],
+        "Thiol-ene 步增长延迟凝胶": ["thiol", "ene", "step growth", "step-growth"],
+        "AFCT 网络重排": ["afct", "fragmentation", "chain transfer", "stress relax", "addition-fragmentation"],
+        "无机填料高填充": ["filler", "silica", "particle", "packing", "inorganic", "nanofiller"],
+        "理论基准": ["shrinkage stress", "polymerization shrinkage"],
+    }
+
+    async def _check_source_exists(self, title: str) -> bool:
+        """用精确标题查 OpenAlex，判断数据源里是否有这篇论文。"""
+        import httpx
+        try:
+            async with httpx.AsyncClient(timeout=20) as client:
+                r = await client.get(
+                    "https://api.openalex.org/works",
+                    params={"filter": f"title.search:{title[:120]}", "per-page": 1},
+                )
+                hits = r.json().get("results", [])
+                return len(hits) > 0
+        except Exception:
+            return True  # 查询失败时不误判为 source 缺失
+
+    def _route_in_queries(self, route: str, queries: list[str]) -> bool:
+        """判断是否有 query 覆盖了该 route 的机制关键词。"""
+        keywords = self.ROUTE_KEYWORDS.get(route, [])
+        if not keywords:
+            return False
+        for q in queries:
+            ql = q.lower()
+            for kw in keywords:
+                if kw.lower() in ql:
+                    return True
+        return False
+
+    async def deep_diagnose(self, benchmark, question_id: str) -> str:
+        """五级检索失败诊断：区分 source/query/truncation/merge/semantic 失败。"""
+        question = benchmark.get_question(question_id)
+        if not question:
+            return "未知问题"
+
+        lines = ["=== Retrieval Failure Analysis ==="]
+        for k in question.get("key_papers", []):
+            doi = normalize_doi(k.get("doi"))
+            if doi in self.qualified_dois:
+                continue
+
+            title = k.get("title", "")
+            route = k.get("route", "")
+            year = k.get("year", "")
+
+            # A. Source coverage
+            source_exists = await self._check_source_exists(title)
+
+            if not source_exists:
+                lines.append(
+                    f"{title[:60]}\n"
+                    f"  Source exists: NO\n"
+                    f"  Failure: A. SOURCE COVERAGE"
+                )
+                continue
+
+            # E. Semantic exploration（query 是否覆盖该机制）
+            route_covered = self._route_in_queries(route, self.used_queries)
+
+            # B/C/D 逐层定位
+            if doi not in self.raw_dois:
+                if not route_covered:
+                    failure = "E. SEMANTIC EXPLORATION (无 query 覆盖该机制)"
+                else:
+                    failure = "B/C. QUERY COVERAGE / TOP-K TRUNCATION"
+            elif doi not in self.prefilter_dois:
+                failure = "D. FILTER FALSE NEGATIVE (快筛误杀)"
+            elif doi not in self.scored_dois:
+                failure = "D. CANDIDATE MERGE FAILURE (精筛未评分)"
+            else:
+                failure = "D. SCORE BELOW THRESHOLD (分数低于阈值)"
+
+            lines.append(
+                f"{title[:60]}\n"
+                f"  Source exists: YES\n"
+                f"  Route query generated: {'YES' if route_covered else 'NO'}\n"
+                f"  Failure: {failure}"
+            )
+
+        return "\n\n".join(lines)
 
     def analyze_retrieval_failures(self, benchmark, question_id: str) -> str:
         """对漏检论文做 retrieval failure analysis。
