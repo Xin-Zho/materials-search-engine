@@ -126,6 +126,7 @@ class ScopusSearchEngine:
         limit: int = 20,
         year_range: tuple[int, int] | None = None,
         sort_by: str = "relevance",
+        skip_cache: bool = False,
     ) -> SearchResult:
         """执行 Scopus 高级搜索，通过 CSV 导出获取结果。"""
         full_query = query
@@ -138,10 +139,11 @@ class ScopusSearchEngine:
             elif end:
                 full_query += f" AND PUBYEAR < {end + 1}"
 
-        cached = self.cache.get_cached_result(full_query)
-        if cached:
-            logger.info("命中缓存: %d 篇", len(cached.papers))
-            return cached
+        if not skip_cache:
+            cached = self.cache.get_cached_result(full_query)
+            if cached:
+                logger.info("命中缓存: %d 篇", len(cached.papers))
+                return cached
 
         t0 = time.time()
 

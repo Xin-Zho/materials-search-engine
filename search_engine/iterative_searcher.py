@@ -343,6 +343,63 @@ class IterativeSearcher:
 
         return "\n\n".join(lines)
 
+    async def candidate_recall_diagnose(self, benchmark, question_id: str, deep_limit: int = 500) -> str:
+        """候选召回深度诊断——把 B/C 拆开（TOP-K TRUNCATION vs QUERY COVERAGE）。
+
+        对每篇漏检论文，找到覆盖其 route 的 query，用大 limit 重新查询，
+        看它到底排在第几：
+        - 排到了但 rank > 正常 limit → TOP-K TRUNCATION（query 没问题，深度不够）
+        - 放到 deep_limit 都没有 → QUERY COVERAGE（query 与该论文连接太弱）
+        """
+        question = benchmark.get_question(question_id)
+        if not question:
+            return "未知问题"
+
+        # 每条 route → 覆盖它的第一条 query
+        route_queries: dict[str, str] = {}
+        for route, keywords in self.ROUTE_KEYWORDS.items():
+            for q in self.used_queries:
+                ql = q.lower()
+                if any(kw.lower() in ql for kw in keywords):
+                    route_queries[route] = q
+                    break
+
+        lines = ["=== Candidate Retrieval Diagnostic ===",
+                 f"{'Paper':<40} {'best rank':>10}  failure"]
+        for k in question.get("key_papers", []):
+            doi = normalize_doi(k.get("doi"))
+            if doi in self.qualified_dois:
+                continue
+            title = k.get("title", "")
+            route = k.get("route", "")
+
+            q = route_queries.get(route)
+            if not q:
+                lines.append(f"{title[:38]:<40} {'-':>10}  SEMANTIC EXPLORATION")
+                continue
+
+            # 用大 limit 重新查询（绕过缓存）
+            try:
+                result = await self.engine.search(q, limit=deep_limit, skip_cache=True)
+            except Exception as e:
+                lines.append(f"{title[:38]:<40} {'ERR':>10}  {str(e)[:20]}")
+                continue
+
+            rank = None
+            for i, p in enumerate(result.papers):
+                if normalize_doi(p.doi) == doi:
+                    rank = i + 1
+                    break
+
+            if rank is None:
+                lines.append(f"{title[:38]:<40} {'>'+str(len(result.papers)):>10}  QUERY COVERAGE")
+            elif rank > self.MAX_PAPERS_PER_QUERY:
+                lines.append(f"{title[:38]:<40} {str(rank):>10}  TOP-K TRUNCATION")
+            else:
+                lines.append(f"{title[:38]:<40} {str(rank):>10}  IN POOL (dropped downstream)")
+
+        return "\n".join(lines)
+
     def analyze_retrieval_failures(self, benchmark, question_id: str) -> str:
         """对漏检论文做 retrieval failure analysis。
 
