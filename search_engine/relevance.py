@@ -188,9 +188,11 @@ class RelevanceFilter:
 
             decisions = self._parse_decisions(response, batch_start)
             for idx, decision in decisions:
+                # LLM 返回全局编号，需转成批内编号（和 filter 方法同源 bug）
+                local_idx = idx - batch_start
                 # recall-first：只删 IRRELEVANT，RELEVANT 和 UNCERTAIN 都保留
-                if decision != "IRRELEVANT" and idx < len(papers):
-                    kept.append(papers[idx])
+                if decision != "IRRELEVANT" and 0 <= local_idx < len(batch):
+                    kept.append(batch[local_idx])
 
             logger.debug("快筛: %d → %d 篇", len(batch), len(decisions))
 
