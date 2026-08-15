@@ -56,19 +56,25 @@ FILTER_PROMPT = """You are a materials science literature reviewer. Your task is
 ```"""
 
 
-PRE_FILTER_PROMPT = """Quick scan — based on titles only, mark clearly irrelevant papers.
+PRE_FILTER_PROMPT = """Quick scan — based on titles only, classify papers into THREE buckets.
 
 Research question: {question}
 
 Papers:
 {papers_text}
 
-For each paper, decide: KEEP (likely relevant) or SKIP (clearly irrelevant).
-A paper is SKIP if the title clearly indicates a completely different topic/field.
-When in doubt, KEEP.
+For each paper, decide:
+- RELEVANT: title clearly relates to the research question.
+- UNCERTAIN: cannot tell from title alone whether it's relevant.
+- IRRELEVANT: title clearly indicates a completely different topic/field.
+
+CRITICAL (recall-first principle): only mark IRRELEVANT when the title is UNMISTAKABLY
+about a different field. If there is ANY doubt, mark UNCERTAIN (not IRRELEVANT).
+Both RELEVANT and UNCERTAIN papers are kept for the next stage; only IRRELEVANT is dropped.
+A paper about a related mechanism but with an unfamiliar term should be UNCERTAIN, not IRRELEVANT.
 
 Output JSON array:
-[{{"index": 0, "decision": "KEEP"}}, {{"index": 1, "decision": "SKIP"}}, ...]"""
+[{{"index": 0, "decision": "UNCERTAIN"}}, {{"index": 1, "decision": "IRRELEVANT"}}, ...]"""
 
 
 class RelevanceFilter:
@@ -174,7 +180,7 @@ class RelevanceFilter:
             )
 
             response = await self.backend.chat(
-                system_prompt="You are a fast paper screener. Output only JSON. When in doubt, KEEP.",
+                system_prompt="You are a fast paper screener. Output only JSON. When in doubt, mark UNCERTAIN.",
                 user_message=prompt,
                 temperature=0,
                 max_tokens=1024,
@@ -182,12 +188,13 @@ class RelevanceFilter:
 
             decisions = self._parse_decisions(response, batch_start)
             for idx, decision in decisions:
-                if decision == "KEEP" and idx < len(papers):
+                # recall-first：只删 IRRELEVANT，RELEVANT 和 UNCERTAIN 都保留
+                if decision != "IRRELEVANT" and idx < len(papers):
                     kept.append(papers[idx])
 
             logger.debug("快筛: %d → %d 篇", len(batch), len(decisions))
 
-        logger.info("快筛: %d → %d 篇", len(papers), len(kept))
+        logger.info("快筛: %d → %d 篇 (只删 IRRELEVANT)", len(papers), len(kept))
         return kept
 
     @staticmethod
@@ -205,9 +212,9 @@ class RelevanceFilter:
             start = text.index("[")
             end = text.rindex("]") + 1
             items = _json.loads(text[start:end])
-            return [(it.get("index", -1), it.get("decision", "KEEP")) for it in items]
+            return [(it.get("index", -1), it.get("decision", "UNCERTAIN")) for it in items]
         except (_json.JSONDecodeError, ValueError):
-            return [(i + offset, "KEEP") for i in range(15)]  # fallback: keep all
+            return [(i + offset, "UNCERTAIN") for i in range(15)]  # fallback: keep all (uncertain)
 
     def _format_batch(self, papers: list[Paper], offset: int) -> str:
         """将一批论文格式化为文本。"""
