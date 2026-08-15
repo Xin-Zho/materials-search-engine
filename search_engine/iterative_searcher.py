@@ -429,11 +429,25 @@ class IterativeSearcher:
                 lines.append(f"{title[:38]:<40} {'-':>10}  SEMANTIC EXPLORATION")
                 continue
 
-            # 用大 limit 重新查询（绕过缓存）
-            try:
-                result = await self.engine.search(q, limit=deep_limit, skip_cache=True)
-            except Exception as e:
-                lines.append(f"{title[:38]:<40} {'ERR':>10}  {str(e)[:20]}")
+            # 用大 limit 重新查询（绕过缓存），带重试
+            result = None
+            last_err = ""
+            for attempt in range(2):
+                try:
+                    result = await self.engine.search(q, limit=deep_limit, skip_cache=True)
+                    break
+                except Exception as e:
+                    last_err = str(e)
+                    import asyncio as _asyncio
+                    await _asyncio.sleep(2)
+
+            if result is None:
+                # 区分会话过期 vs 其他错误
+                from .engine import ScopusAccessError
+                if "Failed to fetch" in last_err or "login" in last_err.lower():
+                    lines.append(f"{title[:38]:<40} {'ERR':>10}  SESSION/EVAL ERROR (需重新 login)")
+                else:
+                    lines.append(f"{title[:38]:<40} {'ERR':>10}  {last_err[:40]}")
                 continue
 
             rank = None

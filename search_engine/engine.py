@@ -266,29 +266,44 @@ class ScopusSearchEngine:
         # Step 2: 轮询 job 状态
         for _ in range(30):  # 最多等 30 秒
             await asyncio.sleep(1)
-            jobs = await self._page.evaluate(f"""
-                async () => {{
-                    const res = await fetch('{base_url}/bulk-jobs');
-                    return await res.json();
-                }}
-            """)
+            try:
+                jobs = await self._page.evaluate(f"""
+                    async () => {{
+                        const res = await fetch('{base_url}/bulk-jobs');
+                        if (!res.ok) return {{ jobs: [] }};
+                        return await res.json();
+                    }}
+                """)
+            except Exception as e:
+                logger.warning("轮询 job 状态失败（可能会话过期）: %s", e)
+                raise ScopusAccessError(
+                    "Scopus 导出中断：会话可能已过期。\n"
+                    "请运行: python -m search_engine login 重新登录。"
+                )
             for job in jobs.get("jobs", []):
                 if job.get("jobId") == job_id:
                     if job.get("status") == "COMPLETED":
                         file_url = job.get("fileUrl", "")
                         # Step 3: 生成预签名 URL 并下载
-                        csv_content = await self._page.evaluate(f"""
-                            async () => {{
-                                const genRes = await fetch(
-                                    '{base_url}/bulk-job/{job_id}/generate-url',
-                                    {{ method: 'POST' }}
-                                );
-                                const genData = await genRes.json();
-                                if (!genData.presignedUrl) return '';
-                                const csvRes = await fetch(genData.presignedUrl);
-                                return await csvRes.text();
-                            }}
-                        """)
+                        try:
+                            csv_content = await self._page.evaluate(f"""
+                                async () => {{
+                                    const genRes = await fetch(
+                                        '{base_url}/bulk-job/{job_id}/generate-url',
+                                        {{ method: 'POST' }}
+                                    );
+                                    const genData = await genRes.json();
+                                    if (!genData.presignedUrl) return '';
+                                    const csvRes = await fetch(genData.presignedUrl);
+                                    return await csvRes.text();
+                                }}
+                            """)
+                        except Exception as e:
+                            logger.warning("下载 CSV 失败（可能会话过期）: %s", e)
+                            raise ScopusAccessError(
+                                "Scopus CSV 下载中断：会话可能已过期。\n"
+                                "请运行: python -m search_engine login 重新登录。"
+                            )
                         return csv_content
                     elif job.get("status") == "FAILED":
                         logger.error("导出失败: %s", job)
