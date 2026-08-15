@@ -27,6 +27,7 @@ from .relevance import RelevanceFilter
 from .term_matrix import TermMatrixGenerator
 from .query_population import QueryPopulation
 from .coverage_map import CoverageMap
+from .evaluator import normalize_doi
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,11 @@ class IterativeSearcher:
         self.coverage = CoverageMap()
         self._relevance_filter = RelevanceFilter(backend)
         self.last_qualified: list[ScoredPaper] = []  # 最后一次搜索的全部达标论文
+        # 检索失败诊断：记录每层候选集的 DOI，用于区分"检索漏"vs"排序/过滤漏"
+        self.raw_dois: set[str] = set()          # 原始检索结果（所有 result.papers）
+        self.prefilter_dois: set[str] = set()    # 快筛后保留
+        self.scored_dois: set[str] = set()       # 精筛后（有评分）
+        self.qualified_dois: set[str] = set()    # 达标（score >= threshold）
 
     async def search(
         self,
@@ -135,6 +141,9 @@ class IterativeSearcher:
 
                 n_returned = len(result.papers)
 
+                # 记录原始检索结果的 DOI（诊断用）
+                self.raw_dois.update(normalize_doi(p.doi) for p in result.papers if p.doi)
+
                 # 去重（用 dedup_key 跨源统一）
                 new_papers = [p for p in result.papers if dedup_key(p) not in all_scored]
                 new_candidates = len(new_papers)
@@ -158,6 +167,9 @@ class IterativeSearcher:
                 if not new_papers:
                     continue
 
+                # 记录快筛后的 DOI
+                self.prefilter_dois.update(normalize_doi(p.doi) for p in new_papers if p.doi)
+
                 # 精筛（输出 route + info_gain）
                 scored = await self._relevance_filter.filter(
                     new_papers,
@@ -170,6 +182,9 @@ class IterativeSearcher:
                 # 计算指标（拆分为候选/评分/相关）
                 new_scored = len(scored)
                 new_relevant = sum(1 for sp in scored if sp.score >= threshold)
+
+                # 记录精筛后的 DOI（诊断用）
+                self.scored_dois.update(normalize_doi(sp.paper.doi) for sp in scored if sp.paper.doi)
 
                 # 新增路线（用实时 known_routes 避免同轮重复计数）
                 new_routes = 0
@@ -210,6 +225,8 @@ class IterativeSearcher:
                 [sp for sp in all_scored.values() if sp.score >= threshold],
                 key=lambda x: x.score, reverse=True,
             )
+            # 记录达标的 DOI（诊断用）
+            self.qualified_dois = {normalize_doi(sp.paper.doi) for sp in qualified if sp.paper.doi}
             gaps = self.coverage.identify_gaps()
 
             logger.info("第 %d 轮完成: %d 篇达标 (目标 %d), %d 个缺口",
@@ -235,6 +252,39 @@ class IterativeSearcher:
         from .mmr import MMRReranker
         reranker = MMRReranker(lambda_param=0.7)
         return reranker.rerank(qualified, top_k=target_count)
+
+    def analyze_retrieval_failures(self, benchmark, question_id: str) -> str:
+        """对漏检论文做 retrieval failure analysis。
+
+        区分漏检发生在哪一层：
+        - 检索阶段漏（查询没返回）→ 需改进查询/术语矩阵/引文通道
+        - 快筛误杀（pre_filter SKIP）→ 需放宽快筛
+        - 精筛未评分 → 解析/批次 bug
+        - 分数低于阈值 → 需调阈值或评分 prompt
+        """
+        question = benchmark.get_question(question_id)
+        if not question:
+            return "未知问题"
+
+        lines = ["=== 检索失败分析 ==="]
+        for k in question.get("key_papers", []):
+            doi = normalize_doi(k.get("doi"))
+            if doi in self.qualified_dois:
+                continue  # 命中，跳过
+
+            if doi not in self.raw_dois:
+                stage = "检索阶段漏（查询未返回此文）"
+            elif doi not in self.prefilter_dois:
+                stage = "快筛误杀（pre_filter 判 SKIP）"
+            elif doi not in self.scored_dois:
+                stage = "精筛未评分（解析/批次问题）"
+            else:
+                stage = "分数低于阈值（被 filter 过滤）"
+
+            lines.append(f"  - [{k.get('year')}] {k.get('title','')[:55]} "
+                         f"({k.get('route','')}) → {stage}")
+
+        return "\n".join(lines)
 
     async def _generate_gap_queries(
         self,

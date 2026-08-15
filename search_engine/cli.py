@@ -442,6 +442,8 @@ async def cmd_generate(args):
                         report = benchmark.evaluate(qid, all_qualified)
                         print()
                         print(benchmark.format_report(report))
+                        print()
+                        print(searcher.analyze_retrieval_failures(benchmark, qid))
                     except Exception as e:
                         print(f"\n[评估失败] {e}")
 
