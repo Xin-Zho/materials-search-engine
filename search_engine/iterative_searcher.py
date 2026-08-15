@@ -82,6 +82,7 @@ class IterativeSearcher:
     N_QUERIES_FIRST_ROUND = 8   # 第一轮查询数（术语矩阵组合）
     N_QUERIES_GAP_ROUND = 4     # 缺口轮查询数
     PRE_FILTER_BATCH = 30       # 快筛阈值
+    PER_QUERY_QUOTA = 25        # coverage-oriented merge：每条查询保留的候选配额
 
     def __init__(self, backend: LLMBackend, engine: ScopusSearchEngine,
                  citation_tracker=None):
@@ -99,6 +100,7 @@ class IterativeSearcher:
         self.scored_dois: set[str] = set()       # 精筛后（有评分）
         self.qualified_dois: set[str] = set()    # 达标（score >= threshold）
         self.used_queries: list[str] = []        # 所有发出的查询（判断 semantic exploration）
+        self.per_query_scored: dict[str, list[ScoredPaper]] = {}  # qid -> 该 query 的评分结果（coverage merge 用）
 
     async def search(
         self,
@@ -195,6 +197,9 @@ class IterativeSearcher:
                         known_routes.add(sp.route)
                         new_routes += 1
 
+                # 记录每条 query 的评分结果（coverage merge 用）
+                self.per_query_scored[qid] = scored
+
                 # 存入 all_scored
                 for sp in scored:
                     key = dedup_key(sp.paper)
@@ -223,16 +228,30 @@ class IterativeSearcher:
             logger.info("第 %d 轮覆盖地图:\n%s", round_num, self.coverage.summarize())
 
             # 5. 识别缺口 + 检查停止
-            qualified = sorted(
+            # 全部达标论文（覆盖度评估用，不受 coverage merge 限制）
+            all_qualified = sorted(
                 [sp for sp in all_scored.values() if sp.score >= threshold],
                 key=lambda x: x.score, reverse=True,
             )
-            # 记录达标的 DOI（诊断用）
-            self.qualified_dois = {normalize_doi(sp.paper.doi) for sp in qualified if sp.paper.doi}
+            self.last_qualified = all_qualified
+            self.qualified_dois = {normalize_doi(sp.paper.doi) for sp in all_qualified if sp.paper.doi}
+
+            # coverage-oriented merge：每条 query 保留 top PER_QUERY_QUOTA，
+            # 防止热门方向 query 的高分论文挤掉冷门路线的候选
+            merged: dict[str, ScoredPaper] = {}
+            for papers in self.per_query_scored.values():
+                for sp in sorted(papers, key=lambda x: x.score, reverse=True)[:self.PER_QUERY_QUOTA]:
+                    key = dedup_key(sp.paper)
+                    if key not in merged:
+                        merged[key] = sp
+            qualified = sorted(
+                [sp for sp in merged.values() if sp.score >= threshold],
+                key=lambda x: x.score, reverse=True,
+            )
             gaps = self.coverage.identify_gaps()
 
-            logger.info("第 %d 轮完成: %d 篇达标 (目标 %d), %d 个缺口",
-                         round_num, len(qualified), target_count, len(gaps))
+            logger.info("第 %d 轮完成: %d 篇达标 (目标 %d, coverage merge 后 %d), %d 个缺口",
+                         round_num, len(all_qualified), target_count, len(qualified), len(gaps))
 
             if len(qualified) >= target_count and not gaps:
                 logger.info("覆盖启发式满足，停止")
@@ -248,9 +267,7 @@ class IterativeSearcher:
                 if not round_queries:
                     break
 
-        # 7. MMR 多样性重排（避免 top-k 被同类论文占满）
-        # 保存达标全集供覆盖度评估（评估应看"找到的所有相关论文"，不是 top-k）
-        self.last_qualified = qualified
+        # 7. MMR 多样性重排（在 coverage merge 后的 qualified 上取 top-k）
         from .mmr import MMRReranker
         reranker = MMRReranker(lambda_param=0.7)
         return reranker.rerank(qualified, top_k=target_count)
