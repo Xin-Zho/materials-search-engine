@@ -409,6 +409,17 @@ async def cmd_generate(args):
                     max_rounds=3,
                 )
 
+                # 保存 Run Manifest（完整 query 集，用于跨运行对比）
+                from datetime import datetime
+                manifest_dir = args.data_dir + "/manifests"
+                Path(manifest_dir).mkdir(parents=True, exist_ok=True)
+                manifest_path = searcher.save_manifest(
+                    f"{manifest_dir}/run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                    research_question=args.question,
+                    benchmark_id=(args.benchmark or "").rsplit(":", 1)[-1] if args.benchmark else "",
+                )
+                print(f"\nRun Manifest: {manifest_path}")
+
                 if scored and args.csv:
                     path = engine.exporter.export_scored(scored, args.csv, args.question)
                     print(f"\n导出: {path}")

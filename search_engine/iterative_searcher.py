@@ -101,6 +101,7 @@ class IterativeSearcher:
         self.qualified_dois: set[str] = set()    # 达标（score >= threshold）
         self.used_queries: list[str] = []        # 所有发出的查询（判断 semantic exploration）
         self.per_query_scored: dict[str, list[ScoredPaper]] = {}  # qid -> 该 query 的评分结果（coverage merge 用）
+        self.query_manifest: list[dict] = []     # Run Manifest：记录所有生成的 query（含轮次/策略）
 
     async def search(
         self,
@@ -129,6 +130,10 @@ class IterativeSearcher:
         round_queries = await self.population.generate_queries(
             matrix, research_question, self.N_QUERIES_FIRST_ROUND
         )
+        for qid, query, strategy in round_queries:
+            self.query_manifest.append({
+                "round": 1, "qid": qid, "query": query, "strategy": strategy,
+            })
 
         for round_num in range(1, max_rounds + 1):
             # 3. 执行本轮查询
@@ -264,6 +269,10 @@ class IterativeSearcher:
                 round_queries = await self._generate_gap_queries(
                     research_question, domain_context, gap_desc, used_queries
                 )
+                for qid, query, strategy in round_queries:
+                    self.query_manifest.append({
+                        "round": round_num + 1, "qid": qid, "query": query, "strategy": strategy,
+                    })
                 if not round_queries:
                     break
 
@@ -271,6 +280,31 @@ class IterativeSearcher:
         from .mmr import MMRReranker
         reranker = MMRReranker(lambda_param=0.7)
         return reranker.rerank(qualified, top_k=target_count)
+
+    def save_manifest(self, path, research_question: str = "", benchmark_id: str = "") -> str:
+        """保存 Run Manifest（完整 query 集 + config），用于跨运行对比。"""
+        import json
+        from datetime import datetime
+        manifest = {
+            "timestamp": datetime.now().isoformat(timespec="seconds"),
+            "research_question": research_question,
+            "benchmark_id": benchmark_id,
+            "config": {
+                "max_rounds": 3,
+                "threshold": 70,
+                "per_query_quota": self.PER_QUERY_QUOTA,
+                "max_papers_per_query": self.MAX_PAPERS_PER_QUERY,
+                "n_queries_first_round": self.N_QUERIES_FIRST_ROUND,
+                "n_queries_gap_round": self.N_QUERIES_GAP_ROUND,
+            },
+            "query_count": len(self.query_manifest),
+            "queries": self.query_manifest,
+        }
+        path = str(path)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(manifest, f, ensure_ascii=False, indent=2)
+        logger.info("Run Manifest 已保存: %s (%d 条 query)", path, len(self.query_manifest))
+        return path
 
     # route → 英文关键词（用于判断 query 是否覆盖该机制）
     ROUTE_KEYWORDS = {
