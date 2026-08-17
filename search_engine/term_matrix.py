@@ -125,13 +125,14 @@ class TermMatrixGenerator:
                 system_prompt="You are a literature search strategist. Output only valid JSON.",
                 user_message=prompt,
                 temperature=0,  # 确定性 backbone（strategy_route 必须稳定）
-                max_tokens=2048,
+                max_tokens=4096,  # strategy_route 20-30 个，JSON 较长，需更大 budget
             )
             matrix = self._parse(response)
             if matrix.get("strategy_route"):
                 break  # 解析成功且有 strategy_route
-            logger.warning("术语矩阵解析失败或空 strategy_route（第 %d/%d 次），重试",
-                           attempt + 1, max_retries + 1)
+            # 调试：保存原始响应，便于定位解析失败原因
+            logger.warning("术语矩阵解析失败（第 %d/%d 次），原始响应前 200 字符: %r",
+                           attempt + 1, max_retries + 1, response[:200])
 
         if not matrix.get("strategy_route"):
             raise RuntimeError(
