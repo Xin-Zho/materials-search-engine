@@ -114,11 +114,12 @@ class TermMatrix:
     """
     dimensions: dict[str, list[str]] = field(default_factory=dict)
 
-    # 标准 8 维度
+    # 标准维度（strategy_route + physical_mechanism 分离，替代模糊的 structure_mechanism）
     DIMENSIONS = [
         "material_system",      # 材料体系
         "composition",          # 组成
-        "structure_mechanism",  # 结构/机制
+        "strategy_route",       # 技术/化学/工艺路线（可独立检索，第一轮强制覆盖对象）
+        "physical_mechanism",   # 底层物理/化学机制（探索支路，不强制覆盖）
         "process",              # 工艺
         "target_properties",    # 目标性能
         "application",          # 应用

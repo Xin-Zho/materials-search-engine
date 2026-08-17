@@ -24,32 +24,45 @@ async def main():
     gen = TermMatrixGenerator(backend)
     ctx = get_domain_context("photocuring")
 
-    print(f"跑 {n} 次 term matrix 生成，检查 structure_mechanism 稳定性...\n")
+    print(f"跑 {n} 次 term matrix 生成，检查 strategy_route（backbone）稳定性...\n")
+    all_routes: list[list[str]] = []
     all_mechs: list[list[str]] = []
     for i in range(n):
         m = await gen.generate(QUESTION, ctx)
-        mechs = [t.lower() for t in m.get("structure_mechanism")]
+        routes = [t.lower() for t in m.get("strategy_route")]
+        mechs = [t.lower() for t in m.get("physical_mechanism")]
+        all_routes.append(routes)
         all_mechs.append(mechs)
-        print(f"[{i+1}] ({len(mechs)} 机制): {m.get('structure_mechanism')}")
+        print(f"[{i+1}] route ({len(routes)}): {m.get('strategy_route')}")
+        print(f"      mech ({len(mechs)}): {m.get('physical_mechanism')}")
 
-    # 统计每个机制出现次数
+    # 统计 strategy_route 出现次数
     from collections import Counter
-    counter = Counter()
-    for mechs in all_mechs:
-        counter.update(set(mechs))
+    route_counter = Counter()
+    for routes in all_routes:
+        route_counter.update(set(routes))
 
-    print("\n=== 机制出现稳定性 ===")
-    for mech, count in counter.most_common():
+    print("\n=== strategy_route 稳定性（核心 backbone，要求 5/5）===")
+    for route, count in route_counter.most_common():
+        bar = "█" * count + "░" * (n - count)
+        print(f"  {route}: {count}/{n} {bar}")
+
+    unstable_routes = [m for m, c in route_counter.items() if c < n]
+    if unstable_routes:
+        print(f"\n不稳定 strategy_route（<{n}/{n}）: {unstable_routes}")
+        print("结论：backbone 不稳，需继续修 term matrix 上游")
+    else:
+        print(f"\n所有 strategy_route {n}/{n} 稳定出现")
+        print("结论：coverage backbone 稳定，Phase 0 可冻结")
+
+    # physical_mechanism 是探索支路，可以波动
+    mech_counter = Counter()
+    for mechs in all_mechs:
+        mech_counter.update(set(mechs))
+    print("\n=== physical_mechanism（探索支路，允许波动）===")
+    for mech, count in mech_counter.most_common():
         bar = "█" * count + "░" * (n - count)
         print(f"  {mech}: {count}/{n} {bar}")
-
-    unstable = [m for m, c in counter.items() if c < n]
-    if unstable:
-        print(f"\n不稳定机制（<{n}/{n}）: {unstable}")
-        print("结论：term matrix 本身不稳定，需修上游知识分解")
-    else:
-        print(f"\n所有机制 {n}/{n} 稳定出现")
-        print("结论：term matrix 稳定，query composition 是唯一不稳定源（双层 query generation 已修复）")
 
 
 if __name__ == "__main__":

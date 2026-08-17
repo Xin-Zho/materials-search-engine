@@ -32,7 +32,8 @@ Generate {n_queries} Scopus queries. Each query must combine terms from DIFFEREN
 (never two terms from the same dimension unless they're synonyms). Cover these combination patterns:
 
 - material_system + target_properties
-- structure_mechanism + target_properties
+- strategy_route + target_properties
+- physical_mechanism + failure_problem
 - process + failure_problem
 - composition + target_properties
 - application + material_system
@@ -74,25 +75,25 @@ class QueryPopulation:
         不依赖 LLM，temperature 恒为 0。保证 term matrix 里出现的每个
         mechanism 都获得搜索机会，避免 LLM 随机组合时漏掉某条路线。
         """
-        mechanisms = matrix.get("structure_mechanism")
+        mechanisms = matrix.get("strategy_route")  # 强制覆盖策略路线，不是物理机制
         target_props = matrix.get("target_properties")
         failure_probs = matrix.get("failure_problem")
 
         queries: list[str] = []
         for mech in mechanisms:
             mech_term = self._scopus_term(mech)
-            # 机制 × 目标性能（取第一个）
+            # 路线 × 目标性能（取第一个）
             if target_props:
                 prop_term = self._scopus_term(target_props[0])
                 queries.append(f"TITLE-ABS-KEY({mech_term}) AND TITLE-ABS-KEY({prop_term})")
-            # 机制 × 失效问题（取第一个）
+            # 路线 × 失效问题（取第一个）
             if failure_probs:
                 fail_term = self._scopus_term(failure_probs[0])
                 q = f"TITLE-ABS-KEY({mech_term}) AND TITLE-ABS-KEY({fail_term})"
                 if q not in queries:
                     queries.append(q)
 
-        logger.info("coverage queries: %d 个机制 → %d 条确定性查询",
+        logger.info("coverage queries: %d 个策略路线 → %d 条确定性查询",
                      len(mechanisms), len(queries))
         return queries
 

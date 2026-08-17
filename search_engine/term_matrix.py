@@ -18,18 +18,19 @@ logger = logging.getLogger(__name__)
 
 MATRIX_PROMPT = """You are a materials science information retrieval strategist.
 
-Decompose the research question into a TERM MATRIX across 8 dimensions.
+Decompose the research question into a TERM MATRIX across 9 dimensions.
 Each dimension is one aspect of the question; each contains candidate search terms (English).
 
-## The 8 Dimensions
+## The 9 Dimensions
 1. material_system — the class of material (elastomer, hydrogel, resin, polymer network...)
 2. composition — chemical constituents (monomer, oligomer, crosslinker, photoinitiator, filler...)
-3. structure_mechanism — structural features or mechanisms (dynamic bond, phase separation, IPN, hydrogen bonding...)
-4. process — fabrication methods (DLP, SLA, UV curing, post-curing, reactive diluent...)
-5. target_properties — desired properties (stretchability, toughness, low viscosity, high resolution...)
-6. application — use cases (soft robot, wearable, actuator, coating, dental...)
-7. failure_problem — failure modes or challenges (brittleness, shrinkage, oxygen inhibition, degradation...)
-8. metrics — measurable quantities (elongation at break, fracture energy, storage modulus, conversion...)
+3. strategy_route — a material/chemical/process ROUTE that can independently form a distinct body of literature. These are SOLUTION or DESIGN approaches (e.g. ring-opening polymerization, thiol-ene, addition-fragmentation chain transfer, phase separation, interpenetrating network, filler loading). CRITICAL: do NOT put physical-quantity or kinetic-state terms here (e.g. gel point, vitrification, free volume, chain mobility).
+4. physical_mechanism — the underlying physical/chemical mechanism explaining WHY a route works (e.g. gel point, vitrification, free volume, chain mobility, stress relaxation, crosslink density). CRITICAL: do NOT put full technical routes here.
+5. process — fabrication methods (DLP, SLA, UV curing, post-curing, reactive diluent...)
+6. target_properties — desired properties (stretchability, toughness, low viscosity, high resolution...)
+7. application — use cases (soft robot, wearable, actuator, coating, dental...)
+8. failure_problem — failure modes or challenges (brittleness, shrinkage, oxygen inhibition, degradation...)
+9. metrics — measurable quantities (elongation at break, fracture energy, storage modulus, conversion...)
 
 ## Rules
 - For each dimension, list 3-8 terms (English, lowercase except proper nouns/acronyms)
@@ -45,9 +46,9 @@ Each dimension is one aspect of the question; each contains candidate search ter
 {domain_context}
 
 ## Output Format
-{{"material_system": [...], "composition": [...], "structure_mechanism": [...],
-  "process": [...], "target_properties": [...], "application": [...],
-  "failure_problem": [...], "metrics": [...]}}"""
+{{"material_system": [...], "composition": [...], "strategy_route": [...],
+  "physical_mechanism": [...], "process": [...], "target_properties": [...],
+  "application": [...], "failure_problem": [...], "metrics": [...]}}"""
 
 
 class TermMatrixGenerator:
@@ -70,7 +71,7 @@ class TermMatrixGenerator:
         response = await self.backend.chat(
             system_prompt="You are a literature search strategist. Output only valid JSON.",
             user_message=prompt,
-            temperature=0.3,
+            temperature=0,  # 确定性 backbone（strategy_route 必须稳定）
             max_tokens=2048,
         )
 
