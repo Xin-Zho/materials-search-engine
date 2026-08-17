@@ -61,12 +61,12 @@ Routes that are synonyms, near-synonyms, or hyponym/hypernym relations should me
 ## Rules
 - Merge synonyms (e.g. "thiol-ene" and "thiol-ene addition" → one family)
 - Merge hyponyms under a hypernym (e.g. "ring-opening polymerization", "cationic polymerization", "silorane" → one family)
-- Each family needs a short canonical name and one representative member
-- Do NOT merge genuinely different routes (e.g. keep AFCT separate from thiol-ene)
+- family name MUST be a SHORT CANONICAL term (2-4 words max), e.g. "filler", "ring-opening", "thiol-ene", "network architecture", "monomer design", "chain-transfer stress-relaxation". Do NOT use long descriptive phrases — use the stable core concept.
+- Do NOT merge genuinely different routes. IMPORTANT guard: "RAFT / reversible addition-fragmentation chain-transfer polymerization" (controlled radical polymerization for molar-mass control) is DIFFERENT from "AFCT / addition-fragmentation chain transfer for stress relaxation" (network rearrangement) — keep them as separate families.
 - Output ONLY valid JSON array
 
 ## Output Format
-[{{"family": "ring-opening/cationic", "representative": "ring-opening polymerization",
+[{{"family": "ring-opening", "representative": "ring-opening polymerization",
    "members": ["ring-opening polymerization", "cationic polymerization", "silorane"]}}, ...]"""
 
 
@@ -111,29 +111,38 @@ class TermMatrixGenerator:
         self,
         research_question: str,
         domain_context: str = "",
+        max_retries: int = 2,
     ) -> TermMatrix:
-        """生成术语矩阵。"""
+        """生成术语矩阵。parse 失败会重试，最终失败抛异常（不返回空矩阵）。"""
         prompt = MATRIX_PROMPT.format(
             question=research_question,
             domain_context=domain_context,
         )
 
-        response = await self.backend.chat(
-            system_prompt="You are a literature search strategist. Output only valid JSON.",
-            user_message=prompt,
-            temperature=0,  # 确定性 backbone（strategy_route 必须稳定）
-            max_tokens=2048,
-        )
+        matrix = TermMatrix()
+        for attempt in range(max_retries + 1):
+            response = await self.backend.chat(
+                system_prompt="You are a literature search strategist. Output only valid JSON.",
+                user_message=prompt,
+                temperature=0,  # 确定性 backbone（strategy_route 必须稳定）
+                max_tokens=2048,
+            )
+            matrix = self._parse(response)
+            if matrix.get("strategy_route"):
+                break  # 解析成功且有 strategy_route
+            logger.warning("术语矩阵解析失败或空 strategy_route（第 %d/%d 次），重试",
+                           attempt + 1, max_retries + 1)
 
-        matrix = self._parse(response)
+        if not matrix.get("strategy_route"):
+            raise RuntimeError(
+                "术语矩阵解析失败：strategy_route 为空（已重试多次）。"
+                "这是 term extraction 的硬失败，不允许返回空矩阵继续搜索。"
+            )
 
         # 对 strategy_route 做语义归一化聚类（同义/上下位合并成 family）
         routes = matrix.get("strategy_route")
-        if routes:
-            families = await self.normalize_routes(routes)
-            matrix.route_families = families
-        else:
-            matrix.route_families = []
+        families = await self.normalize_routes(routes)
+        matrix.route_families = families
 
         total_terms = sum(len(v) for v in matrix.dimensions.values())
         logger.info("术语矩阵: %d 维度, %d 术语, %d route family",
@@ -142,8 +151,42 @@ class TermMatrixGenerator:
         return matrix
 
     @staticmethod
+    def _extract_json_object(text: str) -> dict | None:
+        """括号平衡扫描，提取第一个平衡的 JSON 对象（容忍前后杂质）。"""
+        depth = 0
+        start = -1
+        in_string = False
+        escape = False
+        for i, ch in enumerate(text):
+            if in_string:
+                if escape:
+                    escape = False
+                elif ch == "\\":
+                    escape = True
+                elif ch == '"':
+                    in_string = False
+                continue
+            if ch == '"':
+                in_string = True
+            elif ch == "{":
+                if depth == 0:
+                    start = i
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0 and start >= 0:
+                    try:
+                        obj = json.loads(text[start:i + 1])
+                        if isinstance(obj, dict):
+                            return obj
+                    except json.JSONDecodeError:
+                        pass
+                    start = -1
+        return None
+
+    @staticmethod
     def _parse(response: str) -> TermMatrix:
-        """解析术语矩阵 JSON。"""
+        """解析术语矩阵 JSON（强容错：严格 parse → bracket balancing）。"""
         text = response.strip()
         if text.startswith("```"):
             lines = text.split("\n")
@@ -152,12 +195,19 @@ class TermMatrixGenerator:
                 text = text[:-3]
 
         matrix = TermMatrix()
+        data: dict | None = None
+
+        # 1. 严格 JSON parse
         try:
             start = text.index("{")
             end = text.rindex("}") + 1
             data = json.loads(text[start:end])
-        except (json.JSONDecodeError, ValueError):
-            logger.warning("术语矩阵解析失败，返回空矩阵")
+        except (json.JSONDecodeError, ValueError, ValueError):
+            # 2. bracket balancing 提取对象
+            data = TermMatrixGenerator._extract_json_object(text)
+
+        if not data:
+            logger.warning("术语矩阵解析失败（严格 + bracket balancing 都失败）")
             return matrix
 
         # 只保留标准维度
