@@ -28,7 +28,7 @@ async def main():
     all_mechs: list[list[str]] = []
     for i in range(n):
         m = await gen.generate(QUESTION, ctx)
-        mechs = [t.lower() for t in m.get("structure_mechanism", [])]
+        mechs = [t.lower() for t in m.get("structure_mechanism")]
         all_mechs.append(mechs)
         print(f"[{i+1}] ({len(mechs)} 机制): {m.get('structure_mechanism')}")
 
