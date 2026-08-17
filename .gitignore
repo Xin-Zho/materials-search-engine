@@ -25,3 +25,5 @@ data/
 .vscode/
 *.swp
 *.zip
+result_output.txt
+*.txt
