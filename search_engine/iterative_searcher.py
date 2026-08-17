@@ -81,6 +81,7 @@ class IterativeSearcher:
     MAX_PAPERS_PER_QUERY = 200  # 每条查询最多获取论文数
     N_QUERIES_FIRST_ROUND = 8   # 第一轮查询数（术语矩阵组合）
     N_QUERIES_GAP_ROUND = 4     # 缺口轮查询数
+    N_QUERIES_EXPLORE = 5       # 第一轮探索性查询数（LLM 自由组合）
     PRE_FILTER_BATCH = 30       # 快筛阈值
     PER_QUERY_QUOTA = 25        # coverage-oriented merge：每条查询保留的候选配额
 
@@ -126,15 +127,32 @@ class IterativeSearcher:
         logger.info("=== 生成术语矩阵 ===")
         matrix = await self.term_gen.generate(research_question, domain_context)
 
-        # 2. 第一轮：从矩阵生成查询种群
-        logger.info("=== 第 1 轮：术语矩阵 → 查询种群 ===")
-        round_queries = await self.population.generate_queries(
-            matrix, research_question, self.N_QUERIES_FIRST_ROUND
-        )
-        for qid, query, strategy in round_queries:
+        # 2. 第一轮：coverage（确定性骨架）+ exploration（LLM 探索）双层
+        logger.info("=== 第 1 轮：coverage + exploration 双层 ===")
+        round_queries: list[tuple[str, str, str]] = []
+
+        # 2a. coverage queries：每个机制 cluster 至少一条（确定性，temperature=0）
+        coverage_queries = self.population.build_coverage_queries(matrix)
+        for i, q in enumerate(coverage_queries):
+            qid = f"cov_{i}"
+            self.population.queries[qid] = QueryEntry(query_id=qid, query=q, strategy="coverage")
+            round_queries.append((qid, q, "coverage"))
             self.query_manifest.append({
-                "round": 1, "qid": qid, "query": query, "strategy": strategy,
+                "round": 1, "qid": qid, "query": q, "strategy": "coverage",
             })
+
+        # 2b. exploration queries：LLM 自由组合（跨维度、新机制假设）
+        exploration_queries = await self.population.generate_queries(
+            matrix, research_question, self.N_QUERIES_EXPLORE
+        )
+        for qid, query, strategy in exploration_queries:
+            round_queries.append((qid, query, "exploration"))
+            self.query_manifest.append({
+                "round": 1, "qid": qid, "query": query, "strategy": "exploration",
+            })
+
+        logger.info("第 1 轮: %d coverage + %d exploration = %d 条 query",
+                     len(coverage_queries), len(exploration_queries), len(round_queries))
 
         for round_num in range(1, max_rounds + 1):
             # 3. 执行本轮查询

@@ -60,6 +60,42 @@ class QueryPopulation:
         self.backend = backend
         self.queries: dict[str, QueryEntry] = {}
 
+    @staticmethod
+    def _scopus_term(term: str) -> str:
+        """多词短语加双引号，单词不加。"""
+        term = term.strip().strip('"').strip("'")
+        if " " in term or "-" in term:
+            return f'"{term}"'
+        return term
+
+    def build_coverage_queries(self, matrix: TermMatrix) -> list[str]:
+        """从术语矩阵确定性生成 coverage queries（每个机制 cluster 至少一条）。
+
+        不依赖 LLM，temperature 恒为 0。保证 term matrix 里出现的每个
+        mechanism 都获得搜索机会，避免 LLM 随机组合时漏掉某条路线。
+        """
+        mechanisms = matrix.get("structure_mechanism")
+        target_props = matrix.get("target_properties")
+        failure_probs = matrix.get("failure_problem")
+
+        queries: list[str] = []
+        for mech in mechanisms:
+            mech_term = self._scopus_term(mech)
+            # 机制 × 目标性能（取第一个）
+            if target_props:
+                prop_term = self._scopus_term(target_props[0])
+                queries.append(f"TITLE-ABS-KEY({mech_term}) AND TITLE-ABS-KEY({prop_term})")
+            # 机制 × 失效问题（取第一个）
+            if failure_probs:
+                fail_term = self._scopus_term(failure_probs[0])
+                q = f"TITLE-ABS-KEY({mech_term}) AND TITLE-ABS-KEY({fail_term})"
+                if q not in queries:
+                    queries.append(q)
+
+        logger.info("coverage queries: %d 个机制 → %d 条确定性查询",
+                     len(mechanisms), len(queries))
+        return queries
+
     async def generate_queries(
         self,
         matrix: TermMatrix,
