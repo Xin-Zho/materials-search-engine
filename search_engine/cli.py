@@ -472,6 +472,9 @@ async def cmd_generate(args):
                                     print("  仍遗漏的根基论文:")
                                     for k in ev["missed_papers"]:
                                         print(f"    - [{k.get('year')}] {k.get('title','')[:60]}")
+                                # 候选池诊断：区分 expansion 失败 vs ranking 失败
+                                print()
+                                print(fr.diagnose_candidates(_bench, _qid, early_year=2015))
                             except Exception as e:
                                 print(f"  [Foundational 评估失败] {e}")
                     else:

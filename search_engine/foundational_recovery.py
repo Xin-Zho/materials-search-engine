@@ -96,6 +96,9 @@ class FoundationalRecovery:
             frontier = next_frontier
             logger.debug("第 %d 层: 累计 %d 篇候选", layer, len(candidates))
 
+        # 保存完整候选池（诊断用：检查 Gold 是否在候选池）
+        self.last_candidates = candidates
+
         logger.info("Foundational Recovery: %d 篇种子 → depth=%d → %d 篇候选",
                      len(seed_papers), depth, len(candidates))
 
@@ -160,6 +163,59 @@ class FoundationalRecovery:
             "found_papers": found,
             "missed_papers": missed,
         }
+
+    def diagnose_candidates(self, benchmark, question_id: str, early_year: int = 2015) -> str:
+        """检查 Gold 根基论文是否在候选池里，区分 expansion 失败 vs ranking 失败。
+
+        回答关键问题：12 篇 Gold 是否被引用回溯扩进了候选池？
+        - 在候选池 → expansion 成功，失败在 ranking（rank 太靠后没进 top 30）
+        - 不在候选池 → expansion 失败（seed/图/depth 问题）
+        """
+        question = benchmark.get_question(question_id)
+        if not question:
+            return "未知问题"
+
+        candidates = getattr(self, "last_candidates", {})
+        target = [k for k in question.get("key_papers", [])
+                  if (k.get("year") or 9999) <= early_year]
+
+        # 按被引降序的候选池排名
+        ranked = sorted(
+            candidates.items(),
+            key=lambda x: (x[1][0].citation_count or 0),
+            reverse=True,
+        )
+        rank_by_doi = {doi: i + 1 for i, (doi, _) in enumerate(ranked)}
+
+        lines = ["=== Foundational Recovery Diagnostic ===",
+                 f"候选池总数: {len(candidates)}"]
+        in_pool = 0
+        for k in target:
+            doi = normalize_doi(k.get("doi"))
+            if doi in candidates:
+                paper, depth = candidates[doi]
+                rank = rank_by_doi.get(doi, "?")
+                in_pool += 1
+                lines.append(
+                    f"  [{k.get('year')}] {k.get('title','')[:50]}\n"
+                    f"      IN POOL: depth={depth}, raw_rank={rank}/{len(candidates)}, "
+                    f"cited={paper.citation_count or 0}"
+                )
+            else:
+                lines.append(
+                    f"  [{k.get('year')}] {k.get('title','')[:50]}\n"
+                    f"      NOT IN POOL"
+                )
+
+        lines.append(f"\nCitation Candidate Recall: {in_pool}/{len(target)}")
+        if in_pool == len(target):
+            lines.append("→ 结论：expansion 成功，失败在 FOUNDATION RANKING")
+        elif in_pool > 0:
+            lines.append("→ 结论：部分 expansion 失败 + ranking 失败")
+        else:
+            lines.append("→ 结论：expansion 失败（seed 选择 / 引用图 / depth 问题）")
+
+        return "\n".join(lines)
 
     async def _classify_roles(self, papers: list[Paper], question: str) -> list[dict]:
         """LLM 判断每篇论文的历史角色。"""
