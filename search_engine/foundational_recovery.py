@@ -39,24 +39,32 @@ Output JSON array:
 
 
 class FoundationalRecovery:
-    """根基文献溯源器。"""
+    """根基文献溯源器（通用并行召回：citation + keyword 两通道）。"""
+
+    # 默认 route 历史查询（针对光固化低收缩各机制，可被调用方覆盖）
+    ROUTE_QUERIES = [
+        "silorane",
+        "spiro orthocarbonate",
+        "expanding monomer",
+        "thiol ene polymerization",
+        "addition-fragmentation chain transfer",
+        "nano silica dental composite",
+        "polymerization shrinkage stress",
+    ]
 
     def __init__(self, citation_tracker, backend: LLMBackend):
         self.citation_tracker = citation_tracker
         self.backend = backend
 
-    async def collect_candidates(
+    async def _collect_citation(
         self,
         seed_papers: list[Paper],
-        depth: int = 2,
-        per_layer_limit: int = 50,
+        depth: int,
+        per_layer_limit: int,
     ) -> dict[str, tuple[Paper, int]]:
-        """只做 backward citation 回溯，收集候选池（不调 LLM）。"""
-        # candidates: dedup_key -> (paper, depth)
+        """通道 1：backward citation 回溯。depth 标记层数。"""
         candidates: dict[str, tuple[Paper, int]] = {}
         seen_dois: set[str] = set()
-
-        # 第 1 层：所有种子
         frontier: list[Paper] = list(seed_papers)
 
         for layer in range(1, depth + 1):
@@ -79,12 +87,63 @@ class FoundationalRecovery:
                         candidates[key] = (bp, layer)
                         next_frontier.append(bp)
             frontier = next_frontier
-            logger.debug("第 %d 层: 累计 %d 篇候选", layer, len(candidates))
 
-        self.last_candidates = candidates
-        logger.info("候选池: %d 篇种子 → depth=%d → %d 篇候选",
+        logger.info("citation 通道: %d 篇种子 → depth=%d → %d 篇候选",
                      len(seed_papers), depth, len(candidates))
         return candidates
+
+    async def _collect_keyword(
+        self,
+        queries: list[str],
+        early_year: int,
+        limit_per_query: int = 50,
+    ) -> dict[str, tuple[Paper, int]]:
+        """通道 2：route 关键词历史检索（通用召回，找回 citation 走不到的低被引冷门论文）。"""
+        candidates: dict[str, tuple[Paper, int]] = {}
+        for query in queries:
+            try:
+                papers = await self.citation_tracker.search(
+                    query, year_before=early_year, limit=limit_per_query
+                )
+            except Exception as e:
+                logger.debug("keyword 搜索失败 %s: %s", query, e)
+                continue
+            for p in papers:
+                key = normalize_doi(p.doi) or p.paper_id
+                if key not in candidates:
+                    candidates[key] = (p, 0)  # depth=0 表示 keyword 通道
+        logger.info("keyword 通道: %d 条查询 → %d 篇候选", len(queries), len(candidates))
+        return candidates
+
+    async def collect_candidates(
+        self,
+        seed_papers: list[Paper],
+        depth: int = 2,
+        per_layer_limit: int = 50,
+        early_year: int = 2015,
+        keyword_queries: list[str] | None = None,
+    ) -> dict[str, tuple[Paper, int]]:
+        """并行跑 citation + keyword 两通道，合并候选池（不调 LLM）。"""
+        keyword_queries = keyword_queries if keyword_queries is not None else self.ROUTE_QUERIES
+
+        citation_task = self._collect_citation(seed_papers, depth, per_layer_limit)
+        keyword_task = self._collect_keyword(keyword_queries, early_year)
+
+        import asyncio
+        citation_candidates, keyword_candidates = await asyncio.gather(
+            citation_task, keyword_task
+        )
+
+        # 合并：citation 优先，keyword 补充 citation 没覆盖的
+        all_candidates: dict[str, tuple[Paper, int]] = dict(citation_candidates)
+        for key, val in keyword_candidates.items():
+            if key not in all_candidates:
+                all_candidates[key] = val
+
+        self.last_candidates = all_candidates
+        logger.info("合并候选池: citation %d + keyword %d = %d 篇",
+                     len(citation_candidates), len(keyword_candidates), len(all_candidates))
+        return all_candidates
 
     async def recover(
         self,

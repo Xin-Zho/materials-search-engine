@@ -120,6 +120,30 @@ class CitationTracker:
         logger.info("共被引: %s → %d 篇相关", doi, len(papers))
         return papers[:limit]
 
+    async def search(
+        self,
+        query: str,
+        year_before: int | None = None,
+        limit: int = 20,
+    ) -> list[Paper]:
+        """OpenAlex 关键词搜索，可选年份过滤（用于历史文献关键词召回）。"""
+        url = f"{self.BASE_URL}/works"
+        filters = []
+        if query:
+            filters.append(f"title.search:{query}")
+        if year_before:
+            filters.append(f"publication_year:<{year_before}")
+
+        params = {
+            "filter": ",".join(filters),
+            "per-page": min(limit, 200),
+            "sort": "cited_by_count:desc",
+        }
+        data = await self._get_json(url, params)
+        papers = [self._work_to_paper(w) for w in data.get("results", [])]
+        logger.info("关键词搜索: %s (year<%s) → %d 篇", query, year_before, len(papers))
+        return papers[:limit]
+
     async def _fetch_works_by_ids(self, openalex_ids: list[str]) -> list[Paper]:
         """批量按 OpenAlex ID 查询。"""
         if not openalex_ids:
