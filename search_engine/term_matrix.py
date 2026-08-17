@@ -12,7 +12,7 @@
 import json
 import logging
 from .models import TermMatrix
-from .llm import LLMBackend
+from .llm import LLMBackend, TruncatedResponse
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,8 @@ Each dimension is one aspect of the question; each contains candidate search ter
 
 ## Rules
 - strategy_route MUST list 20-30 terms (HIGH RECALL, do not pre-filter, allow synonyms and near-duplicates — a later normalization step merges them). Never truncate to "top 8".
-- Other dimensions: list 3-8 terms (English, lowercase except proper nouns/acronyms)
+- Other dimensions: list 3-8 terms MAXIMUM (English, lowercase except proper nouns/acronyms). NEVER exceed 8 terms per non-strategy_route dimension.
+- Do NOT enumerate exhaustive lists of test methods, measurement techniques, or synonym compendia — list only the most distinctive, discriminating terms.
 - Include synonyms and variants — this is what enables comprehensive search
 - Base terms on BOTH the question AND the domain knowledge provided
 - If a dimension doesn't apply to this question, return an empty list
@@ -121,16 +122,22 @@ class TermMatrixGenerator:
 
         matrix = TermMatrix()
         for attempt in range(max_retries + 1):
-            response = await self.backend.chat(
-                system_prompt="You are a literature search strategist. Output only valid JSON.",
-                user_message=prompt,
-                temperature=0,  # 确定性 backbone（strategy_route 必须稳定）
-                max_tokens=4096,  # strategy_route 20-30 个，JSON 较长，需更大 budget
-            )
+            try:
+                response = await self.backend.chat(
+                    system_prompt="You are a literature search strategist. Output only valid JSON.",
+                    user_message=prompt,
+                    temperature=0.1,  # 接近确定性，但避免 temperature=0 的 degenerate
+                    max_tokens=4096,
+                    raise_on_truncation=True,  # finish_reason=length 时抛异常
+                )
+            except TruncatedResponse as e:
+                logger.warning("术语矩阵输出被截断（第 %d/%d 次），重试: %s",
+                               attempt + 1, max_retries + 1, e)
+                continue  # 截断结果无效，重试
+
             matrix = self._parse(response)
             if matrix.get("strategy_route"):
                 break  # 解析成功且有 strategy_route
-            # 调试：保存原始响应，便于定位解析失败原因
             logger.warning("术语矩阵解析失败（第 %d/%d 次），原始响应前 200 字符: %r",
                            attempt + 1, max_retries + 1, response[:200])
 

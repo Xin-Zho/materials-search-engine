@@ -14,6 +14,11 @@ from abc import ABC, abstractmethod
 logger = logging.getLogger(__name__)
 
 
+class TruncatedResponse(Exception):
+    """LLM 输出被截断（finish_reason=length），结果无效，需重试。"""
+    pass
+
+
 class LLMBackend(ABC):
     """LLM 后端基类。"""
 
@@ -34,7 +39,8 @@ class DeepSeekBackend(LLMBackend):
         self.base_url = base_url
 
     async def chat(self, system_prompt: str, user_message: str,
-                   temperature: float = 0.3, max_tokens: int = 2048) -> str:
+                   temperature: float = 0.3, max_tokens: int = 2048,
+                   raise_on_truncation: bool = False) -> str:
         import httpx
 
         headers = {
@@ -59,7 +65,13 @@ class DeepSeekBackend(LLMBackend):
             )
             resp.raise_for_status()
             data = resp.json()
-            return data["choices"][0]["message"]["content"]
+            choice = data["choices"][0]
+            finish_reason = choice.get("finish_reason", "stop")
+            if raise_on_truncation and finish_reason == "length":
+                raise TruncatedResponse(
+                    f"DeepSeek 输出被截断（finish_reason=length, max_tokens={max_tokens}）"
+                )
+            return choice["message"]["content"]
 
 
 class OllamaBackend(LLMBackend):
