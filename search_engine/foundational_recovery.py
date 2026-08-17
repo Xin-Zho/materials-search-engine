@@ -45,28 +45,13 @@ class FoundationalRecovery:
         self.citation_tracker = citation_tracker
         self.backend = backend
 
-    async def recover(
+    async def collect_candidates(
         self,
         seed_papers: list[Paper],
-        research_question: str = "",
-        early_year: int = 2015,
         depth: int = 2,
-        top_n: int = 30,
         per_layer_limit: int = 50,
-    ) -> list[dict]:
-        """从种子论文回溯引用链（depth 层），找到奠基/早期/综述论文。
-
-        Args:
-            seed_papers: 主搜索找到的代表论文（需有 DOI）
-            early_year: 只保留该年份及之前的论文（根基论文通常较早）
-            depth: 回溯层数（1 = 种子的参考文献，2 = 参考文献的参考文献）
-            top_n: LLM 分类前最多保留的候选数（按被引排序）
-            per_layer_limit: 每层每篇种子最多回溯的参考文献数
-
-        Returns:
-            [{paper, role, why, depth}, ...] 按被引降序
-        """
-        # 1. Backward citation，逐层回溯
+    ) -> dict[str, tuple[Paper, int]]:
+        """只做 backward citation 回溯，收集候选池（不调 LLM）。"""
         # candidates: dedup_key -> (paper, depth)
         candidates: dict[str, tuple[Paper, int]] = {}
         seen_dois: set[str] = set()
@@ -96,11 +81,34 @@ class FoundationalRecovery:
             frontier = next_frontier
             logger.debug("第 %d 层: 累计 %d 篇候选", layer, len(candidates))
 
-        # 保存完整候选池（诊断用：检查 Gold 是否在候选池）
         self.last_candidates = candidates
-
-        logger.info("Foundational Recovery: %d 篇种子 → depth=%d → %d 篇候选",
+        logger.info("候选池: %d 篇种子 → depth=%d → %d 篇候选",
                      len(seed_papers), depth, len(candidates))
+        return candidates
+
+    async def recover(
+        self,
+        seed_papers: list[Paper],
+        research_question: str = "",
+        early_year: int = 2015,
+        depth: int = 2,
+        top_n: int = 30,
+        per_layer_limit: int = 50,
+    ) -> list[dict]:
+        """从种子论文回溯引用链（depth 层），找到奠基/早期/综述论文。
+
+        Args:
+            seed_papers: 主搜索找到的代表论文（需有 DOI）
+            early_year: 只保留该年份及之前的论文（根基论文通常较早）
+            depth: 回溯层数（1 = 种子的参考文献，2 = 参考文献的参考文献）
+            top_n: LLM 分类前最多保留的候选数（按被引排序）
+            per_layer_limit: 每层每篇种子最多回溯的参考文献数
+
+        Returns:
+            [{paper, role, why, depth}, ...] 按被引降序
+        """
+        # 1. Backward citation 收集候选池
+        candidates = await self.collect_candidates(seed_papers, depth, per_layer_limit)
 
         # 2. 筛选早期 + 高被引
         early = [(p, d) for (p, d) in candidates.values() if p.year and p.year <= early_year]
