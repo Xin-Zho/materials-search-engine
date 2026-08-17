@@ -113,6 +113,7 @@ class TermMatrix:
     每个维度是研究问题的一个侧面，维度内是候选术语。
     """
     dimensions: dict[str, list[str]] = field(default_factory=dict)
+    route_families: list[dict] = field(default_factory=list)  # strategy_route 归一化后的 family
 
     # 标准维度（strategy_route + physical_mechanism 分离，替代模糊的 structure_mechanism）
     DIMENSIONS = [

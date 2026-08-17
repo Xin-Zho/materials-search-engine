@@ -33,7 +33,8 @@ Each dimension is one aspect of the question; each contains candidate search ter
 9. metrics — measurable quantities (elongation at break, fracture energy, storage modulus, conversion...)
 
 ## Rules
-- For each dimension, list 3-8 terms (English, lowercase except proper nouns/acronyms)
+- strategy_route MUST list 20-30 terms (HIGH RECALL, do not pre-filter, allow synonyms and near-duplicates — a later normalization step merges them). Never truncate to "top 8".
+- Other dimensions: list 3-8 terms (English, lowercase except proper nouns/acronyms)
 - Include synonyms and variants — this is what enables comprehensive search
 - Base terms on BOTH the question AND the domain knowledge provided
 - If a dimension doesn't apply to this question, return an empty list
@@ -51,11 +52,60 @@ Each dimension is one aspect of the question; each contains candidate search ter
   "application": [...], "failure_problem": [...], "metrics": [...]}}"""
 
 
+ROUTE_NORMALIZE_PROMPT = """Group these strategy routes into semantic FAMILIES.
+Routes that are synonyms, near-synonyms, or hyponym/hypernym relations should merge into one family.
+
+## Routes
+{routes}
+
+## Rules
+- Merge synonyms (e.g. "thiol-ene" and "thiol-ene addition" → one family)
+- Merge hyponyms under a hypernym (e.g. "ring-opening polymerization", "cationic polymerization", "silorane" → one family)
+- Each family needs a short canonical name and one representative member
+- Do NOT merge genuinely different routes (e.g. keep AFCT separate from thiol-ene)
+- Output ONLY valid JSON array
+
+## Output Format
+[{{"family": "ring-opening/cationic", "representative": "ring-opening polymerization",
+   "members": ["ring-opening polymerization", "cationic polymerization", "silorane"]}}, ...]"""
+
+
 class TermMatrixGenerator:
     """研究问题 → 术语矩阵。"""
 
     def __init__(self, backend: LLMBackend):
         self.backend = backend
+
+    async def normalize_routes(self, routes: list[str]) -> list[dict]:
+        """用 LLM 把 route 聚类成 semantic family（同义/上下位合并）。"""
+        if not routes:
+            return []
+        prompt = ROUTE_NORMALIZE_PROMPT.format(routes="\n".join(f"- {r}" for r in routes))
+        response = await self.backend.chat(
+            system_prompt="You are a materials science taxonomy expert. Output only valid JSON.",
+            user_message=prompt,
+            temperature=0,
+            max_tokens=2048,
+        )
+        families = self._parse_families(response)
+        logger.info("route 归一化: %d 个 route → %d 个 family", len(routes), len(families))
+        return families
+
+    @staticmethod
+    def _parse_families(response: str) -> list[dict]:
+        text = response.strip()
+        if text.startswith("```"):
+            lines = text.split("\n")
+            text = "\n".join(lines[1:])
+            if text.endswith("```"):
+                text = text[:-3]
+        try:
+            start = text.index("[")
+            end = text.rindex("]") + 1
+            items = json.loads(text[start:end])
+            return [it for it in items if isinstance(it, dict) and it.get("representative")]
+        except (json.JSONDecodeError, ValueError):
+            return []
 
     async def generate(
         self,
@@ -76,10 +126,19 @@ class TermMatrixGenerator:
         )
 
         matrix = self._parse(response)
+
+        # 对 strategy_route 做语义归一化聚类（同义/上下位合并成 family）
+        routes = matrix.get("strategy_route")
+        if routes:
+            families = await self.normalize_routes(routes)
+            matrix.route_families = families
+        else:
+            matrix.route_families = []
+
         total_terms = sum(len(v) for v in matrix.dimensions.values())
-        logger.info("术语矩阵: %d 维度, %d 术语",
+        logger.info("术语矩阵: %d 维度, %d 术语, %d route family",
                      len([v for v in matrix.dimensions.values() if v]),
-                     total_terms)
+                     total_terms, len(matrix.route_families))
         return matrix
 
     @staticmethod

@@ -24,45 +24,39 @@ async def main():
     gen = TermMatrixGenerator(backend)
     ctx = get_domain_context("photocuring")
 
-    print(f"跑 {n} 次 term matrix 生成，检查 strategy_route（backbone）稳定性...\n")
-    all_routes: list[list[str]] = []
-    all_mechs: list[list[str]] = []
+    print(f"跑 {n} 次 term matrix 生成，检查 route family（归一化后）稳定性...\n")
+    all_families: list[list[str]] = []
+    all_route_counts: list[int] = []
     for i in range(n):
         m = await gen.generate(QUESTION, ctx)
-        routes = [t.lower() for t in m.get("strategy_route")]
-        mechs = [t.lower() for t in m.get("physical_mechanism")]
-        all_routes.append(routes)
-        all_mechs.append(mechs)
-        print(f"[{i+1}] route ({len(routes)}): {m.get('strategy_route')}")
-        print(f"      mech ({len(mechs)}): {m.get('physical_mechanism')}")
+        # 归一化后的 route families（gen.generate 内部会调 normalize_routes）
+        families = [f.get("family", "").lower() for f in m.route_families]
+        all_families.append(families)
+        all_route_counts.append(len(m.get("strategy_route")))
+        print(f"[{i+1}] raw routes ({len(m.get('strategy_route'))}) → {len(families)} families:")
+        for f in m.route_families:
+            print(f"      [{f.get('family')}] rep={f.get('representative')} ({len(f.get('members',[]))} 成员)")
 
-    # 统计 strategy_route 出现次数
+    # 统计 route family 出现次数（核心 backbone）
     from collections import Counter
-    route_counter = Counter()
-    for routes in all_routes:
-        route_counter.update(set(routes))
+    family_counter = Counter()
+    for families in all_families:
+        family_counter.update(set(families))
 
-    print("\n=== strategy_route 稳定性（核心 backbone，要求 5/5）===")
-    for route, count in route_counter.most_common():
+    print("\n=== Route Family 稳定性（核心 backbone，要求 5/5）===")
+    for fam, count in family_counter.most_common():
         bar = "█" * count + "░" * (n - count)
-        print(f"  {route}: {count}/{n} {bar}")
+        print(f"  {fam}: {count}/{n} {bar}")
 
-    unstable_routes = [m for m, c in route_counter.items() if c < n]
-    if unstable_routes:
-        print(f"\n不稳定 strategy_route（<{n}/{n}）: {unstable_routes}")
-        print("结论：backbone 不稳，需继续修 term matrix 上游")
+    unstable = [f for f, c in family_counter.items() if c < n]
+    if unstable:
+        print(f"\n不稳定 family（<{n}/{n}）: {unstable}")
+        print("结论：route family 覆盖不稳，需继续修")
     else:
-        print(f"\n所有 strategy_route {n}/{n} 稳定出现")
+        print(f"\n所有 route family {n}/{n} 稳定覆盖")
         print("结论：coverage backbone 稳定，Phase 0 可冻结")
 
-    # physical_mechanism 是探索支路，可以波动
-    mech_counter = Counter()
-    for mechs in all_mechs:
-        mech_counter.update(set(mechs))
-    print("\n=== physical_mechanism（探索支路，允许波动）===")
-    for mech, count in mech_counter.most_common():
-        bar = "█" * count + "░" * (n - count)
-        print(f"  {mech}: {count}/{n} {bar}")
+    print(f"\nraw route 数量范围: {min(all_route_counts)}~{max(all_route_counts)}（高召回，具体表达允许变化）")
 
 
 if __name__ == "__main__":

@@ -70,31 +70,38 @@ class QueryPopulation:
         return term
 
     def build_coverage_queries(self, matrix: TermMatrix) -> list[str]:
-        """从术语矩阵确定性生成 coverage queries（每个机制 cluster 至少一条）。
+        """从术语矩阵确定性生成 coverage queries（每个 route family 至少一条）。
 
-        不依赖 LLM，temperature 恒为 0。保证 term matrix 里出现的每个
-        mechanism 都获得搜索机会，避免 LLM 随机组合时漏掉某条路线。
+        优先用归一化后的 route_families 的 representative（每个 family 一条），
+        保证每个语义族都被覆盖，避免 LLM 随机组合时漏掉某条路线。
         """
-        mechanisms = matrix.get("strategy_route")  # 强制覆盖策略路线，不是物理机制
+        # 优先用 route families 的 representative（归一化后，每个 family 一条）
+        if matrix.route_families:
+            routes = [f.get("representative", "") for f in matrix.route_families]
+            routes = [r for r in routes if r]
+        else:
+            # fallback：直接用 strategy_route 原始 terms
+            routes = matrix.get("strategy_route")
+
         target_props = matrix.get("target_properties")
         failure_probs = matrix.get("failure_problem")
 
         queries: list[str] = []
-        for mech in mechanisms:
-            mech_term = self._scopus_term(mech)
+        for route in routes:
+            route_term = self._scopus_term(route)
             # 路线 × 目标性能（取第一个）
             if target_props:
                 prop_term = self._scopus_term(target_props[0])
-                queries.append(f"TITLE-ABS-KEY({mech_term}) AND TITLE-ABS-KEY({prop_term})")
+                queries.append(f"TITLE-ABS-KEY({route_term}) AND TITLE-ABS-KEY({prop_term})")
             # 路线 × 失效问题（取第一个）
             if failure_probs:
                 fail_term = self._scopus_term(failure_probs[0])
-                q = f"TITLE-ABS-KEY({mech_term}) AND TITLE-ABS-KEY({fail_term})"
+                q = f"TITLE-ABS-KEY({route_term}) AND TITLE-ABS-KEY({fail_term})"
                 if q not in queries:
                     queries.append(q)
 
-        logger.info("coverage queries: %d 个策略路线 → %d 条确定性查询",
-                     len(mechanisms), len(queries))
+        logger.info("coverage queries: %d 个 route family → %d 条确定性查询",
+                     len(routes), len(queries))
         return queries
 
     async def generate_queries(
