@@ -497,6 +497,8 @@ async def cmd_generate(args):
                         print(await searcher.deep_diagnose(benchmark, qid))
                         print()
                         print(await searcher.candidate_recall_diagnose(benchmark, qid))
+                        print()
+                        print(searcher.compare_merges(benchmark, qid))
                     except Exception as e:
                         print(f"\n[评估失败] {e}")
 

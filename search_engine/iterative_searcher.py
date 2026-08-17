@@ -93,7 +93,8 @@ class IterativeSearcher:
         self.population = QueryPopulation(backend)
         self.coverage = CoverageMap()
         self._relevance_filter = RelevanceFilter(backend)
-        self.last_qualified: list[ScoredPaper] = []  # 最后一次搜索的全部达标论文
+        self.last_qualified: list[ScoredPaper] = []  # 最后一次搜索的全部达标论文（global merge）
+        self.coverage_qualified: list[ScoredPaper] = []  # coverage merge 后的达标论文（A/B 对比）
         # 检索失败诊断：记录每层候选集的 DOI，用于区分"检索漏"vs"排序/过滤漏"
         self.raw_dois: set[str] = set()          # 原始检索结果（所有 result.papers）
         self.prefilter_dois: set[str] = set()    # 快筛后保留
@@ -253,6 +254,7 @@ class IterativeSearcher:
                 [sp for sp in merged.values() if sp.score >= threshold],
                 key=lambda x: x.score, reverse=True,
             )
+            self.coverage_qualified = qualified  # coverage merge 结果（A/B 对比用）
             gaps = self.coverage.identify_gaps()
 
             logger.info("第 %d 轮完成: %d 篇达标 (目标 %d, coverage merge 后 %d), %d 个缺口",
@@ -280,6 +282,43 @@ class IterativeSearcher:
         from .mmr import MMRReranker
         reranker = MMRReranker(lambda_param=0.7)
         return reranker.rerank(qualified, top_k=target_count)
+
+    def compare_merges(self, benchmark, question_id: str) -> str:
+        """对比 global merge vs coverage merge 的候选召回（A/B）。"""
+        question = benchmark.get_question(question_id)
+        if not question:
+            return "未知问题"
+
+        key_papers = question.get("key_papers", [])
+        global_dois = {normalize_doi(sp.paper.doi) for sp in self.last_qualified}
+        coverage_dois = {normalize_doi(sp.paper.doi) for sp in self.coverage_qualified}
+
+        global_hits = sum(1 for k in key_papers if normalize_doi(k.get("doi")) in global_dois)
+        coverage_hits = sum(1 for k in key_papers if normalize_doi(k.get("doi")) in coverage_dois)
+
+        lines = [
+            "=== Merge A/B 对比 ===",
+            f"A (global merge):     {len(self.last_qualified)} 篇达标, key recall {global_hits}/{len(key_papers)}",
+            f"B (coverage merge):   {len(self.coverage_qualified)} 篇达标, key recall {coverage_hits}/{len(key_papers)}",
+            "",
+        ]
+
+        # 按 route 对比命中
+        route_stats: dict[str, dict] = {}
+        for k in key_papers:
+            route = k.get("route", "未分类")
+            route_stats.setdefault(route, {"g": 0, "c": 0, "total": 0})
+            route_stats[route]["total"] += 1
+            if normalize_doi(k.get("doi")) in global_dois:
+                route_stats[route]["g"] += 1
+            if normalize_doi(k.get("doi")) in coverage_dois:
+                route_stats[route]["c"] += 1
+
+        lines.append("按 route (global/coverage):")
+        for route, s in sorted(route_stats.items()):
+            lines.append(f"  {route}: {s['g']}/{s['total']} vs {s['c']}/{s['total']}")
+
+        return "\n".join(lines)
 
     def save_manifest(self, path, research_question: str = "", benchmark_id: str = "") -> str:
         """保存 Run Manifest（完整 query 集 + config），用于跨运行对比。"""
