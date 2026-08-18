@@ -20,6 +20,11 @@ from .models import Paper, Author
 logger = logging.getLogger(__name__)
 
 
+class RateLimitError(Exception):
+    """OpenAlex rate limit 超限（daily budget 用完或请求过快）。"""
+    pass
+
+
 class CitationTracker:
     """OpenAlex 引文追踪器。"""
 
@@ -48,15 +53,21 @@ class CitationTracker:
         return self._client
 
     async def _get_json(self, url: str, params: dict | None = None) -> dict:
-        """GET JSON，带重试。"""
+        """GET JSON，带重试。
+
+        429（rate limit）显式抛 RateLimitError，绝不静默返回空结果，
+        避免把"检索服务失败"伪装成"0 hits"。
+        """
         client = self._get_client()
         for attempt in range(3):
             try:
                 resp = await client.get(url, params=params)
                 if resp.status_code == 429:
-                    import asyncio
-                    await asyncio.sleep(2 ** attempt)
-                    continue
+                    remaining = resp.headers.get("X-RateLimit-Remaining", "?")
+                    raise RateLimitError(
+                        f"OpenAlex rate limit exceeded (X-RateLimit-Remaining={remaining}). "
+                        f"Daily credit budget 可能已用完，请明天重试或加 mailto 进 polite pool。"
+                    )
                 resp.raise_for_status()
                 return resp.json()
             except httpx.HTTPStatusError as e:

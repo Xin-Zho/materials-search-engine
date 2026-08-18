@@ -57,11 +57,16 @@ async def main():
     # 逐条搜索 + 记录
     query_records = []  # dict per query
     new_papers: dict[str, Paper] = {}
+    from search_engine.citation_tracker import RateLimitError
     async with CitationTracker() as tracker:
         for query, support, src in all_queries:
             try:
                 results = await tracker.search(query, limit=20)
                 total_hits = getattr(tracker, "last_total_hits", len(results))
+            except RateLimitError as e:
+                query_records.append({"query": query, "support": support, "src": src,
+                                      "total_hits": -1, "overlap": 0, "novel_dois": [], "error": "RATE_LIMITED"})
+                continue
             except Exception as e:
                 query_records.append({"query": query, "support": support, "src": src,
                                       "total_hits": 0, "overlap": 0, "novel_dois": [], "error": str(e)})
@@ -85,7 +90,9 @@ async def main():
     failure_counter = Counter()
     support_failure = Counter()
     for rec in query_records:
-        if rec.get("error"):
+        if rec.get("error") == "RATE_LIMITED":
+            failure = "RATE_LIMITED"
+        elif rec.get("error"):
             failure = "ERROR"
         elif rec["total_hits"] == 0:
             failure = "NO_HITS"
