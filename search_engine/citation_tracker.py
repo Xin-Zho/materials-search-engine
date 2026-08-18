@@ -141,7 +141,9 @@ class CitationTracker:
         }
         data = await self._get_json(url, params)
         papers = [self._work_to_paper(w) for w in data.get("results", [])]
-        logger.info("关键词搜索: %s (year<%s) → %d 篇", query, year_before, len(papers))
+        total_hits = data.get("meta", {}).get("count", len(papers))
+        logger.info("关键词搜索: %s (year<%s) → %d 篇 (总命中 %d)", query, year_before, len(papers), total_hits)
+        self.last_total_hits = total_hits
         return papers[:limit]
 
     async def _fetch_works_by_ids(self, openalex_ids: list[str]) -> list[Paper]:

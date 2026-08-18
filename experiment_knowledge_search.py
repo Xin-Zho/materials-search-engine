@@ -1,6 +1,7 @@
-"""Phase 1 实验：Knowledge → Hypothesis → Query → Search（含 relevance 判断 + support_type 分析）。
+"""Phase 1 实验 + 逐条 failure diagnosis。
 
-验证 knowledge-driven queries 能否找到主搜索遗漏的【相关】新论文。
+诊断每个 knowledge query 的失败类型：
+NO_HITS / ALL_ALREADY_FOUND / NEW_BUT_IRRELEVANT / NEW_RELEVANT。
 
 用法（需 DEEPSEEK_API_KEY）:
     python experiment_knowledge_search.py data/exports/foundational_baseline.csv [篇数]
@@ -41,7 +42,7 @@ async def main():
     extractor = KnowledgeExtractor(backend)
 
     print(f"从 {len(papers)} 篇论文提取知识...\n")
-    all_queries: list[tuple[str, str, str]] = []  # (query, support_type, source_title)
+    all_queries: list[tuple[str, str, str]] = []
     for p in papers:
         rec = await extractor.extract(p)
         if not rec:
@@ -53,66 +54,66 @@ async def main():
 
     print(f"共 {len(all_queries)} 条 knowledge queries\n")
 
-    # 搜索 + 收集新候选（记录每个 query 找到的新 DOI）
+    # 逐条搜索 + 记录
+    query_records = []  # dict per query
     new_papers: dict[str, Paper] = {}
-    query_novel: dict[str, list[str]] = {}  # query -> 找到的新 DOI
     async with CitationTracker() as tracker:
         for query, support, src in all_queries:
             try:
                 results = await tracker.search(query, limit=20)
+                total_hits = getattr(tracker, "last_total_hits", len(results))
             except Exception as e:
-                print(f"  [ERR] {query[:50]}: {e}")
+                query_records.append({"query": query, "support": support, "src": src,
+                                      "total_hits": 0, "overlap": 0, "novel_dois": [], "error": str(e)})
                 continue
+            overlap = sum(1 for p in results if normalize_doi(p.doi) in original_dois)
             novel = [p for p in results if normalize_doi(p.doi) not in original_dois]
-            if novel:
-                query_novel[query] = [normalize_doi(p.doi) or p.paper_id for p in novel]
-                for p in novel:
-                    new_papers.setdefault(normalize_doi(p.doi) or p.paper_id, p)
+            novel_dois = [normalize_doi(p.doi) or p.paper_id for p in novel]
+            for p in novel:
+                new_papers.setdefault(normalize_doi(p.doi) or p.paper_id, p)
+            query_records.append({"query": query, "support": support, "src": src,
+                                  "total_hits": total_hits, "overlap": overlap, "novel_dois": novel_dois})
 
-    print(f"去重后新候选: {len(new_papers)} 篇\n")
-
-    # relevance 判断
-    print("对新候选做 relevance 判断...\n")
+    # relevance 判断所有新候选
     rf = RelevanceFilter(backend)
-    scored = await rf.filter(
-        list(new_papers.values()), research_question=QUESTION, threshold=0, top_k=len(new_papers)
-    )
-    relevant_new = {normalize_doi(sp.paper.doi) or sp.paper.paper_id: sp for sp in scored if sp.score >= 70}
-    print(f"相关新论文（score>=70）: {len(relevant_new)} 篇\n")
+    scored = await rf.filter(list(new_papers.values()), research_question=QUESTION,
+                             threshold=0, top_k=len(new_papers))
+    relevant_dois = {normalize_doi(sp.paper.doi) or sp.paper.paper_id for sp in scored if sp.score >= 70}
 
-    # 统计 useful queries（找到 ≥1 relevant 新论文）
-    useful_queries = []
-    for query, novos in query_novel.items():
-        if any(d in relevant_new for d in novos):
-            useful_queries.append(query)
+    # 逐条分类
+    print("=== 逐条 failure diagnosis ===\n")
+    failure_counter = Counter()
+    support_failure = Counter()
+    for rec in query_records:
+        if rec.get("error"):
+            failure = "ERROR"
+        elif rec["total_hits"] == 0:
+            failure = "NO_HITS"
+        elif not rec["novel_dois"]:
+            failure = "ALL_ALREADY_FOUND"
+        elif not any(d in relevant_dois for d in rec["novel_dois"]):
+            failure = "NEW_BUT_IRRELEVANT"
+        else:
+            failure = "NEW_RELEVANT"
+        failure_counter[failure] += 1
+        support_failure[(rec["support"], failure)] += 1
 
-    # support_type 分布
-    support_counter = Counter()
-    for q, support, _ in all_queries:
-        if q in useful_queries:
-            support_counter[support] += 1
-    total_counter = Counter(s for _, s, _ in all_queries)
+        if failure in ("NEW_RELEVANT", "NO_HITS") or rec["support"] == "mechanism_inference":
+            print(f"  [{failure}] ({rec['support']}) hits={rec['total_hits']} overlap={rec['overlap']} novel={len(rec['novel_dois'])}")
+            print(f"      {rec['query'][:80]}")
 
-    print("=== 实验结果 ===")
-    print(f"knowledge queries: {len(all_queries)}")
-    print(f"产生新候选的 query: {len(query_novel)}")
-    print(f"新候选: {len(new_papers)}")
-    print(f"相关新论文 (>=70): {len(relevant_new)}")
-    print(f"useful queries（找到≥1相关新论文）: {len(useful_queries)}")
-    print(f"Useful Query Yield (candidate): {len(query_novel)/len(all_queries)*100:.0f}%")
-    print(f"Useful Query Yield (relevant):  {len(useful_queries)/len(all_queries)*100:.0f}%")
+    print("\n=== 总 failure 分布 ===")
+    for f, c in failure_counter.most_common():
+        print(f"  {f}: {c}")
 
-    print("\n=== 成功 query 的 support_type 分布 ===")
-    for st in total_counter:
-        u = support_counter.get(st, 0)
-        t = total_counter[st]
-        print(f"  {st}: {u}/{t} useful ({u/t*100 if t else 0:.0f}%)")
+    print("\n=== mechanism_inference 的 failure 分布 ===")
+    mech_total = sum(c for (s, f), c in support_failure.items() if s == "mechanism_inference")
+    for (s, f), c in sorted(support_failure.items()):
+        if s == "mechanism_inference":
+            print(f"  {f}: {c}/{mech_total}")
 
-    if relevant_new:
-        print("\n相关新论文示例:")
-        for doi, sp in list(relevant_new.items())[:15]:
-            t = (sp.paper.title or "").encode('ascii', 'replace').decode('ascii')[:70]
-            print(f"  - [{sp.score}%] [{sp.paper.year}] {t}")
+    useful = sum(c for (s, f), c in support_failure.items() if f == "NEW_RELEVANT")
+    print(f"\nUseful Query Yield (relevant): {useful}/{len(all_queries)} = {useful/len(all_queries)*100:.1f}%")
 
 
 if __name__ == "__main__":
