@@ -32,7 +32,7 @@ Abstract: {abstract}
 
 3. materials — specific materials/chemicals/substances (list)
 
-4. physical_mechanisms — causal explanation of WHY a route works, as {cause, mechanism, effect} triples. e.g. {{"cause": "ring-opening polymerization", "mechanism": "volumetric expansion during bond formation", "effect": "offsets polymerization shrinkage"}}. Do NOT put mere result variables (e.g. "shrinkage stress", "crosslink density") as mechanisms — they are effects, not explanations.
+4. physical_mechanisms — causal explanation of WHY a route works, as cause→mechanism→effect triples. e.g. {{"cause": "ring-opening polymerization", "mechanism": "volumetric expansion during bond formation", "effect": "offsets polymerization shrinkage"}}. Do NOT put mere result variables (e.g. "shrinkage stress", "crosslink density") as mechanisms — they are effects, not explanations.
 
 5. characterization_methods — measurement/characterization techniques (list), e.g. "near-infrared spectroscopy", "dynamic mechanical analysis", "tensometry". Keep these SEPARATE from strategy_routes.
 
