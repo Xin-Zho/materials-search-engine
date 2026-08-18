@@ -174,33 +174,60 @@ class RouteCoverage:
 
 
 @dataclass
+@dataclass
+class Mechanism:
+    """物理机制（因果三元组）。"""
+    cause: str = ""       # 触发因素（如 ring-opening polymerization）
+    mechanism: str = ""   # 中间机制（如 volumetric expansion）
+    effect: str = ""      # 目标效果（如 offsets shrinkage）
+
+
+@dataclass
+class SearchHypothesis:
+    """搜索假设：从论文证据泛化出的、可驱动新搜索的方向。"""
+    hypothesis: str = ""             # 泛化假设（超出论文具体化学）
+    rationale: str = ""              # 为什么这个假设成立
+    queries: list[str] = field(default_factory=list)  # 具体搜索 query
+
+
+@dataclass
 class KnowledgeRecord:
     """从一篇相关论文结构化提取的、可继续用于搜索的知识。
 
     核心不是摘要，而是"后面还能拿去继续搜索的知识"。
-    search_hypotheses 是可直接生成新 query 的搜索假设。
-    所有字段保留来源（paper_id / source_text / extractor_version / confidence）。
+    关键区分：
+    - strategy_routes（技术路线）vs characterization_methods（表征方法）
+    - physical_mechanisms（因果三元组）vs 结果变量
+    - historical_terms（可驱动历史文献检索的旧称/别名）
+    - search_hypotheses（Paper Evidence → Generalized Hypothesis → Query）
     """
-    paper_id: str                                   # 来源论文（去重键）
-    problem: str = ""                               # 论文解决的问题
-    strategy_route: list[str] = field(default_factory=list)   # 技术/化学/工艺路线
-    physical_mechanism: list[str] = field(default_factory=list)  # 底层物理机制
-    materials: list[str] = field(default_factory=list)   # 材料体系
-    concepts: list[str] = field(default_factory=list)     # 概念
-    synonyms: list[str] = field(default_factory=list)     # 同义词/变体
-    search_hypotheses: list[str] = field(default_factory=list)  # 可生成 query 的搜索假设
-    source_text: str = ""                           # 提取依据的原文片段（追溯用）
-    extractor_version: str = "1.0"                  # 提取器版本
-    confidence: float = 0.0                         # 提取置信度 0-1
+    paper_id: str                                          # 来源论文（去重键）
+    problem: str = ""                                      # 论文解决的问题
+    strategy_routes: list[str] = field(default_factory=list)      # 技术/化学/工艺路线
+    materials: list[str] = field(default_factory=list)            # 材料体系
+    physical_mechanisms: list[Mechanism] = field(default_factory=list)  # 因果机制
+    characterization_methods: list[str] = field(default_factory=list)   # 表征/实验方法
+    concepts: list[str] = field(default_factory=list)              # 概念
+    synonyms: list[str] = field(default_factory=list)              # 严格同义词
+    broader_terms: list[str] = field(default_factory=list)         # 上位概念
+    historical_terms: list[str] = field(default_factory=list)      # 旧称/别名（可驱动历史检索）
+    search_hypotheses: list[SearchHypothesis] = field(default_factory=list)  # 泛化搜索假设
+    source_text: str = ""                                  # 提取依据的原文片段（追溯用）
+    extractor_version: str = "1.0"                         # 提取器版本
+    confidence: float = 0.0                                # 提取置信度 0-1
 
     def all_terms(self) -> list[str]:
         """展平所有可用于检索的术语（去重）。"""
         seen = set()
         result = []
-        for terms in (self.strategy_route, self.physical_mechanism,
-                      self.materials, self.concepts, self.synonyms,
-                      self.search_hypotheses):
+        for terms in (self.strategy_routes, self.materials, self.concepts,
+                      self.synonyms, self.broader_terms, self.historical_terms):
             for t in terms:
+                if t and t.lower() not in seen:
+                    seen.add(t.lower())
+                    result.append(t)
+        for m in self.physical_mechanisms:
+            for t in (m.cause, m.mechanism, m.effect):
                 if t and t.lower() not in seen:
                     seen.add(t.lower())
                     result.append(t)
