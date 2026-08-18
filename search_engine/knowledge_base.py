@@ -78,6 +78,26 @@ class HistoricalQueryBuilder:
                      len(raw), len(canonical), len(queries))
         return queries
 
+    def build_by_channel(self, records: list[KnowledgeRecord]) -> dict[str, list[HistoricalQuery]]:
+        """按 source_type 分流到不同 query channel。
+
+        historical_term → Historical Recall 主力
+        route           → Route Expansion
+        synonym         → Lexical Expansion
+        material        → Material-conditioned Search
+        """
+        queries = self.build(records)
+        channels: dict[str, list[HistoricalQuery]] = {
+            "historical_term": [],
+            "route": [],
+            "synonym": [],
+            "material": [],
+        }
+        for q in queries:
+            if q.source_type in channels:
+                channels[q.source_type].append(q)
+        return channels
+
     @staticmethod
     def _canonicalize(term: str) -> str:
         """归一化：小写、去连字符、去冗余后缀。"""

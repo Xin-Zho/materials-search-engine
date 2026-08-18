@@ -43,28 +43,40 @@ async def main():
     records = kb.get_all()
     print(f"\n落库 {len(records)} 条知识记录\n")
 
-    # 生成 historical queries（term + anchor 组合，带语义去重）
+    # 按 source_type 分流生成 query
     from search_engine.knowledge_base import HistoricalQueryBuilder
     builder = HistoricalQueryBuilder(anchor="polymerization shrinkage")
-    hist_queries = builder.build(records)
-    print(f"=== knowledge-derived historical queries ({len(hist_queries)} 条) ===")
-    for q in hist_queries[:30]:
-        print(f"  [{q.source_type}] {q.query}")
+    channels = builder.build_by_channel(records)
 
-    # 三个指标
-    from collections import Counter
-    type_counter = Counter(q.source_type for q in hist_queries)
-    print(f"\n=== 三指标 ===")
-    print(f"Generality（source_type 分布）: {dict(type_counter)}")
-    print(f"Redundancy（去重后 query 数 / 总 term 数）: "
-          f"{len(hist_queries)} 条 query（canonicalize 后）")
+    print("=== 分流 query channel ===")
+    channel_names = {
+        "historical_term": "Historical Recall（旧称/别名，主力）",
+        "route": "Route Expansion（技术路线）",
+        "synonym": "Lexical Expansion（同义词变体）",
+        "material": "Material-conditioned Search（材料）",
+    }
+    all_queries = []
+    for ch, qs in channels.items():
+        all_queries.extend(qs)
+        print(f"\n[{ch}] {channel_names.get(ch, ch)}: {len(qs)} 条")
+        for q in qs[:8]:
+            print(f"    {q.query}")
 
-    # 对比硬编码 ROUTE_QUERIES
+    # semantic coverage（canonicalize 后匹配，不是 exact string）
     from search_engine.foundational_recovery import FoundationalRecovery
     hardcoded = FoundationalRecovery.ROUTE_QUERIES
-    covered = sum(1 for h in hardcoded if any(h.lower() in q.source_term.lower() or q.source_term.lower() in h.lower() for q in hist_queries))
-    print(f"\n硬编码 ROUTE_QUERIES: {len(hardcoded)} 条")
-    print(f"knowledge-derived 已覆盖: {covered}/{len(hardcoded)} 条")
+    learned_terms = {builder._canonicalize(q.source_term) for q in all_queries}
+    covered = []
+    for h in hardcoded:
+        hc = builder._canonicalize(h)
+        # 语义覆盖：hardcoded 的 canonical 是否被某个 learned term 包含或包含它
+        if any(hc in lt or lt in hc for lt in learned_terms):
+            covered.append(h)
+    print(f"\n=== semantic coverage of legacy ROUTE_QUERIES ===")
+    print(f"knowledge-derived 语义覆盖: {len(covered)}/{len(hardcoded)} 条")
+    for h in hardcoded:
+        mark = "✓" if h in covered else "✗"
+        print(f"  {mark} {h}")
 
     kb.close()
 
