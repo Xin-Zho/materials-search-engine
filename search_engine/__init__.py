@@ -24,6 +24,7 @@ from .mmr import MMRReranker
 from .evaluator import Benchmark, normalize_doi
 from .foundational_recovery import FoundationalRecovery
 from .knowledge_extractor import KnowledgeExtractor
+from .knowledge_base import KnowledgeBase
 
 __all__ = [
     "Paper",
@@ -56,4 +57,5 @@ __all__ = [
     "FoundationalRecovery",
     "KnowledgeRecord",
     "KnowledgeExtractor",
+    "KnowledgeBase",
 ]
