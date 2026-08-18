@@ -100,13 +100,17 @@ class HistoricalQueryBuilder:
 
     @staticmethod
     def _canonicalize(term: str) -> str:
-        """归一化：小写、去连字符、去冗余后缀。"""
+        """归一化：小写、去连字符/空格（统一连写/分开写）、去复数、去冗余后缀。"""
         t = term.lower().strip().strip('"').strip("'")
-        t = t.replace("-", " ").replace("  ", " ")
+        t = t.replace("-", "").replace(" ", "")  # 连写 vs 分开写统一（spiroortho vs spiro ortho）
+        # 去复数（末尾 s，且不是 ss）
+        if t.endswith("s") and not t.endswith("ss"):
+            t = t[:-1]
         for suffix in HistoricalQueryBuilder._STRIP_SUFFIXES:
-            if t.endswith(suffix):
-                t = t[:-len(suffix)]
-        return t.strip()
+            suffix_compact = suffix.replace(" ", "")
+            if t.endswith(suffix_compact):
+                t = t[:-len(suffix_compact)]
+        return t
 
 
 class KnowledgeBase:
