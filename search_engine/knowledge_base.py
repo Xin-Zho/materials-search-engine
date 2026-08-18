@@ -12,10 +12,81 @@ Phase 1 核心之一：把 KnowledgeRecord 落库（保留来源追溯），
 import json
 import logging
 import sqlite3
+from dataclasses import dataclass, field
 from pathlib import Path
 from .models import KnowledgeRecord, Mechanism, SearchHypothesis
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class HistoricalQuery:
+    """一条 knowledge-derived historical query（带来源追溯）。"""
+    query: str
+    source_paper_id: str
+    source_term: str
+    source_type: str          # historical_term / route / material / synonym
+    target_property: str = "" # anchor（如 polymerization shrinkage）
+
+
+class HistoricalQueryBuilder:
+    """从 KnowledgeRecord 生成 historical queries（term + anchor 组合，带语义去重）。
+
+    流程：raw learned terms → canonicalize → semantic dedup → query generation。
+    每条 query 保留来源，避免几百条几乎一样的 query。
+    """
+
+    # 常见冗余后缀（canonicalize 时剥离）
+    _STRIP_SUFFIXES = [" polymerization", " chemistry", " addition", " reaction"]
+
+    def __init__(self, anchor: str = "polymerization shrinkage"):
+        self.anchor = anchor
+
+    def build(self, records: list[KnowledgeRecord]) -> list[HistoricalQuery]:
+        """从知识记录生成 historical queries。"""
+        # 1. 收集 raw terms（带来源）
+        raw: list[tuple[str, str, str]] = []  # (term, paper_id, source_type)
+        for r in records:
+            for t in r.historical_terms:
+                raw.append((t, r.paper_id, "historical_term"))
+            for t in r.strategy_routes:
+                raw.append((t, r.paper_id, "route"))
+            for t in r.synonyms:
+                raw.append((t, r.paper_id, "synonym"))
+            for t in r.materials:
+                raw.append((t, r.paper_id, "material"))
+
+        # 2. canonicalize + semantic dedup
+        canonical: dict[str, tuple[str, str, str]] = {}
+        for term, pid, stype in raw:
+            key = self._canonicalize(term)
+            if key and key not in canonical:
+                canonical[key] = (term, pid, stype)
+
+        # 3. 组合 query（term + anchor）
+        queries = []
+        for key, (term, pid, stype) in canonical.items():
+            queries.append(HistoricalQuery(
+                query=f'"{term}" AND "{self.anchor}"',
+                source_paper_id=pid,
+                source_term=term,
+                source_type=stype,
+                target_property=self.anchor,
+            ))
+
+        logger.info("historical query builder: %d raw → %d canonical → %d queries",
+                     len(raw), len(canonical), len(queries))
+        return queries
+
+    @staticmethod
+    def _canonicalize(term: str) -> str:
+        """归一化：小写、去连字符、去冗余后缀。"""
+        t = term.lower().strip().strip('"').strip("'")
+        t = t.replace("-", " ").replace("  ", " ")
+        for suffix in HistoricalQueryBuilder._STRIP_SUFFIXES:
+            if t.endswith(suffix):
+                t = t[:-len(suffix)]
+        return t.strip()
 
 
 class KnowledgeBase:

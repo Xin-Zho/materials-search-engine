@@ -43,23 +43,28 @@ async def main():
     records = kb.get_all()
     print(f"\n落库 {len(records)} 条知识记录\n")
 
-    # 生成 historical queries
-    hist_queries = kb.generate_historical_queries()
+    # 生成 historical queries（term + anchor 组合，带语义去重）
+    from search_engine.knowledge_base import HistoricalQueryBuilder
+    builder = HistoricalQueryBuilder(anchor="polymerization shrinkage")
+    hist_queries = builder.build(records)
     print(f"=== knowledge-derived historical queries ({len(hist_queries)} 条) ===")
-    for q in hist_queries:
-        print(f"  {q}")
+    for q in hist_queries[:30]:
+        print(f"  [{q.source_type}] {q.query}")
 
-    print(f"\n=== 术语统计 ===")
-    print(f"strategy_routes: {len(kb.collect_terms('strategy_routes'))} 个")
-    print(f"historical_terms: {len(kb.collect_terms('historical_terms'))} 个")
-    print(f"materials: {len(kb.collect_terms('materials'))} 个")
+    # 三个指标
+    from collections import Counter
+    type_counter = Counter(q.source_type for q in hist_queries)
+    print(f"\n=== 三指标 ===")
+    print(f"Generality（source_type 分布）: {dict(type_counter)}")
+    print(f"Redundancy（去重后 query 数 / 总 term 数）: "
+          f"{len(hist_queries)} 条 query（canonicalize 后）")
 
     # 对比硬编码 ROUTE_QUERIES
     from search_engine.foundational_recovery import FoundationalRecovery
     hardcoded = FoundationalRecovery.ROUTE_QUERIES
+    covered = sum(1 for h in hardcoded if any(h.lower() in q.source_term.lower() or q.source_term.lower() in h.lower() for q in hist_queries))
     print(f"\n硬编码 ROUTE_QUERIES: {len(hardcoded)} 条")
-    print(f"  {hardcoded}")
-    print(f"\nknowledge-derived 已覆盖硬编码中的 {sum(1 for h in hardcoded if any(h in q or q in h for q in hist_queries))}/{len(hardcoded)} 条")
+    print(f"knowledge-derived 已覆盖: {covered}/{len(hardcoded)} 条")
 
     kb.close()
 
