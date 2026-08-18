@@ -171,3 +171,37 @@ class RouteCoverage:
     has_counter_example: bool = False
     has_original: bool = False
     coverage_score: float = 0.0     # 0-1 覆盖度
+
+
+@dataclass
+class KnowledgeRecord:
+    """从一篇相关论文结构化提取的、可继续用于搜索的知识。
+
+    核心不是摘要，而是"后面还能拿去继续搜索的知识"。
+    search_hypotheses 是可直接生成新 query 的搜索假设。
+    所有字段保留来源（paper_id / source_text / extractor_version / confidence）。
+    """
+    paper_id: str                                   # 来源论文（去重键）
+    problem: str = ""                               # 论文解决的问题
+    strategy_route: list[str] = field(default_factory=list)   # 技术/化学/工艺路线
+    physical_mechanism: list[str] = field(default_factory=list)  # 底层物理机制
+    materials: list[str] = field(default_factory=list)   # 材料体系
+    concepts: list[str] = field(default_factory=list)     # 概念
+    synonyms: list[str] = field(default_factory=list)     # 同义词/变体
+    search_hypotheses: list[str] = field(default_factory=list)  # 可生成 query 的搜索假设
+    source_text: str = ""                           # 提取依据的原文片段（追溯用）
+    extractor_version: str = "1.0"                  # 提取器版本
+    confidence: float = 0.0                         # 提取置信度 0-1
+
+    def all_terms(self) -> list[str]:
+        """展平所有可用于检索的术语（去重）。"""
+        seen = set()
+        result = []
+        for terms in (self.strategy_route, self.physical_mechanism,
+                      self.materials, self.concepts, self.synonyms,
+                      self.search_hypotheses):
+            for t in terms:
+                if t and t.lower() not in seen:
+                    seen.add(t.lower())
+                    result.append(t)
+        return result

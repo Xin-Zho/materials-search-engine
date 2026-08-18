@@ -6,7 +6,7 @@
 
 from .models import (
     Paper, Author, SearchResult, SearchCost, SearchIntent,
-    ScoredPaper, TermMatrix, QueryEntry, RouteCoverage,
+    ScoredPaper, TermMatrix, QueryEntry, RouteCoverage, KnowledgeRecord,
 )
 from .compiler import ScopusQueryCompiler
 from .parser import ScopusParser
@@ -23,6 +23,7 @@ from .citation_tracker import CitationTracker
 from .mmr import MMRReranker
 from .evaluator import Benchmark, normalize_doi
 from .foundational_recovery import FoundationalRecovery
+from .knowledge_extractor import KnowledgeExtractor
 
 __all__ = [
     "Paper",
@@ -53,4 +54,6 @@ __all__ = [
     "Benchmark",
     "normalize_doi",
     "FoundationalRecovery",
+    "KnowledgeRecord",
+    "KnowledgeExtractor",
 ]
