@@ -187,6 +187,8 @@ class SearchHypothesis:
     """搜索假设：从论文证据泛化出的、可驱动新搜索的方向。"""
     hypothesis: str = ""             # 泛化假设（超出论文具体化学）
     rationale: str = ""              # 为什么这个假设成立
+    support_type: str = ""           # 证据类型: direct_experiment / mechanism_inference / literature_suggestion / speculative
+    evidence: str = ""               # 论文中支撑该假设的具体证据（原文片段）
     queries: list[str] = field(default_factory=list)  # 具体搜索 query
 
 

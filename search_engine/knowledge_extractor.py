@@ -42,9 +42,9 @@ Abstract: {abstract}
 
 8. broader_terms — hypernyms / more general concepts (list)
 
-9. historical_terms — older names, alternative nomenclature, or historical variants that older papers might use (list). These should help retrieve foundational/early literature.
+9. historical_terms — OLDER NAMES or ALTERNATIVE NOMENCLATURE for the SAME concept/substance (list). These must be historical synonyms of a term already in routes/materials/concepts — e.g. "spiroorthoester" vs "spiro-orthoester", or an old IUPAC name vs current name. NOT related-but-different concepts. These help retrieve foundational/early literature.
 
-10. search_hypotheses — 2-3 GENERALIZED search directions that go BEYOND the specific chemistry in this paper, as {{hypothesis, rationale, queries}} objects. The hypothesis should generalize the paper's finding to a broader class (e.g. "cyclic ring-opening monomers may reduce shrinkage beyond spiro-orthoesters"), rationale explains why, queries are concrete Scopus search phrases.
+10. search_hypotheses — 2-3 GENERALIZED search directions that go BEYOND the specific chemistry in this paper, as {{hypothesis, rationale, support_type, evidence, queries}} objects. The hypothesis should generalize the paper's finding to a broader class (e.g. "cyclic ring-opening monomers may reduce shrinkage beyond spiro-orthoesters"). support_type is one of: direct_experiment / mechanism_inference / literature_suggestion / speculative. evidence is the specific finding/statement in THIS paper that grounds the hypothesis (quote or paraphrase from the abstract). queries are concrete Scopus search phrases.
 
 ## Rules
 - The goal is generating NEW queries that find papers the original query missed, NOT rearranging this paper's own keywords.
@@ -101,6 +101,8 @@ class KnowledgeExtractor:
             SearchHypothesis(
                 hypothesis=h.get("hypothesis", ""),
                 rationale=h.get("rationale", ""),
+                support_type=h.get("support_type", ""),
+                evidence=h.get("evidence", ""),
                 queries=self._as_list(h.get("queries")),
             )
             for h in data.get("search_hypotheses", [])
