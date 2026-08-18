@@ -57,8 +57,17 @@ async def main():
     # 逐条搜索 + 记录
     query_records = []  # dict per query
     new_papers: dict[str, Paper] = {}
-    from search_engine.citation_tracker import RateLimitError
+    from search_engine.citation_tracker import RateLimitError, RateLimitExhaustedError
     async with CitationTracker() as tracker:
+        # 请求前检查额度
+        try:
+            remaining = await tracker.check_rate_limit()
+            if remaining > 0:
+                print(f"OpenAlex 剩余额度: {remaining}\n")
+        except RateLimitExhaustedError as e:
+            print(f"\n[终止] {e}")
+            return
+
         for query, support, src in all_queries:
             try:
                 results = await tracker.search(query, limit=20)

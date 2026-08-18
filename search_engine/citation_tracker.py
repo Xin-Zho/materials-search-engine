@@ -25,14 +25,42 @@ class RateLimitError(Exception):
     pass
 
 
+class RateLimitExhaustedError(Exception):
+    """OpenAlex 每日额度已耗尽（请求前 /rate-limit 检查 remaining<=0）。"""
+    pass
+
+
 class CitationTracker:
-    """OpenAlex 引文追踪器。"""
+    """OpenAlex 引文追踪器（带本地缓存 + rate-limit 保护）。"""
 
     BASE_URL = "https://api.openalex.org"
 
-    def __init__(self, mailto: str | None = None):
+    def __init__(self, mailto: str | None = None,
+                 cache_path: str | None = "data/cache/openalex_cache.json"):
         self.mailto = mailto
+        self.cache_path = cache_path
         self._client: httpx.AsyncClient | None = None
+        self._cache: dict = self._load_cache()
+
+    def _load_cache(self) -> dict:
+        try:
+            import json
+            with open(self.cache_path, encoding="utf-8") as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
+
+    def _save_cache(self):
+        import json
+        import os
+        os.makedirs(os.path.dirname(self.cache_path) or ".", exist_ok=True)
+        with open(self.cache_path, "w", encoding="utf-8") as f:
+            json.dump(self._cache, f)
+
+    @staticmethod
+    def _cache_key(url: str, params: dict | None) -> str:
+        import json
+        return url + "?" + json.dumps(params or {}, sort_keys=True)
 
     async def __aenter__(self):
         headers = {"User-Agent": f"materials-search/0.1 (mailto:{self.mailto})" if self.mailto
@@ -53,11 +81,15 @@ class CitationTracker:
         return self._client
 
     async def _get_json(self, url: str, params: dict | None = None) -> dict:
-        """GET JSON，带重试。
+        """GET JSON，带缓存 + rate-limit 保护。
 
-        429（rate limit）显式抛 RateLimitError，绝不静默返回空结果，
-        避免把"检索服务失败"伪装成"0 hits"。
+        - 命中本地缓存直接返回（不消耗 API credits）
+        - 429（rate limit）显式抛 RateLimitError，绝不静默返回空结果
         """
+        key = self._cache_key(url, params)
+        if key in self._cache:
+            return self._cache[key]
+
         client = self._get_client()
         for attempt in range(3):
             try:
@@ -69,7 +101,10 @@ class CitationTracker:
                         f"Daily credit budget 可能已用完，请明天重试或加 mailto 进 polite pool。"
                     )
                 resp.raise_for_status()
-                return resp.json()
+                data = resp.json()
+                self._cache[key] = data
+                self._save_cache()
+                return data
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 404:
                     return {}
@@ -78,6 +113,25 @@ class CitationTracker:
                 import asyncio
                 await asyncio.sleep(2 ** attempt)
         return {}
+
+    async def check_rate_limit(self) -> int:
+        """请求前查 /rate-limit，remaining<=0 抛 RateLimitExhaustedError。"""
+        client = self._get_client()
+        try:
+            resp = await client.get(f"{self.BASE_URL}/rate-limit")
+            if resp.status_code == 200:
+                data = resp.json()
+                remaining = data.get("remaining", 1)
+                if remaining <= 0:
+                    raise RateLimitExhaustedError(
+                        "OpenAlex 每日额度已耗尽（remaining=0），实验终止。请明天重试。"
+                    )
+                return remaining
+        except RateLimitExhaustedError:
+            raise
+        except Exception:
+            pass  # /rate-limit 查询失败不阻断（header 检查兜底）
+        return -1
 
     async def _get_work_by_doi(self, doi: str) -> dict:
         """通过 DOI 获取 OpenAlex Work 对象。"""
