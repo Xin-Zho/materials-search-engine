@@ -25,6 +25,7 @@ QUESTION = "光固化聚合物降低聚合收缩与收缩应力的机制"
 async def main():
     csv_path = sys.argv[1]
     n = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+    queries_file = sys.argv[3] if len(sys.argv) > 3 else None
 
     papers: list[Paper] = []
     with open(csv_path, encoding="utf-8-sig") as f:
@@ -38,21 +39,29 @@ async def main():
 
     original_dois = {normalize_doi(p.doi) for p in papers}
 
-    backend = DeepSeekBackend(api_key=os.environ.get("DEEPSEEK_API_KEY", ""))
-    extractor = KnowledgeExtractor(backend)
-
-    print(f"从 {len(papers)} 篇论文提取知识...\n")
-    all_queries: list[tuple[str, str, str]] = []
-    for p in papers:
-        rec = await extractor.extract(p)
-        if not rec:
-            continue
-        for h in rec.search_hypotheses:
-            for q in h.queries:
-                if q and q not in [x[0] for x in all_queries]:
-                    all_queries.append((q, h.support_type, p.title[:40]))
-
-    print(f"共 {len(all_queries)} 条 knowledge queries\n")
+    # 生成（或加载）knowledge queries
+    if queries_file and os.path.exists(queries_file):
+        import json as _json
+        all_queries = [tuple(q) for q in _json.load(open(queries_file, encoding="utf-8"))]
+        print(f"从 {queries_file} 加载 {len(all_queries)} 条固定 queries\n")
+    else:
+        backend = DeepSeekBackend(api_key=os.environ.get("DEEPSEEK_API_KEY", ""))
+        extractor = KnowledgeExtractor(backend)
+        print(f"从 {len(papers)} 篇论文提取知识...\n")
+        all_queries: list[tuple[str, str, str]] = []
+        for p in papers:
+            rec = await extractor.extract(p)
+            if not rec:
+                continue
+            for h in rec.search_hypotheses:
+                for q in h.queries:
+                    if q and q not in [x[0] for x in all_queries]:
+                        all_queries.append((q, h.support_type, p.title[:40]))
+        # 保存固定 queries
+        default_qf = "data/cache/knowledge_queries.json"
+        import json as _json
+        _json.dump(all_queries, open(default_qf, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+        print(f"共 {len(all_queries)} 条 knowledge queries（已保存到 {default_qf}）\n")
 
     # 逐条搜索 + 记录
     query_records = []  # dict per query
