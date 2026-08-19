@@ -90,6 +90,73 @@ class TermMatrixGenerator:
         "metrics": ("measurable quantities (elongation at break, fracture energy, storage modulus...)", 5, 400),
     }
 
+    async def _generate_strategy_routes(self, question: str, domain_context: str) -> list[str]:
+        """strategy_route 两阶段生成：主流路线 + 补充路线（避免隐形 Top-K）。
+
+        Pass A: 主流、直接解决路线（10 条）
+        Pass B: 与 A 机制不同的补充方案（10 条，避免重复同类 polymerization chemistry）
+        合并 + canonicalize + dedup，保留约 20 条。
+        """
+        desc = self.DIM_SPEC["strategy_route"][0]
+
+        # Pass A：主流直接路线
+        prompt_a = (
+            f"Extract the MAINSTREAM strategy routes for this materials science research question.\n\n"
+            f"Dimension meaning: {desc}\n\n"
+            f"Research question: {question}\n\n"
+            f"Domain knowledge (AUTHORITATIVE): {domain_context}\n\n"
+            f"List 10 mainstream, direct-solution routes (English, lowercase). "
+            f"These are the most common/established approaches.\n\n"
+            f'Return ONLY JSON: {{"strategy_route": ["route1", "route2", ...]}}'
+        )
+        routes_a = await self._generate_route_pass(prompt_a, "strategy_route")
+
+        # Pass B：补充方案（机制不同于 A）
+        avoid_text = ", ".join(routes_a) if routes_a else "(none)"
+        prompt_b = (
+            f"Extract COMPLEMENTARY strategy routes for this materials science research question.\n\n"
+            f"Dimension meaning: {desc}\n\n"
+            f"Research question: {question}\n\n"
+            f"Domain knowledge (AUTHORITATIVE): {domain_context}\n\n"
+            f"Already-covered mainstream routes (AVOID these and avoid same-category polymerization chemistry): {avoid_text}\n\n"
+            f"List 10 complementary routes with DIFFERENT mechanisms/approaches than the above. "
+            f"Include less-common, emerging, or alternative routes.\n\n"
+            f'Return ONLY JSON: {{"strategy_route": ["route1", "route2", ...]}}'
+        )
+        routes_b = await self._generate_route_pass(prompt_b, "strategy_route")
+
+        # 合并 + canonicalize + dedup
+        seen: set[str] = set()
+        result = []
+        for r in routes_a + routes_b:
+            key = r.lower().strip().replace("-", "").replace(" ", "")
+            if key and key not in seen:
+                seen.add(key)
+                result.append(r)
+
+        logger.info("strategy_route 两阶段: %d (主流) + %d (补充) → %d 去重",
+                     len(routes_a), len(routes_b), len(result))
+        return result
+
+    async def _generate_route_pass(self, prompt: str, dim: str) -> list[str]:
+        """生成一阶段 route（带 retry）。"""
+        for attempt in range(3):
+            try:
+                response = await self.backend.chat(
+                    system_prompt="You are a materials science term extractor. Output only valid JSON.",
+                    user_message=prompt,
+                    temperature=0.1,
+                    max_tokens=700,
+                    raise_on_truncation=True,
+                )
+            except TruncatedResponse:
+                continue
+            data = self._parse_single_dim(response, dim)
+            if data:
+                return data
+        logger.warning("route pass 生成失败（3 次重试）")
+        return []
+
     async def _generate_dimension(self, question: str, domain_context: str, dim: str) -> list[str]:
         """单独生成一个维度（短 prompt + 维度绑定 max_tokens，防止 degenerate 无限列举）。"""
         desc, n_terms, max_tokens = self.DIM_SPEC[dim]
@@ -182,7 +249,11 @@ class TermMatrixGenerator:
 
         # 每个维度单独生成（短 prompt + 低 max_tokens，LLM 无空间无限列举）
         for dim in TermMatrix.DIMENSIONS:
-            terms = await self._generate_dimension(research_question, domain_context, dim)
+            if dim == "strategy_route":
+                # 两阶段生成（主流 + 补充），避免单次 20 条的隐形 Top-K
+                terms = await self._generate_strategy_routes(research_question, domain_context)
+            else:
+                terms = await self._generate_dimension(research_question, domain_context, dim)
             matrix.dimensions[dim] = terms
 
         if not matrix.get("strategy_route"):
