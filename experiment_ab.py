@@ -85,8 +85,6 @@ async def main():
 
     backend = DeepSeekBackend(api_key=os.environ.get("DEEPSEEK_API_KEY", ""))
 
-    print(f"=== A/B 实验（预算 {budget} queries/臂）===\n")
-
     # A 臂：Baseline Expansion（冻结：保存/加载，避免重新生成导致变量变化）
     baseline_qf = "data/cache/baseline_queries.json"
     import json as _json
@@ -99,9 +97,13 @@ async def main():
         _json.dump(baseline_queries, open(baseline_qf, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
         print(f"  Baseline: {len(baseline_queries)} 条（已冻结到 {baseline_qf}）\n")
 
-    # B 臂：Knowledge-driven
+    # 公平预算：对齐到 Baseline 实际数量（不凑 50）
+    budget = len(baseline_queries)
+
+    # B 臂：Knowledge-driven（按保存顺序取前 budget 条，确定性规则，不按成功挑）
     knowledge_queries = load_knowledge_queries("data/cache/knowledge_queries.json", budget)
-    print(f"Knowledge-driven: {len(knowledge_queries)} 条\n")
+    print(f"=== Phase 1 Final A/B（预算 {budget} queries/臂）===\n")
+    print(f"Baseline: {len(baseline_queries)} 条 | Knowledge: {len(knowledge_queries)} 条\n")
 
     async with CitationTracker() as tracker:
         try:
@@ -120,19 +122,27 @@ async def main():
     base_evaluable_rate = (len(baseline_queries) - base_rl) / len(baseline_queries) if baseline_queries else 0
     kn_evaluable_rate = (len(knowledge_queries) - kn_rl) / len(knowledge_queries) if knowledge_queries else 0
 
-    print("\n=== A/B 结果 ===")
-    print(f"{'指标':<30} {'Baseline':>10} {'Knowledge':>12}")
-    print(f"{'query 数':<30} {len(baseline_queries):>10} {len(knowledge_queries):>12}")
-    print(f"{'RATE_LIMITED':<30} {base_rl:>10} {kn_rl:>12}")
-    print(f"{'evaluable rate':<30} {base_evaluable_rate:>9.0%} {kn_evaluable_rate:>11.0%}")
-    print(f"{'useful queries':<30} {base_useful:>10} {kn_useful:>12}")
-    print(f"{'Unique New Relevant Papers':<30} {base_relevant:>10} {kn_relevant:>12}")
-    print(f"{'New Relevant / Query':<30} {base_relevant/len(baseline_queries) if baseline_queries else 0:>10.3f} {kn_relevant/len(knowledge_queries) if knowledge_queries else 0:>12.3f}")
+    print("\n=== Phase 1 Final A/B 结果 ===")
+    print(f"{'指标':<32} {'Baseline':>10} {'Knowledge':>12}")
+    print(f"{'Budget':<32} {len(baseline_queries):>10} {len(knowledge_queries):>12}")
+    print(f"{'RATE_LIMITED':<32} {base_rl:>10} {kn_rl:>12}")
+    print(f"{'Evaluable':<32} {len(baseline_queries)-base_rl:>10} {len(knowledge_queries)-kn_rl:>12}")
+    print(f"{'Useful queries':<32} {base_useful:>10} {kn_useful:>12}")
+    print(f"{'Unique New Relevant':<32} {base_relevant:>10} {kn_relevant:>12}")
+    print(f"{'New Relevant / Query':<32} {base_relevant/len(baseline_queries) if baseline_queries else 0:>10.3f} {kn_relevant/len(knowledge_queries) if knowledge_queries else 0:>12.3f}")
 
     if base_evaluable_rate < 0.9 or kn_evaluable_rate < 0.9:
         print("\nAB_RESULT = INVALID / INCOMPLETE（某臂 evaluable rate < 90%，不能下结论）")
     else:
+        gain = kn_relevant - base_relevant
         print("\nAB_RESULT = VALID（两臂都 ≥90% 可评价）")
+        print(f"Incremental Unique Relevant Recall Gain: {gain:+d} 篇（Knowledge - Baseline）")
+        if gain > 0:
+            print(f"→ Knowledge-driven 在相同预算下多召回 {gain} 篇新相关论文，Phase 1 正式通过")
+        elif gain == 0:
+            print(f"→ 两者相当，Knowledge 价值主要在知识库/历史召回，据此进 Phase 2")
+        else:
+            print(f"→ Baseline 更高，需重新审视 Knowledge-driven query 的价值")
 
 
 if __name__ == "__main__":
