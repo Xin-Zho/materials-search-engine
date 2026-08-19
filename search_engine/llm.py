@@ -56,6 +56,9 @@ class DeepSeekBackend(LLMBackend):
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
+        # 可选 JSON mode（强制合法 JSON，防止 degenerate 无限列举）
+        if raise_on_truncation:
+            body["response_format"] = {"type": "json_object"}
 
         async with httpx.AsyncClient(timeout=120) as client:
             resp = await client.post(
