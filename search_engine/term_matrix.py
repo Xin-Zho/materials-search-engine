@@ -77,6 +77,70 @@ class TermMatrixGenerator:
     def __init__(self, backend: LLMBackend):
         self.backend = backend
 
+    # 每个维度的说明（分维度生成用）+ 建议 term 数
+    DIM_SPEC = {
+        "material_system": ("the class of material (elastomer, hydrogel, resin, polymer network...)", 6),
+        "composition": ("chemical constituents (monomer, oligomer, crosslinker, photoinitiator, filler...)", 6),
+        "strategy_route": ("material/chemical/process ROUTE that independently forms a distinct literature body — SOLUTION/DESIGN approaches (e.g. ring-opening polymerization, thiol-ene, phase separation). NOT physical-quantity terms (gel point, vitrification, free volume)", 20),
+        "physical_mechanism": ("underlying physical/chemical mechanism explaining WHY a route works (gel point, vitrification, free volume, stress relaxation). NOT full technical routes", 6),
+        "process": ("fabrication methods (DLP, SLA, UV curing, post-curing...)", 6),
+        "target_properties": ("desired properties (stretchability, toughness, low viscosity, high resolution...)", 6),
+        "application": ("use cases (soft robot, wearable, coating, dental...)", 5),
+        "failure_problem": ("failure modes or challenges (brittleness, shrinkage, oxygen inhibition...)", 5),
+        "metrics": ("measurable quantities (elongation at break, fracture energy, storage modulus...)", 5),
+    }
+
+    async def _generate_dimension(self, question: str, domain_context: str, dim: str) -> list[str]:
+        """单独生成一个维度（短 prompt + 低 max_tokens，防止 degenerate 无限列举）。"""
+        desc, n_terms = self.DIM_SPEC[dim]
+        prompt = (
+            f"Extract terms for the dimension '{dim}' of this materials science research question.\n\n"
+            f"Dimension meaning: {desc}\n\n"
+            f"Research question: {question}\n\n"
+            f"Domain knowledge (AUTHORITATIVE): {domain_context}\n\n"
+            f"List EXACTLY {n_terms} terms (English, lowercase). Do NOT exceed {n_terms}. "
+            f"Do NOT enumerate exhaustive lists — only the most distinctive terms.\n\n"
+            f'Return ONLY JSON: {{"{dim}": ["term1", "term2", ...]}}'
+        )
+
+        for attempt in range(3):
+            try:
+                response = await self.backend.chat(
+                    system_prompt="You are a materials science term extractor. Output only valid JSON.",
+                    user_message=prompt,
+                    temperature=0.1,
+                    max_tokens=400,  # 单维度足够，且不给无限列举的空间
+                    raise_on_truncation=True,
+                )
+            except TruncatedResponse:
+                continue
+
+            data = self._parse_single_dim(response, dim)
+            if data:
+                return data
+
+        logger.warning("维度 %s 生成失败（3 次重试）", dim)
+        return []
+
+    @staticmethod
+    def _parse_single_dim(response: str, dim: str) -> list[str]:
+        """解析单维度 JSON。"""
+        text = response.strip()
+        if text.startswith("```"):
+            lines = text.split("\n")
+            text = "\n".join(lines[1:])
+            if text.endswith("```"):
+                text = text[:-3]
+        try:
+            start = text.index("{")
+            end = text.rindex("}") + 1
+            data = json.loads(text[start:end])
+            if isinstance(data, dict) and dim in data and isinstance(data[dim], list):
+                return [t.strip() for t in data[dim] if isinstance(t, str) and t.strip()]
+        except (json.JSONDecodeError, ValueError):
+            pass
+        return []
+
     async def normalize_routes(self, routes: list[str]) -> list[dict]:
         """用 LLM 把 route 聚类成 semantic family（同义/上下位合并）。"""
         if not routes:
@@ -112,39 +176,18 @@ class TermMatrixGenerator:
         self,
         research_question: str,
         domain_context: str = "",
-        max_retries: int = 2,
     ) -> TermMatrix:
-        """生成术语矩阵。parse 失败会重试，最终失败抛异常（不返回空矩阵）。"""
-        prompt = MATRIX_PROMPT.format(
-            question=research_question,
-            domain_context=domain_context,
-        )
-
+        """生成术语矩阵（分维度生成，防止长 JSON 导致 degenerate）。"""
         matrix = TermMatrix()
-        for attempt in range(max_retries + 1):
-            try:
-                response = await self.backend.chat(
-                    system_prompt="You are a literature search strategist. Output only valid JSON.",
-                    user_message=prompt,
-                    temperature=0.1,  # 接近确定性，但避免 temperature=0 的 degenerate
-                    max_tokens=4096,
-                    raise_on_truncation=True,  # finish_reason=length 时抛异常
-                )
-            except TruncatedResponse as e:
-                logger.warning("术语矩阵输出被截断（第 %d/%d 次），重试: %s",
-                               attempt + 1, max_retries + 1, e)
-                continue  # 截断结果无效，重试
 
-            matrix = self._parse(response)
-            if matrix.get("strategy_route"):
-                break  # 解析成功且有 strategy_route
-            logger.warning("术语矩阵解析失败（第 %d/%d 次），原始响应前 200 字符: %r",
-                           attempt + 1, max_retries + 1, response[:200])
+        # 每个维度单独生成（短 prompt + 低 max_tokens，LLM 无空间无限列举）
+        for dim in TermMatrix.DIMENSIONS:
+            terms = await self._generate_dimension(research_question, domain_context, dim)
+            matrix.dimensions[dim] = terms
 
         if not matrix.get("strategy_route"):
             raise RuntimeError(
-                "术语矩阵解析失败：strategy_route 为空（已重试多次）。"
-                "这是 term extraction 的硬失败，不允许返回空矩阵继续搜索。"
+                "术语矩阵生成失败：strategy_route 为空。这是 term extraction 的硬失败。"
             )
 
         # 对 strategy_route 做语义归一化聚类（同义/上下位合并成 family）
