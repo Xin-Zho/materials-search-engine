@@ -77,22 +77,22 @@ class TermMatrixGenerator:
     def __init__(self, backend: LLMBackend):
         self.backend = backend
 
-    # 每个维度的说明（分维度生成用）+ 建议 term 数
+    # 每个维度：说明 + 建议 term 数 + max_tokens（输出上限与信息量绑定）
     DIM_SPEC = {
-        "material_system": ("the class of material (elastomer, hydrogel, resin, polymer network...)", 6),
-        "composition": ("chemical constituents (monomer, oligomer, crosslinker, photoinitiator, filler...)", 6),
-        "strategy_route": ("material/chemical/process ROUTE that independently forms a distinct literature body — SOLUTION/DESIGN approaches (e.g. ring-opening polymerization, thiol-ene, phase separation). NOT physical-quantity terms (gel point, vitrification, free volume)", 20),
-        "physical_mechanism": ("underlying physical/chemical mechanism explaining WHY a route works (gel point, vitrification, free volume, stress relaxation). NOT full technical routes", 6),
-        "process": ("fabrication methods (DLP, SLA, UV curing, post-curing...)", 6),
-        "target_properties": ("desired properties (stretchability, toughness, low viscosity, high resolution...)", 6),
-        "application": ("use cases (soft robot, wearable, coating, dental...)", 5),
-        "failure_problem": ("failure modes or challenges (brittleness, shrinkage, oxygen inhibition...)", 5),
-        "metrics": ("measurable quantities (elongation at break, fracture energy, storage modulus...)", 5),
+        "material_system": ("the class of material (elastomer, hydrogel, resin, polymer network...)", 6, 500),
+        "composition": ("chemical constituents (monomer, oligomer, crosslinker, photoinitiator, filler...)", 6, 500),
+        "strategy_route": ("material/chemical/process ROUTE that independently forms a distinct literature body — SOLUTION/DESIGN approaches (e.g. ring-opening polymerization, thiol-ene, phase separation). NOT physical-quantity terms (gel point, vitrification, free volume)", 20, 1000),
+        "physical_mechanism": ("underlying physical/chemical mechanism explaining WHY a route works (gel point, vitrification, free volume, stress relaxation). NOT full technical routes", 6, 500),
+        "process": ("fabrication methods (DLP, SLA, UV curing, post-curing...)", 6, 500),
+        "target_properties": ("desired properties (stretchability, toughness, low viscosity, high resolution...)", 6, 500),
+        "application": ("use cases (soft robot, wearable, coating, dental...)", 5, 400),
+        "failure_problem": ("failure modes or challenges (brittleness, shrinkage, oxygen inhibition...)", 5, 400),
+        "metrics": ("measurable quantities (elongation at break, fracture energy, storage modulus...)", 5, 400),
     }
 
     async def _generate_dimension(self, question: str, domain_context: str, dim: str) -> list[str]:
-        """单独生成一个维度（短 prompt + 低 max_tokens，防止 degenerate 无限列举）。"""
-        desc, n_terms = self.DIM_SPEC[dim]
+        """单独生成一个维度（短 prompt + 维度绑定 max_tokens，防止 degenerate 无限列举）。"""
+        desc, n_terms, max_tokens = self.DIM_SPEC[dim]
         prompt = (
             f"Extract terms for the dimension '{dim}' of this materials science research question.\n\n"
             f"Dimension meaning: {desc}\n\n"
@@ -109,7 +109,7 @@ class TermMatrixGenerator:
                     system_prompt="You are a materials science term extractor. Output only valid JSON.",
                     user_message=prompt,
                     temperature=0.1,
-                    max_tokens=400,  # 单维度足够，且不给无限列举的空间
+                    max_tokens=max_tokens,  # 维度绑定，不给无限列举的空间
                     raise_on_truncation=True,
                 )
             except TruncatedResponse:
@@ -189,6 +189,17 @@ class TermMatrixGenerator:
             raise RuntimeError(
                 "术语矩阵生成失败：strategy_route 为空。这是 term extraction 的硬失败。"
             )
+
+        # 跨维度 dedup（同义 term 不重复出现在多个维度）
+        seen_terms: set[str] = set()
+        for dim in TermMatrix.DIMENSIONS:
+            deduped = []
+            for t in matrix.dimensions[dim]:
+                key = t.lower().strip()
+                if key not in seen_terms:
+                    seen_terms.add(key)
+                    deduped.append(t)
+            matrix.dimensions[dim] = deduped
 
         # 对 strategy_route 做语义归一化聚类（同义/上下位合并成 family）
         routes = matrix.get("strategy_route")
