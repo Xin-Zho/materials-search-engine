@@ -26,6 +26,7 @@ async def main():
     csv_path = sys.argv[1]
     n = int(sys.argv[2]) if len(sys.argv) > 2 else 10
     queries_file = sys.argv[3] if len(sys.argv) > 3 else None
+    relax = len(sys.argv) > 4 and sys.argv[4] == "--relax"
 
     papers: list[Paper] = []
     with open(csv_path, encoding="utf-8-sig") as f:
@@ -62,6 +63,17 @@ async def main():
         import json as _json
         _json.dump(all_queries, open(default_qf, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
         print(f"共 {len(all_queries)} 条 knowledge queries（已保存到 {default_qf}）\n")
+
+    # v2：query relaxation（放宽过严的 query，recall-first）
+    if relax:
+        from search_engine.query_relaxer import QueryRelaxer
+        relaxer = QueryRelaxer()
+        relaxed_queries = []
+        for query, support, src in all_queries:
+            for r in relaxer.relax(query):
+                relaxed_queries.append((r, support, src))
+        print(f"relax 后: {len(all_queries)} → {len(relaxed_queries)} 条 queries\n")
+        all_queries = relaxed_queries
 
     # 逐条搜索 + 记录
     query_records = []  # dict per query
