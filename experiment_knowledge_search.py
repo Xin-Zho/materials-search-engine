@@ -41,12 +41,12 @@ async def main():
     original_dois = {normalize_doi(p.doi) for p in papers}
 
     # 生成（或加载）knowledge queries
+    backend = DeepSeekBackend(api_key=os.environ.get("DEEPSEEK_API_KEY", ""))
     if queries_file and os.path.exists(queries_file):
         import json as _json
         all_queries = [tuple(q) for q in _json.load(open(queries_file, encoding="utf-8"))]
         print(f"从 {queries_file} 加载 {len(all_queries)} 条固定 queries\n")
     else:
-        backend = DeepSeekBackend(api_key=os.environ.get("DEEPSEEK_API_KEY", ""))
         extractor = KnowledgeExtractor(backend)
         print(f"从 {len(papers)} 篇论文提取知识...\n")
         all_queries: list[tuple[str, str, str]] = []
