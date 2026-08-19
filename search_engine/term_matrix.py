@@ -208,20 +208,43 @@ class TermMatrixGenerator:
             pass
         return []
 
-    async def normalize_routes(self, routes: list[str]) -> list[dict]:
-        """用 LLM 把 route 聚类成 semantic family（同义/上下位合并）。"""
+    async def normalize_routes(self, routes: list[str], batch_size: int = 30) -> list[dict]:
+        """用 LLM 把 route 聚类成 semantic family（同义/上下位合并）。
+
+        输入太长时分批 canonicalization，避免单次塞入所有 route 导致截断。
+        """
         if not routes:
             return []
+
+        all_families: list[dict] = []
+        for i in range(0, len(routes), batch_size):
+            batch = routes[i:i + batch_size]
+            families = await self._normalize_batch(batch)
+            all_families.extend(families)
+
+        logger.info("route 归一化: %d 个 route → %d 个 family (%d 批)",
+                     len(routes), len(all_families), (len(routes) + batch_size - 1) // batch_size)
+        return all_families
+
+    async def _normalize_batch(self, routes: list[str]) -> list[dict]:
+        """归一化一批 route（带 retry + truncation 检测）。"""
         prompt = ROUTE_NORMALIZE_PROMPT.format(routes="\n".join(f"- {r}" for r in routes))
-        response = await self.backend.chat(
-            system_prompt="You are a materials science taxonomy expert. Output only valid JSON.",
-            user_message=prompt,
-            temperature=0,
-            max_tokens=2048,
-        )
-        families = self._parse_families(response)
-        logger.info("route 归一化: %d 个 route → %d 个 family", len(routes), len(families))
-        return families
+        for attempt in range(3):
+            try:
+                response = await self.backend.chat(
+                    system_prompt="You are a materials science taxonomy expert. Output only valid JSON.",
+                    user_message=prompt,
+                    temperature=0,
+                    max_tokens=3000,
+                    raise_on_truncation=True,
+                )
+            except TruncatedResponse:
+                continue
+            families = self._parse_families(response)
+            if families:
+                return families
+        logger.warning("route 归一化批次失败（3 次重试），批内 %d 个 route", len(routes))
+        return []
 
     @staticmethod
     def _parse_families(response: str) -> list[dict]:

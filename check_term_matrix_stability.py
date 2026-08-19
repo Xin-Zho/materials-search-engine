@@ -28,13 +28,21 @@ async def main():
     gen = TermMatrixGenerator(backend)
     ctx = get_domain_context("photocuring")
 
-    print(f"跑 {n} 次 term matrix 生成，收集 raw strategy_route...\n")
-    all_raw_runs: list[list[str]] = []
-    for i in range(n):
-        m = await gen.generate(QUESTION, ctx)
-        raw = [t.lower() for t in m.get("strategy_route")]
-        all_raw_runs.append(raw)
-        print(f"[{i+1}] {len(raw)} 个 raw routes")
+    raw_runs_file = "data/cache/raw_routes.json"
+    import json as _json
+    if os.path.exists(raw_runs_file):
+        all_raw_runs = _json.load(open(raw_runs_file, encoding="utf-8"))
+        print(f"从 {raw_runs_file} 加载 {len(all_raw_runs)} run 的冻结 raw routes（不重新生成）\n")
+    else:
+        print(f"跑 {n} 次 term matrix 生成，收集 raw strategy_route...\n")
+        all_raw_runs: list[list[str]] = []
+        for i in range(n):
+            m = await gen.generate(QUESTION, ctx)
+            raw = [t.lower() for t in m.get("strategy_route")]
+            all_raw_runs.append(raw)
+            print(f"[{i+1}] {len(raw)} 个 raw routes")
+        _json.dump(all_raw_runs, open(raw_runs_file, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+        print(f"已保存冻结 raw routes 到 {raw_runs_file}\n")
 
     # 全局归一化（所有 raw routes 合并，一次聚类）
     all_routes_union = []
