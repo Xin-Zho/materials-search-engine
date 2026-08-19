@@ -25,33 +25,37 @@ class QueryRelaxer:
             "polymerization shrinkage", "stress",
         ]
 
-    def relax(self, query: str) -> list[str]:
-        """放宽一条 query，返回多条（含原 query）。
+    def relax(self, query: str, max_level: int = 2) -> list[str]:
+        """逐层放宽（progressive / bounded），每层至少保留 anchor + ≥1 非 anchor。
 
-        - 拆 AND 概念
-        - 区分 anchor（保留）vs 非 anchor（放宽）
-        - 每个非 anchor 单独 + anchor 生成一条宽查询
-        - 原 query 保留（最窄）
+        - 不放宽到单词（禁止单个泛词）
+        - 每层减少一个非 anchor 概念，最多 max_level 层
+        - anchor（target）始终保留
+
+        例: cyclic monomers AND ring-opening AND photopolymerization AND shrinkage
+          → level1: cyclic monomers AND ring-opening AND shrinkage
+          → level2: cyclic monomers AND shrinkage
         """
         concepts = self._split_and(query)
-        if len(concepts) <= 1:
-            return [query]
+        if len(concepts) <= 2:
+            return []  # 已经够宽，不放宽
 
         anchors = [c for c in concepts if self._is_anchor(c)]
         non_anchors = [c for c in concepts if not self._is_anchor(c)]
 
-        relaxed = []
-        # 每个非 anchor 单独 + 所有 anchor（最宽，recall-first）
-        for na in non_anchors:
-            q = " AND ".join([na] + anchors)
-            if q not in relaxed:
-                relaxed.append(q)
-        # 原 query（最窄，precision）
-        if query not in relaxed:
-            relaxed.append(query)
+        if not anchors or len(non_anchors) <= 1:
+            return []  # 没有 anchor 或非 anchor 太少，不放宽到单词
 
-        logger.debug("relax %d concepts → %d queries", len(concepts), len(relaxed))
-        return relaxed
+        levels = []
+        # 从 len(non_anchors)-1 个非 anchor 递减到 max(len-1-max_level, 1) 个
+        min_k = max(len(non_anchors) - 1 - max_level, 1)
+        for k in range(len(non_anchors) - 1, min_k - 1, -1):
+            q = " AND ".join(non_anchors[:k] + anchors)
+            if q not in levels:
+                levels.append(q)
+
+        logger.debug("relax %d concepts → %d levels", len(concepts), len(levels))
+        return levels
 
     def relax_many(self, queries: list[str]) -> list[tuple[str, str]]:
         """批量放宽，返回 (original_query, relaxed_query) 对。"""

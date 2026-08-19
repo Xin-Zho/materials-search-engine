@@ -64,21 +64,13 @@ async def main():
         _json.dump(all_queries, open(default_qf, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
         print(f"共 {len(all_queries)} 条 knowledge queries（已保存到 {default_qf}）\n")
 
-    # v2：query relaxation（放宽过严的 query，recall-first）
-    if relax:
-        from search_engine.query_relaxer import QueryRelaxer
-        relaxer = QueryRelaxer()
-        relaxed_queries = []
-        for query, support, src in all_queries:
-            for r in relaxer.relax(query):
-                relaxed_queries.append((r, support, src))
-        print(f"relax 后: {len(all_queries)} → {len(relaxed_queries)} 条 queries\n")
-        all_queries = relaxed_queries
-
-    # 逐条搜索 + 记录
+    # 逐条搜索 + 记录（按需 relaxation：仅 NO_HITS 的 parent 才放宽）
     query_records = []  # dict per query
     new_papers: dict[str, Paper] = {}
     from search_engine.citation_tracker import RateLimitError, RateLimitExhaustedError
+    from search_engine.query_relaxer import QueryRelaxer
+    relaxer = QueryRelaxer() if relax else None
+
     async with CitationTracker() as tracker:
         # 请求前检查额度
         try:
@@ -89,25 +81,35 @@ async def main():
             print(f"\n[终止] {e}")
             return
 
-        for query, support, src in all_queries:
+        async def run_query(query, support, src, parent=None, level=0):
             try:
                 results = await tracker.search(query, limit=20)
                 total_hits = getattr(tracker, "last_total_hits", len(results))
-            except RateLimitError as e:
-                query_records.append({"query": query, "support": support, "src": src,
-                                      "total_hits": -1, "overlap": 0, "novel_dois": [], "error": "RATE_LIMITED"})
-                continue
+            except RateLimitError:
+                return {"query": query, "support": support, "src": src,
+                        "total_hits": -1, "overlap": 0, "novel_dois": [], "error": "RATE_LIMITED",
+                        "parent": parent, "level": level}
             except Exception as e:
-                query_records.append({"query": query, "support": support, "src": src,
-                                      "total_hits": 0, "overlap": 0, "novel_dois": [], "error": str(e)})
-                continue
+                return {"query": query, "support": support, "src": src,
+                        "total_hits": 0, "overlap": 0, "novel_dois": [], "error": str(e),
+                        "parent": parent, "level": level}
             overlap = sum(1 for p in results if normalize_doi(p.doi) in original_dois)
             novel = [p for p in results if normalize_doi(p.doi) not in original_dois]
             novel_dois = [normalize_doi(p.doi) or p.paper_id for p in novel]
             for p in novel:
                 new_papers.setdefault(normalize_doi(p.doi) or p.paper_id, p)
-            query_records.append({"query": query, "support": support, "src": src,
-                                  "total_hits": total_hits, "overlap": overlap, "novel_dois": novel_dois})
+            return {"query": query, "support": support, "src": src,
+                    "total_hits": total_hits, "overlap": overlap, "novel_dois": novel_dois,
+                    "parent": parent, "level": level}
+
+        for query, support, src in all_queries:
+            rec = await run_query(query, support, src)
+            query_records.append(rec)
+            # 按需 relaxation：仅 NO_HITS 的 parent 生成 relaxed child
+            if relaxer and rec["total_hits"] == 0 and not rec.get("error"):
+                for level, r in enumerate(relaxer.relax(query), 1):
+                    rrec = await run_query(r, support, src, parent=query, level=level)
+                    query_records.append(rrec)
 
     # relevance 判断所有新候选
     rf = RelevanceFilter(backend)
@@ -161,6 +163,21 @@ async def main():
     print(f"Useful Query Yield (relevant): {useful}/{evaluable} = {useful/evaluable*100:.1f}%")
     print(f"Unique New Relevant Papers: {len(relevant_dois)}")
     print(f"New Relevant per useful query: {len(relevant_dois)/useful:.1f}" if useful else "N/A")
+
+    # Relaxation Rescue Rate（仅 relax 模式）
+    if relax:
+        no_hits_parents = [rec for rec in query_records
+                           if rec.get("level", 0) == 0 and rec["total_hits"] == 0 and not rec.get("error")]
+        rescued_parents = set()
+        for rec in query_records:
+            if rec.get("parent") and rec.get("level", 0) > 0 and rec.get("parent") in {p["query"] for p in no_hits_parents}:
+                if any(d in relevant_dois for d in rec["novel_dois"]):
+                    rescued_parents.add(rec["parent"])
+        rescue_rate = len(rescued_parents) / len(no_hits_parents) if no_hits_parents else 0
+        print(f"\n=== Relaxation Rescue Rate ===")
+        print(f"NO_HITS parent: {len(no_hits_parents)}")
+        print(f"被 relaxation 救回的 parent: {len(rescued_parents)}")
+        print(f"Rescue Rate: {len(rescued_parents)}/{len(no_hits_parents)} = {rescue_rate*100:.1f}%")
 
 
 if __name__ == "__main__":
