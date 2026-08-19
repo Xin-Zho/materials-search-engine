@@ -138,7 +138,17 @@ async def main():
             print(f"  {f}: {c}/{mech_total}")
 
     useful = sum(c for (s, f), c in support_failure.items() if f == "NEW_RELEVANT")
-    print(f"\nUseful Query Yield (relevant): {useful}/{len(all_queries)} = {useful/len(all_queries)*100:.1f}%")
+    rate_limited = failure_counter.get("RATE_LIMITED", 0)
+    evaluable = len(all_queries) - rate_limited
+
+    print(f"\n=== 核心指标 ===")
+    print(f"total queries: {len(all_queries)}")
+    print(f"RATE_LIMITED (排除): {rate_limited}")
+    print(f"evaluable: {evaluable}")
+    print(f"useful queries (NEW_RELEVANT): {useful}")
+    print(f"Useful Query Yield (relevant): {useful}/{evaluable} = {useful/evaluable*100:.1f}%")
+    print(f"Unique New Relevant Papers: {len(relevant_dois)}")
+    print(f"New Relevant per useful query: {len(relevant_dois)/useful:.1f}" if useful else "N/A")
 
 
 if __name__ == "__main__":

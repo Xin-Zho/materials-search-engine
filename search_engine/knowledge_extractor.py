@@ -101,7 +101,7 @@ class KnowledgeExtractor:
             SearchHypothesis(
                 hypothesis=h.get("hypothesis", ""),
                 rationale=h.get("rationale", ""),
-                support_type=h.get("support_type", ""),
+                support_type=h.get("support_type", "") or "unspecified",
                 evidence=h.get("evidence", ""),
                 queries=self._as_list(h.get("queries")),
             )
