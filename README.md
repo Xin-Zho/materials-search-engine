@@ -6,12 +6,13 @@ A coverage-driven literature search engine for materials science. Given a resear
 
 ## Features
 
-- **Term matrix decomposition** — a research question is split into 8 dimensions (material system, composition, mechanism, process, properties, application, failure modes, metrics) before any search happens.
-- **Query population** — maintains a pool of queries, each scored by *new papers found*, *new routes discovered*, *duplicate rate*, and *cost* (not just relevance).
-- **Dual-channel search** — keyword search (Scopus) + citation graph expansion (OpenAlex forward/backward/co-citation).
-- **Structured labeling** — every paper gets a relevance score, a technical route, and an *information gain* score (how much new information it adds).
-- **Coverage map** — papers are clustered into research routes; gaps drive the next round of queries.
-- **Year weighting** — recent papers (≤3 years) are boosted, papers >5 years old penalized.
+- **Coverage-driven search** — a research question is decomposed into a term matrix, expanded into a query population, and iteratively searched with gap-driven rounds (asks "what is still missing", not "what is similar").
+- **Dual-channel recall** — keyword search (Scopus) + citation graph expansion (OpenAlex forward/backward/co-citation) + Foundational Recovery (citation + keyword channels for classic/early papers).
+- **Knowledge Extractor** — extracts searchable knowledge from papers: causal mechanisms (cause→mechanism→effect), strategy routes, historical terms, and generalized search hypotheses (Paper Evidence → Hypothesis → Query).
+- **Knowledge Base** — persists extracted knowledge with source traceability, and generates knowledge-derived historical queries (replacing hardcoded route queries).
+- **Structured labeling** — relevance score, technical route, evidence type, information gain per paper.
+- **Coverage map** — papers clustered into routes; gaps drive the next round.
+- **MMR diversity re-ranking** — avoids top-k being dominated by similar papers.
 - **CSV export** — scored results with route/category/info-gain columns.
 
 ## Architecture
@@ -144,29 +145,53 @@ This tool automates access to Scopus for **your own institutional research use**
 ```
 search_engine/
 ├── engine.py              # Scopus search + export REST API
-├── models.py              # Paper, ScoredPaper, TermMatrix, QueryEntry, ...
+├── models.py              # Paper, ScoredPaper, TermMatrix, KnowledgeRecord, ...
 ├── compiler.py            # structured intent → Scopus query syntax
 ├── cache.py               # SQLite cache + search log
 ├── csv_exporter.py        # CSV export (scored results)
-├── llm.py                 # DeepSeek + Ollama backends
+├── llm.py                 # DeepSeek + Ollama backends (JSON mode + truncation detection)
 ├── knowledge.py           # domain term knowledge (photocuring/ML/motor)
-├── relevance.py           # pre-filter + structured scoring + year weighting
-├── term_matrix.py         # question → 8-dimension term matrix
-├── query_population.py    # query pool with return tracking
+├── relevance.py           # recall-first pre-filter + structured scoring
+├── term_matrix.py         # question → per-dimension term matrix (two-stage routes)
+├── query_population.py    # query pool (coverage + exploration)
 ├── coverage_map.py        # route clustering + gap identification
 ├── iterative_searcher.py  # coverage-driven iterative search (dual-channel)
-├── citation_tracker.py    # OpenAlex forward/backward/co-citation
+├── citation_tracker.py    # OpenAlex forward/backward/co-citation + rate-limit guard
+├── knowledge_extractor.py # paper → searchable knowledge (mechanisms/hypotheses)
+├── knowledge_base.py      # persist knowledge + generate historical queries
+├── query_relaxer.py       # progressive query relaxation (backlogged)
+├── foundational_recovery.py # citation+keyword recall for classic papers
+├── evaluator.py           # benchmark coverage evaluation
+├── mmr.py                 # MMR diversity re-ranking
 ├── query_generator.py     # single-shot query generator (legacy)
 └── cli.py                 # CLI entry point
 ```
 
 ## Roadmap
 
+### Phase 0 — Search infrastructure ✅
 - [x] Scopus search + export
 - [x] LLM query generation (DeepSeek / Ollama)
 - [x] Iterative search + relevance filtering
 - [x] Coverage-driven architecture (term matrix / query population / coverage map)
 - [x] OpenAlex citation tracking (dual channel)
-- [ ] Explore-exploit balance (bandit) + MMR diversity re-ranking
+- [x] Foundational Recovery (citation + keyword recall)
+- [x] MMR diversity re-ranking
+- [x] Production reliability (per-dimension term extraction, rate-limit guards)
+
+### Phase 1 — Knowledge Extractor ✅ (A/B pending quota)
+- [x] Knowledge Extractor (causal mechanisms, generalized hypotheses)
+- [x] Knowledge Base (persistence + source traceability)
+- [x] Knowledge-derived historical query generation
+- [x] Mechanism-driven new-literature recall (validated: 8 unique new relevant papers)
+- [ ] Final A/B: Knowledge-driven vs Baseline expansion (equal budget, awaiting OpenAlex quota)
+
+### Phase 2 — Autonomous discovery (planned)
+- [ ] Novelty / unknown-route discovery
+- [ ] Search → Learn → Search closed loop
+
+### Later
 - [ ] Benchmark set (pilot: 5 photocuring questions)
 - [ ] Evaluation framework (relevance / coverage / evidence quality / cost)
+- [ ] Independent statistical audit (recall lower bound)
+- [ ] Explore-exploit balance (bandit)
