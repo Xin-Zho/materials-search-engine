@@ -25,6 +25,8 @@ from .evaluator import Benchmark, normalize_doi
 from .foundational_recovery import FoundationalRecovery
 from .knowledge_extractor import KnowledgeExtractor
 from .knowledge_base import KnowledgeBase
+from .route_normalizer import RouteNormalizer
+from .coverage_aware_expander import CoverageAwareExpander
 
 __all__ = [
     "Paper",
@@ -58,4 +60,6 @@ __all__ = [
     "KnowledgeRecord",
     "KnowledgeExtractor",
     "KnowledgeBase",
+    "RouteNormalizer",
+    "CoverageAwareExpander",
 ]
