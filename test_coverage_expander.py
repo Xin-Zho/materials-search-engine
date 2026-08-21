@@ -25,13 +25,18 @@ async def main():
     result = await expander.analyze(records)
     coverage = result["coverage"]
     gaps = result["gaps"]
+    non_family = result.get("non_family", [])
 
-    print("=== canonical route coverage ===")
+    print("=== route family coverage（技术路线）===")
     for route, count in coverage.most_common():
         bar = "█" * min(count, 10)
         print(f"  {route}: {count} 篇 {bar}")
 
-    print(f"\n=== 缺口（coverage ≤ 1）: {len(gaps)} 个 ===")
+    print(f"\n=== 机制/过程类（不计入 coverage）: {len(non_family)} 个 ===")
+    for nf in non_family[:20]:
+        print(f"  - {nf}")
+
+    print(f"\n=== 缺口（family coverage ≤ 1）: {len(gaps)} 个 ===")
     for g in gaps:
         print(f"  - {g}")
 
