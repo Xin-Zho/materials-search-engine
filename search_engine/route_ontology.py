@@ -21,26 +21,37 @@ from .llm import LLMBackend
 
 logger = logging.getLogger(__name__)
 
-CLASSIFY_PROMPT = """Classify these research routes into ONE of three types, and if it's a strategy route, assign a family.
+CLASSIFY_PROMPT = """Classify these research routes into ONE of three types. If strategy route, assign BOTH a family and a higher-level research strategy.
 
 ## Types
-1. strategy_family — a material/chemical/process ROUTE that can independently form a literature body (a SOLUTION approach, e.g. ring-opening polymerization, thiol-ene, filler loading, silorane). Assign a short family name (2-4 words, canonical).
-2. physical_mechanism — an underlying WHY-it-works mechanism (e.g. modulus evolution, gel point, free volume, stress relaxation). NOT a searchable route on its own.
-3. process_parameter — a fabrication/processing condition (e.g. irradiation interval, hot lithography, curing protocol, light intensity). NOT a material route.
+1. strategy_family — a material/chemical/process ROUTE that can independently form a literature body (a SOLUTION approach). Assign: (a) a short canonical family (2-4 words), (b) a higher-level research strategy.
+2. physical_mechanism — an underlying WHY-it-works mechanism (modulus evolution, gel point, free volume, stress relaxation). NOT a searchable route.
+3. process_parameter — a fabrication condition (irradiation interval, hot lithography, curing protocol). NOT a material route.
+
+## Research strategy (higher-level grouping, merge related families)
+Use one of these strategy labels to group families:
+- "network rearrangement" (AFCT, bond exchange, chain transfer, stress relaxation via topology)
+- "delayed gelation" (thiol-ene, step-growth, delayed gel point)
+- "ring-opening compensation" (silorane, spiro orthocarbonate, expanding monomer, ring-opening)
+- "filler reinforcement" (silica, nanoparticle, inorganic filler, hybrid)
+- "monomer design" (low-shrinkage monomer, oligomer design, monomer modification)
+- "cationic/anionic polymerization" (cationic, anionic, polarity-reversal catalysis)
+- "dual/step curing" (dual-curing, gradient, bulk-fill)
+- other — pick a concise label if none fit
 
 ## Rules
-- family name must be SHORT CANONICAL (e.g. "ring-opening", "thiol-ene", "filler", "AFCT"), not descriptive phrases
-- Merge synonyms under same family
-- physical_mechanism and process_parameter do NOT need a family (leave empty)
+- family: SHORT canonical (e.g. "ring-opening", "thiol-ene", "filler", "AFCT")
+- strategy: use the labels above; merge related families under the SAME strategy
+- physical_mechanism / process_parameter: family and strategy left empty
 - Output ONLY valid JSON array
 
 ## Routes
 {routes}
 
 ## Output Format
-[{{"route": "silorane", "type": "strategy_family", "family": "ring-opening"}},
- {{"route": "power-law modulus evolution", "type": "physical_mechanism", "family": ""}},
- {{"route": "hot lithography", "type": "process_parameter", "family": ""}}]"""
+[{{"route": "silorane", "type": "strategy_family", "family": "ring-opening", "strategy": "ring-opening compensation"}},
+ {{"route": "power-law modulus evolution", "type": "physical_mechanism", "family": "", "strategy": ""}},
+ {{"route": "hot lithography", "type": "process_parameter", "family": "", "strategy": ""}}]"""
 
 
 class RouteOntology:
@@ -92,15 +103,17 @@ class RouteOntology:
         result = []
         for it in items:
             if isinstance(it, dict) and it.get("route"):
+                is_family = it.get("type", "strategy_family") == "strategy_family"
                 result.append({
                     "route": it["route"],
                     "type": it.get("type", "strategy_family"),
-                    "family": it.get("family", "") if it.get("type") == "strategy_family" else "",
+                    "family": it.get("family", "") if is_family else "",
+                    "strategy": it.get("strategy", "") if is_family else "",
                 })
 
-        # 兜底：没分类的 route 归为 strategy_family（用自身做 family）
+        # 兜底：没分类的 route 归为 strategy_family（用自身做 family/strategy）
         classified_routes = {c["route"] for c in result}
         for r in routes:
             if r not in classified_routes:
-                result.append({"route": r, "type": "strategy_family", "family": r})
+                result.append({"route": r, "type": "strategy_family", "family": r, "strategy": r})
         return result

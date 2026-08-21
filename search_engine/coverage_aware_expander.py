@@ -63,20 +63,20 @@ class CoverageAwareExpander:
         # 3. 分类到 family（区分技术路线 vs 机制/过程）
         classified = await self.ontology.classify(canonical_routes)
 
-        # 4. family-level coverage（只统计 strategy_family，机制/过程不计入）
+        # 4. strategy-level coverage（只统计 strategy_family，机制/过程不计入）
         coverage = Counter()
         non_family = []
         for c in classified:
             if c["type"] == "strategy_family":
-                family = c["family"] or c["route"]
-                coverage[family] += 1
+                strategy = c.get("strategy") or c.get("family") or c["route"]
+                coverage[strategy] += 1
             else:
                 non_family.append(c["route"])
 
-        # 5. 识别缺口（family coverage ≤ threshold）
-        gaps = [family for family, count in coverage.items() if count <= self.gap_threshold]
+        # 5. 识别缺口（strategy coverage ≤ threshold）
+        gaps = [s for s, count in coverage.items() if count <= self.gap_threshold]
 
-        logger.info("coverage 分析: %d family, %d 缺口, %d 非 family 类",
+        logger.info("coverage 分析: %d strategy, %d 缺口, %d 非 family 类",
                      len(coverage), len(gaps), len(non_family))
         return {"coverage": coverage, "gaps": gaps, "non_family": non_family}
 
