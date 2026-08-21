@@ -74,34 +74,55 @@ async def main():
 
     # 对每篇相关论文提取 route
     print("=== 新增相关论文的 route 分析 ===\n")
-    route_counter = Counter()
+    raw_route_counter = Counter()
     paper_routes: list[tuple[str, list[str]]] = []
     for p in relevant:
         rec = await extractor.extract(p)
         routes = rec.strategy_routes if rec else []
-        route_counter.update(routes)
+        raw_route_counter.update(routes)
         paper_routes.append((p.title, routes))
         t = (p.title or "").encode('ascii', 'replace').decode('ascii')[:70]
         print(f"  [{p.year}] {t}")
         print(f"      routes: {routes}")
 
-    print("\n=== route 分布 ===")
-    for route, count in route_counter.most_common():
+    # Route normalization（raw → canonical）
+    from search_engine.route_normalizer import RouteNormalizer
+    normalizer = RouteNormalizer(backend)
+    all_raw = list(raw_route_counter.keys())
+    canonical_map = await normalizer.normalize(all_raw)
+
+    canonical_counter = Counter()
+    for raw, count in raw_route_counter.items():
+        canonical_counter[canonical_map.get(raw, raw)] += count
+
+    print("\n=== canonical route 分布（归一化后）===")
+    for route, count in canonical_counter.most_common():
         print(f"  {route}: {count} 篇")
 
-    # 对比 gold route（盲区分析）
-    print("\n=== 盲区分析（vs benchmark gold routes）===")
-    gold_lower = {g.lower(): g for g in GOLD_ROUTES}
+    # 对比 gold route（盲区分析，用 canonical）
+    print("\n=== 盲区分析（vs benchmark gold routes，canonical 对齐）===")
+    # 用 canonical 名做模糊匹配
+    gold_kw = {
+        "AFCT 网络重排": ["addition-fragmentation", "chain transfer", "aft"],
+        "Silorane/阳离子开环": ["silorane", "oxirane", "ring-opening", "cationic"],
+        "Spiro-orthocarbonate 膨胀单体": ["spiro", "orthocarbonate", "expanding monomer"],
+        "Thiol-ene 步增长延迟凝胶": ["thiol", "ene"],
+        "无机填料高填充": ["filler", "silica", "particle", "packing"],
+        "理论基准": ["shrinkage stress", "polymerization shrinkage", "contraction"],
+    }
     matched = set()
-    for route in route_counter:
-        for g, g_orig in gold_lower.items():
-            if any(kw in route.lower() or route.lower() in g for kw in g.split()):
-                matched.add(g_orig)
-    blind_spots = GOLD_ROUTES - matched
-    print(f"已覆盖 gold route: {len(matched)}/{len(GOLD_ROUTES)}")
-    print(f"knowledge 新增论文覆盖了这些 gold route: {sorted(matched)}")
-    print(f"gold route 盲区（仍未覆盖）: {sorted(blind_spots)}")
-    print(f"\n新增论文引入的 gold 之外的新 route: {[r for r in route_counter if not any(g in r.lower() for g in gold_lower)]}")
+    for route in canonical_counter:
+        rl = route.lower()
+        for g, kws in gold_kw.items():
+            if any(kw in rl for kw in kws):
+                matched.add(g)
+    blind_spots = set(gold_kw) - matched
+    print(f"knowledge 新增论文覆盖了这些 gold route: {sorted(matched) if matched else '无'}")
+    print(f"gold route 盲区（仍未覆盖）: {sorted(blind_spots) if blind_spots else '无'}")
+    print(f"\n新增论文引入的 gold 之外的新 route:")
+    for r in canonical_counter:
+        if not any(any(kw in r.lower() for kw in kws) for kws in gold_kw.values()):
+            print(f"  - {r}")
 
 
 if __name__ == "__main__":
