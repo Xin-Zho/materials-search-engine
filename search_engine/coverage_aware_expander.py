@@ -121,15 +121,20 @@ class CoverageAwareExpander:
             for r in rec_routes:
                 route_coverage[r] += 1
 
-        # 4. mechanism-level coverage（用固定 ontology 做 route × mechanism matrix）
+        # 4. mechanism-level coverage（归一化后匹配，避免假阴性）
         from .route_mechanism_ontology import match_route, get_mechanisms
+        from .mechanism_normalizer import MechanismNormalizer
+        mech_normalizer = MechanismNormalizer()
 
+        # 收集论文的 mechanisms，归一化成 canonical
         all_mechs: set[str] = set()
         for rec in records:
             for m in rec.physical_mechanisms:
                 for term in (m.mechanism, m.cause, m.effect):
                     if term:
-                        all_mechs.add(term.lower())
+                        canonical = mech_normalizer.normalize(term)
+                        if canonical:
+                            all_mechs.add(canonical.lower())
 
         mechanism_coverage: dict[str, dict] = {}
         missing_mechanisms: dict[str, list] = {}
@@ -142,7 +147,8 @@ class CoverageAwareExpander:
             mechanism_coverage[core] = {}
             missing_mechanisms[core] = []
             for mech in standard_mechs:
-                covered = mech.lower() in all_mechs
+                canonical_mech = mech_normalizer.normalize(mech).lower()
+                covered = canonical_mech in all_mechs
                 mechanism_coverage[core][mech] = covered
                 if not covered:
                     missing_mechanisms[core].append(mech)
