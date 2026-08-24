@@ -41,11 +41,12 @@ async def main():
         print(f"  - {g}")
 
     # Route ontology（关系图）
-    print("\n=== Route Ontology（strategy → routes / mechanisms / historical_terms）===")
+    print("\n=== Route Ontology（strategy → canonical_routes / aliases / mechanisms / historical_terms）===")
     onto = await ontology.build(records)
     for strategy, info in onto.items():
         print(f"\n[{strategy}]")
-        print(f"  routes: {info['routes']}")
+        print(f"  canonical_routes: {info['canonical_routes']}")
+        print(f"  aliases: {info['aliases'][:8]}")
         print(f"  mechanisms: {info['mechanisms'][:5]}")
         print(f"  historical_terms: {info['historical_terms'][:5]}")
 
