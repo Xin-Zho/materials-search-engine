@@ -55,6 +55,15 @@ async def main():
     for strategy, mechs in mech_onto.items():
         print(f"  {strategy}: {mechs}")
 
+    # Route graph（route 节点为中心）
+    print("\n=== Route Graph（route → strategies / mechanisms / historical_terms）===")
+    route_graph = await ontology.build_route_graph(records)
+    for route, info in route_graph.items():
+        print(f"\n[{route}]")
+        print(f"  strategies: {info['strategies']}")
+        print(f"  mechanisms: {info['mechanisms'][:5]}")
+        print(f"  historical_terms: {info['historical_terms'][:5]}")
+
     kb.close()
 
 

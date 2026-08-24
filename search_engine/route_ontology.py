@@ -127,6 +127,59 @@ class RouteOntology:
         except (json.JSONDecodeError, ValueError):
             return []
 
+    async def build_route_graph(self, records) -> dict[str, dict]:
+        """建立 route graph（route 节点为中心，不再 strategy → route）。
+
+        输出结构：{canonical_route: {strategies, mechanisms, historical_terms}}
+        一个 route 可属于多个 strategy（如 AFCT 属于 network rearrangement 和
+        ring-opening compensation），coverage 以 route 为节点统计。
+        """
+        from collections import defaultdict
+
+        raw_routes: list[str] = []
+        for rec in records:
+            raw_routes.extend(rec.strategy_routes)
+        classified = await self.classify(raw_routes)
+
+        graph: dict[str, dict] = defaultdict(
+            lambda: {"strategies": set(), "mechanisms": set(), "historical_terms": set()}
+        )
+
+        # raw route → canonical family 映射
+        raw_to_family: dict[str, str] = {}
+        for c in classified:
+            if c["type"] == "strategy_family":
+                family = c.get("family") or c["route"]
+                raw_to_family[c["route"]] = family
+                strategy = c.get("strategy") or family
+                graph[family]["strategies"].add(strategy)
+
+        # 聚合 mechanisms + historical_terms（按 family 归属）
+        for rec in records:
+            rec_families = set()
+            for route in rec.strategy_routes:
+                family = raw_to_family.get(route)
+                if family:
+                    rec_families.add(family)
+            for family in rec_families:
+                for m in rec.physical_mechanisms:
+                    graph[family]["mechanisms"].add(m.mechanism or m.cause or m.effect)
+                for h in rec.historical_terms:
+                    graph[family]["historical_terms"].add(h)
+                for h in rec.synonyms:
+                    graph[family]["historical_terms"].add(h)
+
+        result = {
+            route: {
+                "strategies": sorted(v["strategies"]),
+                "mechanisms": sorted(v["mechanisms"]),
+                "historical_terms": sorted(v["historical_terms"]),
+            }
+            for route, v in graph.items()
+        }
+        logger.info("route graph: %d route 节点", len(result))
+        return result
+
     async def build(self, records) -> dict[str, dict]:
         """从 KnowledgeRecord 建立 route ontology。
 
