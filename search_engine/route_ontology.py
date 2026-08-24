@@ -66,12 +66,73 @@ MECHANISM_PROMPT = """For each research strategy below, list its associated MECH
 ## Output Format
 [{{"strategy": "network rearrangement", "mechanisms": ["reversible bond exchange", "stress relaxation", "delayed gelation"]}}, ...]"""
 
+CANONICAL_ROUTE_PROMPT = """For each research ROUTE below, define its COMPLETE STANDARD mechanism set — the full list of WHY-it-works mechanisms this route should ideally cover (4-6 concise mechanisms each).
+
+## Routes
+{routes}
+
+## Rules
+- mechanisms are WHY-it-works explanations (e.g. "reversible bond exchange", "stress relaxation", "delayed gelation", "volumetric expansion", "reduced polymerizable fraction")
+- list the COMPLETE set (including mechanisms not yet found in papers) — this becomes the coverage checklist
+- do NOT list measurement techniques
+- Output ONLY valid JSON array
+
+## Output Format
+[{{"route": "AFCT", "mechanisms": ["network rearrangement", "stress relaxation", "delayed gelation", "reversible bond exchange"]}}, ...]"""
+
 
 class RouteOntology:
     """route → family 层级分类。"""
 
     def __init__(self, backend: LLMBackend):
         self.backend = backend
+
+    async def build_canonical_routes(self, route_graph: dict[str, dict]) -> dict[str, list[str]]:
+        """建立标准 route → mechanisms 映射（canonical_route.json 的内容）。
+
+        用 LLM 为每个 route 生成 COMPLETE mechanism 集合（包括论文还没提到的），
+        作为 coverage 的检查清单。这样未覆盖的 mechanism 会被标 ✗ 而不是被忽略。
+        """
+        if not route_graph:
+            return {}
+
+        routes_text = "\n".join(f"- {r}" for r in route_graph.keys())
+        prompt = CANONICAL_ROUTE_PROMPT.format(routes=routes_text)
+
+        try:
+            response = await self.backend.chat(
+                system_prompt="You are a materials science mechanism taxonomist. Output only valid JSON.",
+                user_message=prompt,
+                temperature=0,
+                max_tokens=2500,
+            )
+        except Exception as e:
+            logger.warning("canonical route 生成失败: %s", e)
+            return {r: info.get("mechanisms", []) for r, info in route_graph.items()}
+
+        items = self._parse_canonical(response)
+        result = {r: info.get("mechanisms", []) for r, info in route_graph.items()}
+        for it in items:
+            if it.get("route") and it.get("mechanisms"):
+                result[it["route"]] = it["mechanisms"]
+        logger.info("canonical routes: %d route", len(result))
+        return result
+
+    @staticmethod
+    def _parse_canonical(response: str) -> list[dict]:
+        import json
+        text = response.strip()
+        if text.startswith("```"):
+            lines = text.split("\n")
+            text = "\n".join(lines[1:])
+            if text.endswith("```"):
+                text = text[:-3]
+        try:
+            start = text.index("[")
+            end = text.rindex("]") + 1
+            return [it for it in json.loads(text[start:end]) if isinstance(it, dict)]
+        except (json.JSONDecodeError, ValueError):
+            return []
 
     async def build_mechanism_ontology(self, ontology: dict[str, dict]) -> dict[str, list[str]]:
         """为每个 strategy 清洗 mechanisms（用 LLM 判断机制归属，避免错乱）。

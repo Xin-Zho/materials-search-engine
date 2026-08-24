@@ -121,7 +121,7 @@ class CoverageAwareExpander:
             for r in rec_routes:
                 route_coverage[r] += 1
 
-        # 4. mechanism-level coverage（每个 route 的 mechanism 是否被论文提到）
+        # 4. mechanism-level coverage（用标准 mechanisms 判断，未覆盖的标 ✗ 而不是忽略）
         all_mechs: set[str] = set()
         for rec in records:
             for m in rec.physical_mechanisms:
@@ -129,12 +129,14 @@ class CoverageAwareExpander:
                     if term:
                         all_mechs.add(term.lower())
 
+        canonical_mechs = await self.ontology.build_canonical_routes(route_graph)
+
         mechanism_coverage: dict[str, dict] = {}
         missing_mechanisms: dict[str, list] = {}
-        for route, info in route_graph.items():
+        for route, standard_mechs in canonical_mechs.items():
             mechanism_coverage[route] = {}
             missing_mechanisms[route] = []
-            for mech in info.get("mechanisms", []):
+            for mech in standard_mechs:
                 covered = mech.lower() in all_mechs
                 mechanism_coverage[route][mech] = covered
                 if not covered:
