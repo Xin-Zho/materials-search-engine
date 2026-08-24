@@ -9,6 +9,7 @@ import os
 from search_engine.llm import DeepSeekBackend
 from search_engine.knowledge_base import KnowledgeBase
 from search_engine.route_normalizer import RouteNormalizer
+from search_engine.route_ontology import RouteOntology
 from search_engine.coverage_aware_expander import CoverageAwareExpander
 
 
@@ -16,35 +17,37 @@ async def main():
     backend = DeepSeekBackend(api_key=os.environ.get("DEEPSEEK_API_KEY", ""))
     kb = KnowledgeBase()
     normalizer = RouteNormalizer(backend)
-    expander = CoverageAwareExpander(backend, normalizer, gap_threshold=1)
+    ontology = RouteOntology(backend)
+    expander = CoverageAwareExpander(backend, normalizer, ontology=ontology, gap_threshold=1)
 
     records = kb.get_all()
     print(f"Knowledge Base 记录: {len(records)} 条\n")
 
-    # 分析 coverage
+    # 分析 coverage（strategy-level）
     result = await expander.analyze(records)
     coverage = result["coverage"]
     gaps = result["gaps"]
     non_family = result.get("non_family", [])
 
-    print("=== route family coverage（技术路线）===")
+    print("=== research strategy coverage ===")
     for route, count in coverage.most_common():
         bar = "█" * min(count, 10)
         print(f"  {route}: {count} 篇 {bar}")
 
-    print(f"\n=== 机制/过程类（不计入 coverage）: {len(non_family)} 个 ===")
-    for nf in non_family[:20]:
-        print(f"  - {nf}")
+    print(f"\n=== 机制/过程类（不计入）: {len(non_family)} 个 ===")
 
-    print(f"\n=== 缺口（family coverage ≤ 1）: {len(gaps)} 个 ===")
+    print(f"\n=== 缺口（strategy coverage ≤ 1）: {len(gaps)} 个 ===")
     for g in gaps:
         print(f"  - {g}")
 
-    # 生成缺口 query
-    queries = await expander.generate_gap_queries(gaps, anchor="polymerization shrinkage")
-    print(f"\n=== 缺口 query（{len(queries)} 条）===")
-    for q in queries:
-        print(f"  {q}")
+    # Route ontology（关系图）
+    print("\n=== Route Ontology（strategy → routes / mechanisms / historical_terms）===")
+    onto = await ontology.build(records)
+    for strategy, info in onto.items():
+        print(f"\n[{strategy}]")
+        print(f"  routes: {info['routes']}")
+        print(f"  mechanisms: {info['mechanisms'][:5]}")
+        print(f"  historical_terms: {info['historical_terms'][:5]}")
 
     kb.close()
 

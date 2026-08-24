@@ -60,6 +60,54 @@ class RouteOntology:
     def __init__(self, backend: LLMBackend):
         self.backend = backend
 
+    async def build(self, records) -> dict[str, dict]:
+        """从 KnowledgeRecord 建立 route ontology：strategy → related_routes / historical_terms / mechanisms。
+
+        聚合每个 research strategy 下的可搜索知识，缺口 strategy 可自动展开成多条 query。
+        """
+        from collections import defaultdict
+
+        # 1. 提取所有 raw routes，分类到 strategy
+        raw_routes: list[str] = []
+        for rec in records:
+            raw_routes.extend(rec.strategy_routes)
+        classified = await self.classify(raw_routes)
+
+        # 2. 按 strategy 聚合
+        ontology: dict[str, dict] = defaultdict(
+            lambda: {"routes": set(), "mechanisms": set(), "historical_terms": set()}
+        )
+        for c in classified:
+            if c["type"] == "strategy_family":
+                strategy = c.get("strategy") or c.get("family") or c["route"]
+                ontology[strategy]["routes"].add(c["route"])
+
+        # 3. 聚合 mechanism + historical_terms（同一篇论文的知识归到其 strategy）
+        for rec in records:
+            rec_strategies = set()
+            for c in classified:
+                if c["type"] == "strategy_family" and c["route"] in rec.strategy_routes:
+                    rec_strategies.add(c.get("strategy") or c.get("family") or c["route"])
+            for s in rec_strategies:
+                for m in rec.physical_mechanisms:
+                    ontology[s]["mechanisms"].add(m.mechanism or m.cause or m.effect)
+                for h in rec.historical_terms:
+                    ontology[s]["historical_terms"].add(h)
+                for h in rec.synonyms:
+                    ontology[s]["historical_terms"].add(h)
+
+        # 转成可序列化 dict
+        result = {
+            s: {
+                "routes": sorted(v["routes"]),
+                "mechanisms": sorted(v["mechanisms"]),
+                "historical_terms": sorted(v["historical_terms"]),
+            }
+            for s, v in ontology.items()
+        }
+        logger.info("route ontology: %d strategy", len(result))
+        return result
+
     async def classify(self, routes: list[str]) -> list[dict]:
         """把 routes 分类为 strategy_family / physical_mechanism / process_parameter。"""
         if not routes:
