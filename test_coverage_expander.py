@@ -64,6 +64,18 @@ async def main():
         print(f"  mechanisms: {info['mechanisms'][:5]}")
         print(f"  historical_terms: {info['historical_terms'][:5]}")
 
+    # route-level + mechanism-level coverage
+    print("\n=== Route/Mechanism Coverage ===")
+    rc = await expander.analyze_route_coverage(records)
+    for route, count in rc["route_coverage"].items():
+        mechs = rc["mechanism_coverage"].get(route, {})
+        marks = "".join("✓" if v else "✗" for v in mechs.values())
+        print(f"  {route}: {count} 篇 | mechanisms: {marks}")
+    print("\n缺失的 mechanism（未覆盖）:")
+    for route, mechs in rc["missing_mechanisms"].items():
+        if mechs:
+            print(f"  {route}: {mechs}")
+
     kb.close()
 
 

@@ -90,6 +90,62 @@ class CoverageAwareExpander:
                      len(coverage), len(gaps), len(non_family))
         return {"coverage": coverage, "gaps": gaps, "non_family": sorted(non_family)}
 
+    async def analyze_route_coverage(self, records) -> dict:
+        """route-level + mechanism-level coverage（知道哪个机制没覆盖）。
+
+        Returns:
+            {"route_coverage": {route: paper_count},
+             "mechanism_coverage": {route: {mechanism: covered_bool}},
+             "missing_mechanisms": {route: [未覆盖 mechanism]}}
+        """
+        from collections import Counter
+
+        # 1. build route graph（route → mechanisms）
+        route_graph = await self.ontology.build_route_graph(records)
+
+        # 2. raw → canonical route 映射
+        raw_routes = [r for rec in records for r in rec.strategy_routes]
+        classified = await self.ontology.classify(raw_routes)
+        raw_to_canonical: dict[str, str] = {}
+        for c in classified:
+            if c["type"] == "strategy_family":
+                raw_to_canonical[c["route"]] = c.get("family") or c["route"]
+
+        # 3. route-level coverage（每篇论文的每个 route 计一次）
+        route_coverage = Counter()
+        for rec in records:
+            rec_routes = set()
+            for route in rec.strategy_routes:
+                canonical = raw_to_canonical.get(route, route)
+                rec_routes.add(canonical)
+            for r in rec_routes:
+                route_coverage[r] += 1
+
+        # 4. mechanism-level coverage（每个 route 的 mechanism 是否被论文提到）
+        all_mechs: set[str] = set()
+        for rec in records:
+            for m in rec.physical_mechanisms:
+                for term in (m.mechanism, m.cause, m.effect):
+                    if term:
+                        all_mechs.add(term.lower())
+
+        mechanism_coverage: dict[str, dict] = {}
+        missing_mechanisms: dict[str, list] = {}
+        for route, info in route_graph.items():
+            mechanism_coverage[route] = {}
+            missing_mechanisms[route] = []
+            for mech in info.get("mechanisms", []):
+                covered = mech.lower() in all_mechs
+                mechanism_coverage[route][mech] = covered
+                if not covered:
+                    missing_mechanisms[route].append(mech)
+
+        return {
+            "route_coverage": dict(route_coverage),
+            "mechanism_coverage": mechanism_coverage,
+            "missing_mechanisms": missing_mechanisms,
+        }
+
     async def generate_gap_queries(self, gaps: list[str], anchor: str = "polymerization shrinkage") -> list[str]:
         """对缺口 route 生成 recall query（route + anchor）。"""
         queries = []
