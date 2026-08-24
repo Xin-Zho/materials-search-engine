@@ -53,12 +53,79 @@ Use one of these strategy labels to group families:
  {{"route": "power-law modulus evolution", "type": "physical_mechanism", "family": "", "strategy": ""}},
  {{"route": "hot lithography", "type": "process_parameter", "family": "", "strategy": ""}}]"""
 
+MECHANISM_PROMPT = """For each research strategy below, list its associated MECHANISMS — the physical/chemical reasons WHY this route reduces polymerization shrinkage or shrinkage stress (3-5 concise mechanisms each).
+
+## Strategies (strategy: canonical route)
+{strategies}
+
+## Rules
+- mechanisms must be WHY-it-works explanations (e.g. "reversible bond exchange", "volumetric expansion", "reduced polymerizable fraction")
+- do NOT list measurement techniques or unrelated mechanisms
+- Output ONLY valid JSON array
+
+## Output Format
+[{{"strategy": "network rearrangement", "mechanisms": ["reversible bond exchange", "stress relaxation", "delayed gelation"]}}, ...]"""
+
 
 class RouteOntology:
     """route → family 层级分类。"""
 
     def __init__(self, backend: LLMBackend):
         self.backend = backend
+
+    async def build_mechanism_ontology(self, ontology: dict[str, dict]) -> dict[str, list[str]]:
+        """为每个 strategy 清洗 mechanisms（用 LLM 判断机制归属，避免错乱）。
+
+        Args:
+            ontology: build() 的输出 {strategy: {canonical_routes, aliases, ...}}
+
+        Returns:
+            {strategy: [清洗后的 mechanisms]}
+        """
+        if not ontology:
+            return {}
+
+        # 构造 strategy → canonical route 列表
+        strategies_text = "\n".join(
+            f"- {s}: {', '.join(info.get('canonical_routes', []))}"
+            for s, info in ontology.items()
+        )
+        prompt = MECHANISM_PROMPT.format(strategies=strategies_text)
+
+        try:
+            response = await self.backend.chat(
+                system_prompt="You are a materials science mechanism taxonomist. Output only valid JSON.",
+                user_message=prompt,
+                temperature=0,
+                max_tokens=2000,
+            )
+        except Exception as e:
+            logger.warning("mechanism ontology 生成失败: %s", e)
+            return {s: info.get("mechanisms", []) for s, info in ontology.items()}
+
+        items = self._parse_mechanism(response)
+        result = {s: info.get("mechanisms", []) for s, info in ontology.items()}  # 兜底用原 mechanisms
+        for it in items:
+            if it.get("strategy") and it.get("mechanisms"):
+                result[it["strategy"]] = it["mechanisms"]
+        logger.info("mechanism ontology: %d strategy", len(result))
+        return result
+
+    @staticmethod
+    def _parse_mechanism(response: str) -> list[dict]:
+        import json
+        text = response.strip()
+        if text.startswith("```"):
+            lines = text.split("\n")
+            text = "\n".join(lines[1:])
+            if text.endswith("```"):
+                text = text[:-3]
+        try:
+            start = text.index("[")
+            end = text.rindex("]") + 1
+            return [it for it in json.loads(text[start:end]) if isinstance(it, dict)]
+        except (json.JSONDecodeError, ValueError):
+            return []
 
     async def build(self, records) -> dict[str, dict]:
         """从 KnowledgeRecord 建立 route ontology。

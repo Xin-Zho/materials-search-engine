@@ -47,8 +47,13 @@ async def main():
         print(f"\n[{strategy}]")
         print(f"  canonical_routes: {info['canonical_routes']}")
         print(f"  aliases: {info['aliases'][:8]}")
-        print(f"  mechanisms: {info['mechanisms'][:5]}")
         print(f"  historical_terms: {info['historical_terms'][:5]}")
+
+    # Mechanism ontology（清洗后的机制归属）
+    print("\n=== Mechanism Ontology（strategy → 清洗后的 mechanisms）===")
+    mech_onto = await ontology.build_mechanism_ontology(onto)
+    for strategy, mechs in mech_onto.items():
+        print(f"  {strategy}: {mechs}")
 
     kb.close()
 
