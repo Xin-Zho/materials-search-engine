@@ -56,29 +56,39 @@ class CoverageAwareExpander:
         if not raw_routes:
             return {"coverage": Counter(), "gaps": [], "non_family": []}
 
-        # 2. 归一化成 canonical
-        canonical_map = await self.normalizer.normalize(raw_routes)
-        canonical_routes = [canonical_map.get(raw, raw) for raw in raw_routes]
+        # 2. 归一化成 canonical（raw → canonical）
+        canonical_map = await self.normalizer.normalize(list(set(raw_routes)))
 
-        # 3. 分类到 family（区分技术路线 vs 机制/过程）
+        # 3. 分类 canonical → strategy（一次）
+        canonical_routes = list(set(canonical_map.values()))
         classified = await self.ontology.classify(canonical_routes)
 
-        # 4. strategy-level coverage（只统计 strategy_family，机制/过程不计入）
-        coverage = Counter()
-        non_family = []
+        route_to_strategy: dict[str, str] = {}
+        non_family: set[str] = set()
         for c in classified:
             if c["type"] == "strategy_family":
-                strategy = c.get("strategy") or c.get("family") or c["route"]
-                coverage[strategy] += 1
+                route_to_strategy[c["route"]] = c.get("strategy") or c.get("family") or c["route"]
             else:
-                non_family.append(c["route"])
+                non_family.add(c["route"])
+
+        # 4. 论文级 coverage（每篇论文的每个 strategy 计一次，避免 raw 表达重复计数）
+        coverage = Counter()
+        for rec in records:
+            rec_strategies: set[str] = set()
+            for route in rec.strategy_routes:
+                canonical = canonical_map.get(route, route)
+                strategy = route_to_strategy.get(canonical)
+                if strategy:
+                    rec_strategies.add(strategy)
+            for s in rec_strategies:
+                coverage[s] += 1
 
         # 5. 识别缺口（strategy coverage ≤ threshold）
         gaps = [s for s, count in coverage.items() if count <= self.gap_threshold]
 
         logger.info("coverage 分析: %d strategy, %d 缺口, %d 非 family 类",
                      len(coverage), len(gaps), len(non_family))
-        return {"coverage": coverage, "gaps": gaps, "non_family": non_family}
+        return {"coverage": coverage, "gaps": gaps, "non_family": sorted(non_family)}
 
     async def generate_gap_queries(self, gaps: list[str], anchor: str = "polymerization shrinkage") -> list[str]:
         """对缺口 route 生成 recall query（route + anchor）。"""

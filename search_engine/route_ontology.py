@@ -61,28 +61,35 @@ class RouteOntology:
         self.backend = backend
 
     async def build(self, records) -> dict[str, dict]:
-        """从 KnowledgeRecord 建立 route ontology：strategy → related_routes / historical_terms / mechanisms。
+        """从 KnowledgeRecord 建立 route ontology。
 
-        聚合每个 research strategy 下的可搜索知识，缺口 strategy 可自动展开成多条 query。
+        输出结构：strategy → canonical_routes / aliases / mechanisms / historical_terms。
+        - canonical_routes：标准技术路线名（classify 的 family，归一化后的）
+        - aliases：raw 表达的别名（同一路线的不同说法）
+        这样 coverage 统计时同一路线不会被当成多个路线。
         """
         from collections import defaultdict
 
-        # 1. 提取所有 raw routes，分类到 strategy
+        # 1. 提取所有 raw routes，分类（family = canonical，route = raw）
         raw_routes: list[str] = []
         for rec in records:
             raw_routes.extend(rec.strategy_routes)
         classified = await self.classify(raw_routes)
 
-        # 2. 按 strategy 聚合
+        # 2. 按 strategy 聚合（canonical_routes + aliases 分开）
         ontology: dict[str, dict] = defaultdict(
-            lambda: {"routes": set(), "mechanisms": set(), "historical_terms": set()}
+            lambda: {"canonical_routes": set(), "aliases": set(),
+                     "mechanisms": set(), "historical_terms": set()}
         )
         for c in classified:
             if c["type"] == "strategy_family":
                 strategy = c.get("strategy") or c.get("family") or c["route"]
-                ontology[strategy]["routes"].add(c["route"])
+                family = c.get("family") or c["route"]
+                ontology[strategy]["canonical_routes"].add(family)
+                if c["route"] != family:  # raw 表达作为别名
+                    ontology[strategy]["aliases"].add(c["route"])
 
-        # 3. 聚合 mechanism + historical_terms（同一篇论文的知识归到其 strategy）
+        # 3. 聚合 mechanism + historical_terms
         for rec in records:
             rec_strategies = set()
             for c in classified:
@@ -99,7 +106,8 @@ class RouteOntology:
         # 转成可序列化 dict
         result = {
             s: {
-                "routes": sorted(v["routes"]),
+                "canonical_routes": sorted(v["canonical_routes"]),
+                "aliases": sorted(v["aliases"]),
                 "mechanisms": sorted(v["mechanisms"]),
                 "historical_terms": sorted(v["historical_terms"]),
             }
