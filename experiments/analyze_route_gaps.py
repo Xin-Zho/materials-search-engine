@@ -14,7 +14,7 @@ import sys
 from collections import Counter
 from search_engine.llm import DeepSeekBackend
 from search_engine.knowledge_extractor import KnowledgeExtractor
-from search_engine.citation_tracker import CitationTracker, RateLimitError
+from search_engine import CitationTracker, RateLimitError
 from search_engine.evaluator import normalize_doi
 from search_engine.relevance import RelevanceFilter
 from search_engine.models import Paper

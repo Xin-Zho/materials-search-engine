@@ -229,7 +229,8 @@ class KnowledgeBase:
             "strategy_routes": record.strategy_routes,
             "materials": record.materials,
             "physical_mechanisms": [
-                {"cause": m.cause, "mechanism": m.mechanism, "effect": m.effect}
+                {"cause": m.cause, "mechanism": m.mechanism, "effect": m.effect,
+                 "canonical": m.canonical, "evidence": m.evidence, "confidence": m.confidence}
                 for m in record.physical_mechanisms
             ],
             "characterization_methods": record.characterization_methods,
@@ -258,7 +259,9 @@ class KnowledgeBase:
             materials=d.get("materials", []),
             physical_mechanisms=[
                 Mechanism(cause=m.get("cause", ""), mechanism=m.get("mechanism", ""),
-                          effect=m.get("effect", ""))
+                          effect=m.get("effect", ""), canonical=m.get("canonical", ""),
+                          evidence=m.get("evidence", ""),
+                          confidence=float(m.get("confidence", 0.0) or 0.0))
                 for m in d.get("physical_mechanisms", [])
             ],
             characterization_methods=d.get("characterization_methods", []),

@@ -11,7 +11,7 @@
 
 import logging
 from collections import defaultdict
-from .models import ScoredPaper, RouteCoverage
+from ..models import ScoredPaper, RouteCoverage
 
 logger = logging.getLogger(__name__)
 

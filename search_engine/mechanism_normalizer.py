@@ -18,13 +18,13 @@ logger = logging.getLogger(__name__)
 
 # 固定的 canonical mechanism → 别名（人工维护，类似 route ontology）
 MECHANISM_ONTOLOGY: dict[str, list[str]] = {
-    "stress relaxation": ["stress relaxation", "network reconfiguration", "stress release", "viscoelastic relaxation", "relaxation"],
-    "delayed gelation": ["delayed gelation", "delayed gel point", "late gelation", "gel delay", "delayed gel"],
+    "stress relaxation": ["stress relaxation", "relax stress", "stress relief"],
+    "delayed gelation": ["delayed gelation", "delay gelation", "delayed gel point", "gelation delay"],
     "volumetric expansion": ["volumetric expansion", "volume expansion", "expansion"],
     "ring strain relief": ["ring strain relief", "ring strain release", "ring strain"],
-    "reversible bond exchange": ["reversible bond exchange", "bond exchange", "dynamic bond exchange", "reversible exchange"],
-    "network rearrangement": ["network rearrangement", "topology rearrangement", "network reconfiguration"],
-    "chain transfer": ["chain transfer", "addition fragmentation", "addition-fragmentation", "aft"],
+    "reversible bond exchange": ["reversible bond exchange", "dynamic bond exchange", "bond exchange", "exchange reaction", "reversible exchange", "reversible chain transfer"],
+    "network rearrangement": ["network rearrangement", "network reconfiguration", "network restructuring", "network relaxation", "network adaptation"],
+    "chain transfer": ["chain transfer", "addition-fragmentation chain transfer", "AFCT"],
     "reduced shrinkage": ["reduced shrinkage", "shrinkage reduction", "low shrinkage", "shrinkage compensation", "compensation of shrinkage"],
     "reduced polymerizable fraction": ["reduced polymerizable fraction", "reduced resin fraction", "lower resin content", "filler volume"],
     "modulus increase": ["modulus increase", "increased modulus", "stiffness increase", "rigidity"],
@@ -60,6 +60,35 @@ class MechanismNormalizer:
                 if alias in rl or rl in alias:
                     return canonical
         return raw_mechanism  # 没匹配到，保留原样
+
+    def aliases_for(self, mechanism: str) -> list[str]:
+        """返回 mechanism 的匹配别名集（含自身，小写），用于子串匹配。
+
+        mechanism 可能是 canonical key，也可能是某个 key 的别名；
+        返回它所属的完整别名列表。与 normalize() 的一对一不同，
+        这里保留完整别名集，让 coverage 能对每个 checklist mechanism
+        独立做子串匹配（一个关键词不会同时触发多个标签）。
+        """
+        m = mechanism.lower().strip()
+        if not m:
+            return []
+        if m in self.ontology:
+            out = [m]
+            for alias in self.ontology[m]:
+                a = alias.lower()
+                if a not in out:
+                    out.append(a)
+            return out
+        for canon, aliases in self.ontology.items():
+            for alias in aliases:
+                if alias.lower() == m:
+                    out = [canon.lower()]
+                    for a in aliases:
+                        al = a.lower()
+                        if al not in out:
+                            out.append(al)
+                    return out
+        return [m]
 
     def normalize_many(self, raw_mechanisms: list[str]) -> list[str]:
         """批量归一化，去重。"""

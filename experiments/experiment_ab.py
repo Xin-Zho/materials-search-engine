@@ -15,7 +15,7 @@ import sys
 from search_engine.llm import DeepSeekBackend
 from search_engine.term_matrix import TermMatrixGenerator
 from search_engine.query_population import QueryPopulation
-from search_engine.citation_tracker import CitationTracker, RateLimitError, RateLimitExhaustedError
+from search_engine import CitationTracker, RateLimitError, RateLimitExhaustedError
 from search_engine.evaluator import normalize_doi
 from search_engine.relevance import RelevanceFilter
 from search_engine.knowledge import get_domain_context

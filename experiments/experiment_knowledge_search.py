@@ -14,7 +14,7 @@ import sys
 from collections import Counter
 from search_engine.llm import DeepSeekBackend
 from search_engine.knowledge_extractor import KnowledgeExtractor
-from search_engine.citation_tracker import CitationTracker
+from search_engine import CitationTracker
 from search_engine.evaluator import normalize_doi
 from search_engine.relevance import RelevanceFilter
 from search_engine.models import Paper
@@ -67,7 +67,7 @@ async def main():
     # 逐条搜索 + 记录（按需 relaxation：仅 NO_HITS 的 parent 才放宽）
     query_records = []  # dict per query
     new_papers: dict[str, Paper] = {}
-    from search_engine.citation_tracker import RateLimitError, RateLimitExhaustedError
+    from search_engine import RateLimitError, RateLimitExhaustedError
     from search_engine.query_relaxer import QueryRelaxer
     relaxer = QueryRelaxer() if relax else None
 

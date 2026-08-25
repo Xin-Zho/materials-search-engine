@@ -32,7 +32,7 @@ Abstract: {abstract}
 
 3. materials — specific materials/chemicals/substances (list)
 
-4. physical_mechanisms — causal explanation of WHY a route works, as cause→mechanism→effect triples. e.g. {{"cause": "ring-opening polymerization", "mechanism": "volumetric expansion during bond formation", "effect": "offsets polymerization shrinkage"}}. Do NOT put mere result variables (e.g. "shrinkage stress", "crosslink density") as mechanisms — they are effects, not explanations.
+4. physical_mechanisms — causal explanation of WHY a route works, as objects with cause/mechanism/effect PLUS canonical/evidence/confidence. e.g. {{"cause": "ring-opening polymerization", "mechanism": "volumetric expansion during bond formation", "effect": "offsets polymerization shrinkage", "canonical": "volumetric expansion", "evidence": "quote/paraphrase from abstract supporting this mechanism", "confidence": 0.9}}. canonical is the SHORT standard mechanism name; evidence is WHY you attribute this mechanism to the paper; confidence is 0-1. Do NOT put mere result variables as mechanisms.
 
 5. characterization_methods — measurement/characterization techniques (list), e.g. "near-infrared spectroscopy", "dynamic mechanical analysis", "tensometry". Keep these SEPARATE from strategy_routes.
 
@@ -93,6 +93,9 @@ class KnowledgeExtractor:
                 cause=m.get("cause", ""),
                 mechanism=m.get("mechanism", ""),
                 effect=m.get("effect", ""),
+                canonical=m.get("canonical", ""),
+                evidence=m.get("evidence", ""),
+                confidence=float(m.get("confidence", 0.0) or 0.0),
             )
             for m in data.get("physical_mechanisms", [])
             if isinstance(m, dict)

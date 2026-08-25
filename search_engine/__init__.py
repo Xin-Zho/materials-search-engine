@@ -17,16 +17,19 @@ from .query_generator import QueryGenerator
 from .llm import DeepSeekBackend, OllamaBackend, create_backend
 from .term_matrix import TermMatrixGenerator
 from .query_population import QueryPopulation
-from .coverage_map import CoverageMap
+from .coverage.route_coverage import CoverageMap
 from .iterative_searcher import IterativeSearcher
-from .citation_tracker import CitationTracker
+from .backends import OpenAlexBackend, ScopusBackend, SearchBackend, CitationTracker, RateLimitError, RateLimitExhaustedError
 from .mmr import MMRReranker
 from .evaluator import Benchmark, normalize_doi
 from .foundational_recovery import FoundationalRecovery
 from .knowledge_extractor import KnowledgeExtractor
 from .knowledge_base import KnowledgeBase
 from .route_normalizer import RouteNormalizer
-from .coverage_aware_expander import CoverageAwareExpander
+from .knowledge.expander import CoverageAwareExpander
+from .knowledge.coverage import MechanismCoverageAnalyzer
+from .knowledge.gap_detector import GapDetector
+from .knowledge.gap_query_generator import GapQueryGenerator
 
 __all__ = [
     "Paper",
@@ -62,4 +65,12 @@ __all__ = [
     "KnowledgeBase",
     "RouteNormalizer",
     "CoverageAwareExpander",
+    "MechanismCoverageAnalyzer",
+    "GapDetector",
+    "GapQueryGenerator",
+    "OpenAlexBackend",
+    "ScopusBackend",
+    "SearchBackend",
+    "RateLimitError",
+    "RateLimitExhaustedError",
 ]

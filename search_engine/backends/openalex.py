@@ -1,21 +1,23 @@
-"""CitationTracker — OpenAlex 引文追踪（向前/向后/共被引）。
+"""OpenAlexBackend — OpenAlex API 后端（搜索 + 引文追踪 + 元数据）。
 
-补充关键词搜索的盲区：不同材料领域用不同术语描述相同机制，
-引文网络能找到关键词搜不到的核心论文。
+封装 OpenAlex 的所有 HTTP 调用：关键词搜索、DOI 查询、标题存在性检查、
+向前/向后/共被引追踪。带本地缓存 + rate-limit 保护。
+
+历史名 ``CitationTracker`` 保留为别名（见文件末尾），旧代码
+``from search_engine import CitationTracker`` 零改动。
 
 使用方式:
-    tracker = CitationTracker()
-    # 向后追踪（种子论文引用了什么）
-    backward = await tracker.backward(doi="10.xxx/yyy", limit=20)
-    # 向前追踪（谁引用了种子论文）
-    forward = await tracker.forward(doi="10.xxx/yyy", limit=20)
-    # 共被引/相似论文
-    related = await tracker.related(doi="10.xxx/yyy", limit=20)
+    async with OpenAlexBackend(mailto="you@example.com") as oa:
+        papers = await oa.search("self-healing polymer")
+        exists = await oa.title_exists("Some Paper Title")
+        backward = await oa.backward(doi="10.xxx/yyy", limit=20)
 """
 
 import logging
 import httpx
-from .models import Paper, Author
+
+from ..models import Paper, Author
+from .base import SearchBackend
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +32,12 @@ class RateLimitExhaustedError(Exception):
     pass
 
 
-class CitationTracker:
-    """OpenAlex 引文追踪器（带本地缓存 + rate-limit 保护）。"""
+class OpenAlexBackend(SearchBackend):
+    """OpenAlex 后端（带本地缓存 + rate-limit 保护）。
+
+    实现 ``SearchBackend.search``；额外提供引文追踪（backward/forward/related）、
+    DOI 查询、标题存在性检查等 OpenAlex 专属能力——这些不进基类，只在本类扩展。
+    """
 
     BASE_URL = "https://api.openalex.org"
 
@@ -69,6 +75,9 @@ class CitationTracker:
         return self
 
     async def __aexit__(self, *args):
+        await self.close()
+
+    async def close(self):
         if self._client:
             await self._client.aclose()
             self._client = None
@@ -138,12 +147,28 @@ class CitationTracker:
         url = f"{self.BASE_URL}/works/doi:{doi}"
         return await self._get_json(url)
 
-    async def backward(self, doi: str, limit: int = 20) -> list[Paper]:
-        """向后追踪 — 种子论文引用的文献。
+    async def get_by_doi(self, doi: str) -> Paper | None:
+        """按 DOI 取单篇论文（SearchBackend 可选能力）。"""
+        work = await self._get_work_by_doi(doi)
+        if not work:
+            return None
+        return self._work_to_paper(work)
 
-        Returns:
-            引用论文的 Paper 列表
+    async def title_exists(self, title: str) -> bool:
+        """标题是否存在于 OpenAlex（SearchBackend 可选能力）。
+
+        用 title.search 查；查询失败保守返回 True（不误判缺失，与历史逻辑一致）。
         """
+        url = f"{self.BASE_URL}/works"
+        params = {"filter": f"title.search:{title[:120]}", "per-page": 1}
+        try:
+            data = await self._get_json(url, params)
+            return len(data.get("results", [])) > 0
+        except Exception:
+            return True
+
+    async def backward(self, doi: str, limit: int = 20) -> list[Paper]:
+        """向后追踪 — 种子论文引用的文献。"""
         work = await self._get_work_by_doi(doi)
         referenced_ids = work.get("referenced_works", [])
         if not referenced_ids:
@@ -242,7 +267,7 @@ class CitationTracker:
                 authors.append(Author(surname=surname, given_name=given))
 
         # 摘要重建
-        abstract = CitationTracker._reconstruct_abstract(
+        abstract = OpenAlexBackend._reconstruct_abstract(
             work.get("abstract_inverted_index")
         )
 
@@ -282,3 +307,7 @@ class CitationTracker:
                 positions.append((idx, word))
         positions.sort()
         return " ".join(word for _, word in positions)
+
+
+# 向后兼容：旧代码 from search_engine import CitationTracker / RateLimitError
+CitationTracker = OpenAlexBackend

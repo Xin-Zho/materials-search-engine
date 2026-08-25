@@ -394,7 +394,7 @@ async def cmd_generate(args):
             if args.filter:
                 # 迭代搜索模式
                 print(f"迭代搜索: 目标 {args.top_k} 篇 ≥ {args.threshold}%\n")
-                from .citation_tracker import CitationTracker
+                from .backends import CitationTracker
                 citation_tracker = CitationTracker(mailto=args.mailto) if args.citations else None
                 searcher = IterativeSearcher(
                     backend=backend,

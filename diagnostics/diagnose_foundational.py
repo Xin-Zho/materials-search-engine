@@ -10,7 +10,7 @@
 import asyncio
 import csv
 import sys
-from search_engine.citation_tracker import CitationTracker
+from search_engine import CitationTracker
 from search_engine.foundational_recovery import FoundationalRecovery
 from search_engine.evaluator import Benchmark
 from search_engine.models import Paper

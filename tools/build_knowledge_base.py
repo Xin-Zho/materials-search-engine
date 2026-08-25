@@ -15,6 +15,11 @@ from search_engine.knowledge_extractor import KnowledgeExtractor
 from search_engine.knowledge_base import KnowledgeBase
 from search_engine.models import Paper
 
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 
 async def main():
     csv_path = sys.argv[1]

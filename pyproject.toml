@@ -23,3 +23,6 @@ include = ["search_engine*"]
 
 [project.scripts]
 scopus-search = "search_engine.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

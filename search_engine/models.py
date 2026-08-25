@@ -174,12 +174,14 @@ class RouteCoverage:
 
 
 @dataclass
-@dataclass
 class Mechanism:
-    """物理机制（因果三元组）。"""
+    """物理机制（因果三元组 + evidence-based 字段）。"""
     cause: str = ""       # 触发因素（如 ring-opening polymerization）
     mechanism: str = ""   # 中间机制（如 volumetric expansion）
     effect: str = ""      # 目标效果（如 offsets shrinkage）
+    canonical: str = ""   # 归一化后的标准机制名（如 stress relaxation）
+    evidence: str = ""    # 为什么认为论文有这个机制（原文依据）
+    confidence: float = 0.0  # 置信度 0-1
 
 
 @dataclass

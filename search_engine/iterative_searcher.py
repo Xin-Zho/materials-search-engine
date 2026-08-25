@@ -26,7 +26,7 @@ from .llm import LLMBackend
 from .relevance import RelevanceFilter
 from .term_matrix import TermMatrixGenerator
 from .query_population import QueryPopulation
-from .coverage_map import CoverageMap
+from .coverage.route_coverage import CoverageMap
 from .evaluator import normalize_doi
 
 logger = logging.getLogger(__name__)
@@ -375,15 +375,10 @@ class IterativeSearcher:
 
     async def _check_source_exists(self, title: str) -> bool:
         """用精确标题查 OpenAlex，判断数据源里是否有这篇论文。"""
-        import httpx
+        from .backends import OpenAlexBackend
         try:
-            async with httpx.AsyncClient(timeout=20) as client:
-                r = await client.get(
-                    "https://api.openalex.org/works",
-                    params={"filter": f"title.search:{title[:120]}", "per-page": 1},
-                )
-                hits = r.json().get("results", [])
-                return len(hits) > 0
+            async with OpenAlexBackend() as oa:
+                return await oa.title_exists(title)
         except Exception:
             return True  # 查询失败时不误判为 source 缺失
 

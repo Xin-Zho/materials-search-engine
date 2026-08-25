@@ -6,11 +6,17 @@
 
 import asyncio
 import os
+import sys
 from search_engine.llm import DeepSeekBackend
 from search_engine.knowledge_base import KnowledgeBase
 from search_engine.route_normalizer import RouteNormalizer
 from search_engine.route_ontology import RouteOntology
-from search_engine.coverage_aware_expander import CoverageAwareExpander
+from search_engine import CoverageAwareExpander
+
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
 
 
 async def main():
@@ -70,9 +76,14 @@ async def main():
     for route, mech_map in rc["mechanism_coverage"].items():
         count = rc["route_coverage"].get(route, 0)
         print(f"\n  {route}（{count} 篇）:")
-        for mech, covered in mech_map.items():
-            mark = "✓" if covered else "✗"
-            print(f"    {mark} {mech}")
+        for mech, info in mech_map.items():
+            if info["covered"]:
+                detail = f" ({info['confidence']:.2f})"
+                if info["evidence"]:
+                    detail += f" — {info['evidence']}"
+                print(f"    ✓ {mech}{detail}")
+            else:
+                print(f"    ✗ {mech}")
 
     print("\n缺失的 mechanism（下一轮搜索目标）:")
     for route, mechs in rc["missing_mechanisms"].items():
