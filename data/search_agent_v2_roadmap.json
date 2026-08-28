@@ -214,6 +214,42 @@
    "evidence": "composite/dental/photopolymer 修复后稳定导出 (RETRY=0 可复现)，对 41 子集 Top2000 新增 = 0"
   },
   {
+   "phase": "usability",
+   "name": "Data Quality / Research-Usable 审计（v2.1 前置）",
+   "status": "DONE",
+   "frozen_at": "2026-08-28",
+   "rule": "Usable = IdentityValid ∧ TitleAvailable ∧ (AbstractAvailable ∨ FullTextAvailable)",
+   "two_layers": {
+    "Discovery_Index": "所有有稳定身份的检索论文——去重/citation/community discovery 用",
+    "Research_Usable_DB": "满足 usability rule 子集——relevance/KB/KG/研究分析用；无 abstract 无全文不进入"
+   },
+   "audit_results": {
+    "candidate_total": 6572,
+    "candidate_usable": "5958 (90.7%)",
+    "candidate_unusable": "614（NO_ABSTRACT_NO_FULLTEXT）",
+    "qgs_total": 134,
+    "qgs_usable": "105 (78.4%)",
+    "qgs_unusable": "29（无 abstract 无全文）",
+    "discovery_candidate_recall": "61.9% (83/134)",
+    "research_usable_recall": "79.0% (83/105)",
+    "found_but_unusable": 0,
+    "key_finding": "发现的 83 篇 QGS 全部 usable（0 篇发现但不可用）；RR_usable 分母从 134 降到 105"
+   },
+   "unusable_29_analysis": {
+    "pre2006": "17/29 为 ≤2005 历史论文（Scopus 老论文收录常无摘要）",
+    "holography": "Phenanthrenequinone-doped PMMA / Epoxy-Photopolymer for Volume Holography / Holographic recording TiO2 / Holographic data storage 等——正是 v2.1 跨不到的社区",
+    "uv_nil": "UV-Nanoimprint Lithography 仿真 ×3（DIRECTION_GAP 207/213/225 同批）",
+    "bowen1967": "Adhesive bonding...V（DIRECTION_GAP 点名的 Bowen 1967）",
+    "implication": "v2.1 即使搜到这些论文，也需要 fulltext 获取管道（OpenAlex fulltext URL/Crossref）才能 usable——社区发现成功后接 fulltext 是硬需求"
+   },
+   "tools": [
+    "tools/audit_research_usability.py（离线审计，DOI 桥 scopus_cache abstract）",
+    "tools/evaluate_community_round1.py 已更新 usable 口径（retrieved_usable/new_usable_MCG/usable_retrieval_novelty/qgs1_usable_hit）"
+   ],
+   "data": "data/exports/research_usability_audit.json",
+   "note": "scopus_cache paper_id 是 scopus:{DOI} 格式——abstract 匹配必须 DOI 桥，eid 匹配会 0 命中（踩坑）"
+  },
+  {
    "phase": "v2.1",
    "name": "Cross-Community Discovery",
    "status": "NEXT",
