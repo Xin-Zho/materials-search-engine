@@ -185,6 +185,42 @@ class Mechanism:
 
 
 @dataclass
+class RouteMechanismEvidenceEdge:
+    """一条 route—mechanism 证据边 —— coverage 的唯一证据来源（Phase 1.8 核心结构）。
+
+    核心原则：route 和 mechanism 的绑定关系必须来自论文原文（evidence 支持），
+    不允许事后把 paper.routes × paper.mechanisms 笛卡尔组合凭空生成 edge。
+
+    unbound mechanism：raw_route/canonical_route 为空字符串 —— 机制仍可进入
+    mechanism inventory / discovery，但永远不关闭任何 route × mechanism gap。
+
+    canonical 字段由本地确定性归并填充（assign_route + MECHANISM_CANONICAL），
+    与 CoverageMatcher 同一语义源，不依赖 LLM 输出一致的 canonical 字符串。
+
+    relation_type（extractor 判定，论文级声明类型）：
+      direct   —— 论文直接陈述该 route 通过该 mechanism 起作用
+      inferred —— LLM 从机制链推断，论文未直接陈述（第一版不关闭 gap）
+    """
+    paper_id: str
+    raw_route: str = ""            # extractor 原始 route 文本（"" = unbound）
+    canonical_route: str = ""      # assign_route 归并结果（"" = 无法归并 / unbound）
+    raw_mechanism: str = ""        # extractor 原始 mechanism 文本
+    canonical_mechanism: str = ""  # MECHANISM_CANONICAL 归并结果
+    evidence: str = ""             # 支撑该 route—mechanism 关系的原文依据
+    confidence: float = 0.0        # 0-1
+    relation_type: str = "direct"  # direct / inferred / human_verified / domain_verified
+    provenance: str = ""           # ""(model) / manual_audit（人工核实补的 edge，评估 extractor 时单独统计）
+
+    # relation_type 四态（用户定 2026-08-25，证据强度分级）：
+    #   direct           —— 论文明确说（extractor 自动判定，进 DIRECT_MODEL）
+    #   inferred         —— LLM 从机制链推断，论文未直接陈述（不关闭 gap）
+    #   human_verified   —— 人工确认论文明确说（进 DIRECT_HUMAN）
+    #   domain_verified  —— 领域知识确认但论文表述弱（进 DOMAIN_VERIFIED，不伪装 DIRECT；
+    #                        完备性证明双口径：C_strict=DIRECT_MODEL+DIRECT_HUMAN，
+    #                        C_domain=strict+DOMAIN_VERIFIED）
+
+
+@dataclass
 class SearchHypothesis:
     """搜索假设：从论文证据泛化出的、可驱动新搜索的方向。"""
     hypothesis: str = ""             # 泛化假设（超出论文具体化学）
@@ -205,7 +241,10 @@ class KnowledgeRecord:
     - historical_terms（可驱动历史文献检索的旧称/别名）
     - search_hypotheses（Paper Evidence → Generalized Hypothesis → Query）
     """
-    paper_id: str                                          # 来源论文（去重键）
+    paper_id: str                                          # 来源论文（surviving DB row key，如 openalex:...）
+    canonical_paper_id: str = ""                           # 论文真实身份（优先 doi:10.xxx；merge 后不随删行丢失）
+    doi: str = ""                                          # DOI（Scopus/OpenAlex 共用标识）
+    openalex_id: str = ""                                  # OpenAlex W-ID（不含前缀）
     problem: str = ""                                      # 论文解决的问题
     strategy_routes: list[str] = field(default_factory=list)      # 技术/化学/工艺路线
     materials: list[str] = field(default_factory=list)            # 材料体系
@@ -216,9 +255,11 @@ class KnowledgeRecord:
     broader_terms: list[str] = field(default_factory=list)         # 上位概念
     historical_terms: list[str] = field(default_factory=list)      # 旧称/别名（可驱动历史检索）
     search_hypotheses: list[SearchHypothesis] = field(default_factory=list)  # 泛化搜索假设
+    route_mechanism_edges: list[RouteMechanismEvidenceEdge] = field(default_factory=list)  # Phase 1.8 证据边（coverage 唯一证据）
     source_text: str = ""                                  # 提取依据的原文片段（追溯用）
     extractor_version: str = "1.0"                         # 提取器版本
     confidence: float = 0.0                                # 提取置信度 0-1
+    extraction_status: str = ""                            # "" / ok / insufficient_evidence（无法获取足够文本）
 
     def all_terms(self) -> list[str]:
         """展平所有可用于检索的术语（去重）。"""

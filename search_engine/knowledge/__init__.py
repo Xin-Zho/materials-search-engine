@@ -17,10 +17,12 @@ from .coverage import MechanismCoverageAnalyzer
 from .gap_detector import GapDetector
 from .gap_query_generator import GapQueryGenerator
 from .expander import CoverageAwareExpander
+from .autonomous_loop import AutonomousLoop
 
 __all__ = [
     "MechanismCoverageAnalyzer",
     "GapDetector",
     "GapQueryGenerator",
     "CoverageAwareExpander",
+    "AutonomousLoop",
 ]

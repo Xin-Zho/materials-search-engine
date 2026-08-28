@@ -30,6 +30,7 @@ from .knowledge.expander import CoverageAwareExpander
 from .knowledge.coverage import MechanismCoverageAnalyzer
 from .knowledge.gap_detector import GapDetector
 from .knowledge.gap_query_generator import GapQueryGenerator
+from .knowledge.autonomous_loop import AutonomousLoop
 
 __all__ = [
     "Paper",
@@ -73,4 +74,5 @@ __all__ = [
     "SearchBackend",
     "RateLimitError",
     "RateLimitExhaustedError",
+    "AutonomousLoop",
 ]

@@ -7,6 +7,11 @@ gap_query_generator——本类不碰这俩。
 与 coverage.route_coverage.CoverageMap 区分：
 - CoverageMap 看的是"搜索结果按路线聚类，哪条路线论文少"（搜索侧）。
 - 本类看的是"知识库里哪个 route 的哪个机制缺证据"（知识侧）。
+
+route × mechanism 匹配使用 CoverageMatcher（唯一语义源）：
+- route：ROUTE_HIERARCHY 有方向 is_a（thiol-ene → step-growth）+ CORE aliases
+- mechanism：MECHANISM_CANONICAL 概念层级（stress relief → stress relaxation）+ 别名兜底
+与 global rematch / diagnostic 共用同一套 matcher，避免"本地说关、matrix 不认"的 divergence。
 """
 
 import logging
@@ -15,7 +20,10 @@ from collections import Counter
 from ..llm import LLMBackend
 from ..route_normalizer import RouteNormalizer
 from ..route_ontology import RouteOntology
-from ..route_mechanism_ontology import match_route, get_mechanisms
+from ..route_mechanism_ontology import (
+    CORE_ROUTE_MECHANISMS, get_mechanisms, assign_route, route_match_type, CoverageMatcher,
+    mechanism_type,
+)
 from ..mechanism_normalizer import MechanismNormalizer
 from ..models import Mechanism
 
@@ -76,68 +84,93 @@ class MechanismCoverageAnalyzer:
     async def analyze_route_coverage(self, records) -> dict:
         """route-level + mechanism-level coverage（知道哪个机制没覆盖）。
 
+        Phase 1.8：coverage 的唯一证据来源是 route_mechanism_edges（RouteMechanismEvidenceEdge）。
+        covered = 存在 supporting edge（CoverageMatcher.edge_supports_gap 返回 DIRECT/INHERITED）。
+        旧记录（extractor_version < 2.0，无 edges）不贡献 coverage —— 宁缺毋滥，等重抽。
+
+        route 归并使用本地 CoverageMatcher（有方向 is_a + aliases），
+        mechanism 用 MECHANISM_CANONICAL 概念层级 + 别名兜底——与 global rematch
+        / diagnostic 共用同一套语义，保证 matrix 是唯一 authoritative closure truth。
+
         Returns:
             {"route_coverage": {core_route: 论文数},
-             "mechanism_coverage": {core_route: {mechanism: {covered, evidence, confidence}}},
+             "mechanism_coverage": {core_route: {mechanism: {covered, evidence, confidence,
+                                                            relation, paper_id, inferred_candidates}}},
              "missing_mechanisms": {core_route: [未覆盖 mechanism]}}
         """
-        mech_normalizer = MechanismNormalizer()
+        matcher = CoverageMatcher()
 
-        # 1. raw → canonical route 映射（classify 一次）
-        raw_routes = [r for rec in records for r in rec.strategy_routes]
-        classified = await self.ontology.classify(raw_routes)
-        raw_to_canonical: dict[str, str] = {}
-        for c in classified:
-            if c["type"] == "strategy_family":
-                raw_to_canonical[c["route"]] = c.get("family") or c["route"]
+        # 1. paper → canonical routes（metadata 用途，检索/分类仍用 strategy_routes）
+        paper_canonicals: list[tuple[object, set[str]]] = []
+        for rec in records:
+            routes: set[str] = set()
+            for phrase in rec.strategy_routes:
+                r = assign_route([phrase])
+                if r:
+                    routes.add(r)
+            paper_canonicals.append((rec, routes))
 
-        # 2. canonical route → core route（7 个核心 route 之一）
-        canonical_to_core: dict[str, str] = {}
-        for canonical_route in set(raw_to_canonical.values()):
-            core = match_route(canonical_route)
-            if core:
-                canonical_to_core[canonical_route] = core
+        # 2. 收集全部证据边（跨所有 records；旧记录无 edges → 不贡献）
+        all_edges = []
+        for rec in records:
+            all_edges.extend(rec.route_mechanism_edges)
 
-        # 3. route-level coverage（每篇论文的每个 core route 计一次）
+        # 3. route + mechanism coverage（对 7 个 core route）
         route_coverage = Counter()
-        for rec in records:
-            rec_cores = self._paper_cores(rec, raw_to_canonical, canonical_to_core)
-            for core in rec_cores:
-                route_coverage[core] += 1
-
-        # 4. mechanism-level coverage：per-route + 全文弱别名匹配。
-        #    每个 checklist mechanism 独立用自己的别名对论文机制的全部文本字段
-        #    （canonical/cause/mechanism/effect/evidence）做子串匹配，
-        #    这样每个 ✓ 都来自各自的证据，而非一个关键词触发多个标签。
-        core_mech_texts: dict[str, list[tuple[str, Mechanism]]] = {}
-        for rec in records:
-            rec_cores = self._paper_cores(rec, raw_to_canonical, canonical_to_core)
-            for core in rec_cores:
-                for m in rec.physical_mechanisms:
-                    text = " ".join(t for t in (m.canonical, m.cause, m.mechanism, m.effect, m.evidence) if t).lower()
-                    core_mech_texts.setdefault(core, []).append((text, m))
-
         mechanism_coverage: dict[str, dict] = {}
         missing_mechanisms: dict[str, list] = {}
-        for core in route_coverage:
-            standard_mechs = get_mechanisms(core)
-            texts = core_mech_texts.get(core, [])
+        for core in CORE_ROUTE_MECHANISMS:
+            core_papers = [
+                (rec, routes) for rec, routes in paper_canonicals
+                if routes and route_match_type(routes, core) != "NO_MATCH"
+            ]
+            route_coverage[core] = len(core_papers)
             mechanism_coverage[core] = {}
             missing_mechanisms[core] = []
-            for mech in standard_mechs:
-                aliases = mech_normalizer.aliases_for(mech)
-                best: Mechanism | None = None
-                for text, m in texts:
-                    if any(alias in text for alias in aliases):
-                        if best is None or m.confidence > best.confidence:
-                            best = m
-                covered = best is not None
-                mechanism_coverage[core][mech] = {
-                    "covered": covered,
-                    "evidence": best.evidence if best else "",
-                    "confidence": best.confidence if best else 0.0,
-                }
-                if not covered:
+            for mech in get_mechanisms(core):
+                supporting = []
+                inferred = []
+                for e in all_edges:
+                    st = matcher.edge_supports_gap(e, core, mech)
+                    if st == "INFERRED":
+                        inferred.append(e)
+                    elif st != "NO_MATCH":
+                        supporting.append((st, e))
+                if supporting:
+                    # 优先级：DIRECT_MODEL > DIRECT_HUMAN > INHERITED（与 compute_gap_coverage 同）
+                    st, best = "INHERITED", None
+                    for pref in ("DIRECT_MODEL", "DIRECT_HUMAN", "INHERITED"):
+                        chosen = [x for x in supporting if x[0] == pref]
+                        if chosen:
+                            st, best = max(chosen, key=lambda x: x[1].confidence)
+                            break
+                    mechanism_coverage[core][mech] = {
+                        "covered": True,
+                        "evidence": best.evidence or "",
+                        "confidence": best.confidence or 0.0,
+                        "relation": st,                 # DIRECT_MODEL / DIRECT_HUMAN / INHERITED
+                        "paper_id": best.paper_id,
+                        "type": mechanism_type(core, mech),   # MECHANISM / ROUTE_PROPERTY / EFFECT
+                        "inferred_candidates": [
+                            {"paper_id": e.paper_id, "evidence": (e.evidence or "")[:60],
+                             "confidence": e.confidence}
+                            for e in inferred
+                        ],
+                    }
+                else:
+                    mechanism_coverage[core][mech] = {
+                        "covered": False,
+                        "evidence": "",
+                        "confidence": 0.0,
+                        "relation": "NO_MATCH",
+                        "paper_id": "",
+                        "type": mechanism_type(core, mech),   # MECHANISM / ROUTE_PROPERTY / EFFECT
+                        "inferred_candidates": [
+                            {"paper_id": e.paper_id, "evidence": (e.evidence or "")[:60],
+                             "confidence": e.confidence}
+                            for e in inferred
+                        ],
+                    }
                     missing_mechanisms[core].append(mech)
 
         return {
@@ -145,14 +178,3 @@ class MechanismCoverageAnalyzer:
             "mechanism_coverage": mechanism_coverage,
             "missing_mechanisms": missing_mechanisms,
         }
-
-    @staticmethod
-    def _paper_cores(rec, raw_to_canonical: dict, canonical_to_core: dict) -> set[str]:
-        """一篇论文归属的 core routes（按 strategy_routes 归一化）。"""
-        cores: set[str] = set()
-        for route in rec.strategy_routes:
-            canonical = raw_to_canonical.get(route, route)
-            core = canonical_to_core.get(canonical)
-            if core:
-                cores.add(core)
-        return cores

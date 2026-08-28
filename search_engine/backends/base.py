@@ -28,6 +28,14 @@ class SearchBackend(abc.ABC):
         """标题是否存在于此数据源（可选能力，默认保守返回 True，不误判缺失）。"""
         return True
 
+    async def search_strict(self, query: str, **kwargs) -> list[Paper]:
+        """严格检索（仅 title/abstract 限定），用于 gap closure precision。
+
+        两级查询的 Tier 1：要求 route + mechanism + anchor 同时出现在 title/abstract。
+        默认退化到普通 search（broad），具体后端可覆盖成 OQL / title-abs-key 检索。
+        """
+        return await self.search(query, **kwargs)
+
     async def close(self) -> None:
         """释放底层资源（HTTP client 等），默认无操作。"""
         return None

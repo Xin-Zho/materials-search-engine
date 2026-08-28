@@ -3,10 +3,16 @@
 薄逻辑层：把 MechanismCoverageAnalyzer 算出的 coverage / mechanism_coverage
 转成"缺口列表"。策略级缺口（coverage ≤ threshold）和机制级缺口（未覆盖机制）
 都从这里出，与"如何算 coverage"解耦。
+
+Phase 1.7（用户定）：coverage target 是 typed 的——MECHANISM / ROUTE_PROPERTY /
+EFFECT。机制级缺口（gap search 的输入）只取 **MECHANISM** 类型：ROUTE_PROPERTY /
+EFFECT 有价值但不和 causal mechanism 混成同一个 completeness 指标，也不生成 gap query。
 """
 
 import logging
 from collections import Counter
+
+from ..route_mechanism_ontology import mechanism_type
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +28,17 @@ class GapDetector:
         return [s for s, count in coverage.items() if count <= self.gap_threshold]
 
     def detect_missing_mechanisms(self, mechanism_coverage: dict) -> dict[str, list[str]]:
-        """机制级缺口：每个 core route 下 covered=False 的机制。"""
+        """机制级缺口：每个 core route 下 covered=False 的机制。
+
+        只返回 type == MECHANISM 的缺口（ROUTE_PROPERTY/EFFECT 不生成 gap query，
+        不参与 Phase 1.7 的 gap closure 指标）。
+        """
         missing: dict[str, list[str]] = {}
         for route, mechs in mechanism_coverage.items():
-            miss = [m for m, info in mechs.items() if not info.get("covered")]
+            miss = [
+                m for m, info in mechs.items()
+                if not info.get("covered") and mechanism_type(route, m) == "MECHANISM"
+            ]
             if miss:
                 missing[route] = miss
         return missing

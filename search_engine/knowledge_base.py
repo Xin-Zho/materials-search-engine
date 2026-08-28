@@ -14,7 +14,7 @@ import logging
 import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
-from .models import KnowledgeRecord, Mechanism, SearchHypothesis
+from .models import KnowledgeRecord, Mechanism, SearchHypothesis, RouteMechanismEvidenceEdge
 
 logger = logging.getLogger(__name__)
 
@@ -137,10 +137,27 @@ class KnowledgeBase:
                 created_at REAL NOT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_knowledge_version ON knowledge_records(extractor_version);
+
+            -- Phase 1.8: route—mechanism 证据边（coverage 的唯一证据来源）
+            -- 与 knowledge_records.record_json 里的 route_mechanism_edges 保持同步，
+            -- 此表供 SQL 审计/查询；运行时权威来源是 record 对象。
+            CREATE TABLE IF NOT EXISTS route_mechanism_edges (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                paper_id TEXT NOT NULL,
+                raw_route TEXT,
+                canonical_route TEXT,
+                raw_mechanism TEXT,
+                canonical_mechanism TEXT,
+                evidence TEXT,
+                confidence REAL,
+                relation_type TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_edges_paper ON route_mechanism_edges(paper_id);
+            CREATE INDEX IF NOT EXISTS idx_edges_route_mech ON route_mechanism_edges(canonical_route, canonical_mechanism);
         """)
 
     def store(self, record: KnowledgeRecord):
-        """落库一条知识记录。"""
+        """落库一条知识记录（含 route_mechanism_edges 同步到 edges 表）。"""
         self.init_tables()
         import time
         self.conn.execute(
@@ -150,7 +167,52 @@ class KnowledgeBase:
             (record.paper_id, self._serialize(record),
              record.extractor_version, record.confidence, time.time()),
         )
+        # edges 表同步（DELETE + INSERT，保证与 record 一致）
+        self.conn.execute("DELETE FROM route_mechanism_edges WHERE paper_id = ?", (record.paper_id,))
+        self.conn.executemany(
+            "INSERT INTO route_mechanism_edges "
+            "(paper_id, raw_route, canonical_route, raw_mechanism, canonical_mechanism, "
+            " evidence, confidence, relation_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [(e.paper_id or record.paper_id, e.raw_route, e.canonical_route,
+              e.raw_mechanism, e.canonical_mechanism, e.evidence,
+              e.confidence, e.relation_type)
+             for e in record.route_mechanism_edges],
+        )
         self.conn.commit()
+
+    def delete(self, paper_id: str):
+        """删除一条记录（knowledge_records + edges 表），供 identity merge 使用。"""
+        self.init_tables()
+        self.conn.execute("DELETE FROM route_mechanism_edges WHERE paper_id = ?", (paper_id,))
+        self.conn.execute("DELETE FROM knowledge_records WHERE paper_id = ?", (paper_id,))
+        self.conn.commit()
+
+    def get_edges(self, canonical_route: str | None = None,
+                  canonical_mechanism: str | None = None) -> list[RouteMechanismEvidenceEdge]:
+        """读取证据边（可选项过滤），供 coverage/审计使用。"""
+        self.init_tables()
+        sql = ("SELECT paper_id, raw_route, canonical_route, raw_mechanism, "
+               "canonical_mechanism, evidence, confidence, relation_type "
+               "FROM route_mechanism_edges")
+        conds, args = [], []
+        if canonical_route:
+            conds.append("canonical_route = ?")
+            args.append(canonical_route)
+        if canonical_mechanism:
+            conds.append("canonical_mechanism = ?")
+            args.append(canonical_mechanism)
+        if conds:
+            sql += " WHERE " + " AND ".join(conds)
+        rows = self.conn.execute(sql, args).fetchall()
+        return [
+            RouteMechanismEvidenceEdge(
+                paper_id=r[0], raw_route=r[1] or "", canonical_route=r[2] or "",
+                raw_mechanism=r[3] or "", canonical_mechanism=r[4] or "",
+                evidence=r[5] or "", confidence=float(r[6] or 0.0),
+                relation_type=r[7] or "direct",
+            )
+            for r in rows
+        ]
 
     def store_many(self, records: list[KnowledgeRecord]):
         for r in records:
@@ -225,6 +287,9 @@ class KnowledgeBase:
     def _serialize(record: KnowledgeRecord) -> str:
         return json.dumps({
             "paper_id": record.paper_id,
+            "canonical_paper_id": record.canonical_paper_id,
+            "doi": record.doi,
+            "openalex_id": record.openalex_id,
             "problem": record.problem,
             "strategy_routes": record.strategy_routes,
             "materials": record.materials,
@@ -244,9 +309,18 @@ class KnowledgeBase:
                  "queries": h.queries}
                 for h in record.search_hypotheses
             ],
+            "route_mechanism_edges": [
+                {"paper_id": e.paper_id, "raw_route": e.raw_route,
+                 "canonical_route": e.canonical_route, "raw_mechanism": e.raw_mechanism,
+                 "canonical_mechanism": e.canonical_mechanism, "evidence": e.evidence,
+                 "confidence": e.confidence, "relation_type": e.relation_type,
+                 "provenance": e.provenance}
+                for e in record.route_mechanism_edges
+            ],
             "source_text": record.source_text,
             "extractor_version": record.extractor_version,
             "confidence": record.confidence,
+            "extraction_status": record.extraction_status,
         }, ensure_ascii=False)
 
     @staticmethod
@@ -254,6 +328,9 @@ class KnowledgeBase:
         d = json.loads(data)
         return KnowledgeRecord(
             paper_id=d.get("paper_id", ""),
+            canonical_paper_id=d.get("canonical_paper_id", ""),
+            doi=d.get("doi", ""),
+            openalex_id=d.get("openalex_id", ""),
             problem=d.get("problem", ""),
             strategy_routes=d.get("strategy_routes", []),
             materials=d.get("materials", []),
@@ -279,9 +356,25 @@ class KnowledgeBase:
                 )
                 for h in d.get("search_hypotheses", [])
             ],
+            route_mechanism_edges=[
+                RouteMechanismEvidenceEdge(
+                    paper_id=e.get("paper_id", "") or d.get("paper_id", ""),
+                    raw_route=e.get("raw_route", ""),
+                    canonical_route=e.get("canonical_route", ""),
+                    raw_mechanism=e.get("raw_mechanism", ""),
+                    canonical_mechanism=e.get("canonical_mechanism", ""),
+                    evidence=e.get("evidence", ""),
+                    confidence=float(e.get("confidence", 0.0) or 0.0),
+                    relation_type=e.get("relation_type", "direct"),
+                    provenance=e.get("provenance", ""),
+                )
+                for e in d.get("route_mechanism_edges", [])
+                if isinstance(e, dict)
+            ],
             source_text=d.get("source_text", ""),
             extractor_version=d.get("extractor_version", "1.1"),
             confidence=d.get("confidence", 0.0),
+            extraction_status=d.get("extraction_status", ""),
         )
 
     def close(self):

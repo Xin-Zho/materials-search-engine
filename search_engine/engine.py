@@ -127,8 +127,14 @@ class ScopusSearchEngine:
         year_range: tuple[int, int] | None = None,
         sort_by: str = "relevance",
         skip_cache: bool = False,
+        offset: int = 0,
     ) -> SearchResult:
-        """执行 Scopus 高级搜索，通过 CSV 导出获取结果。"""
+        """执行 Scopus 高级搜索，通过 CSV 导出获取结果。
+
+        offset：导出起始位置（resultSet.offset）。Phase 3 概率抽样用——Scopus
+        export-service 支持 offset，但深 offset（>5000）受 Scopus 结果上限约束，
+        需 probe 实验验证（tools/probe_scopus_sampling.py）。
+        """
         full_query = query
         if year_range:
             start, end = year_range
@@ -166,7 +172,7 @@ class ScopusSearchEngine:
             return result
 
         # 2. 通过 Scopus Export API 获取 CSV
-        csv_text = await self._export_via_api(full_query, limit)
+        csv_text = await self._export_via_api(full_query, limit, offset=offset)
         # 保存原始 CSV 以便调试字段名
         (self.data_dir / "cache" / "scopus_export_raw.csv").write_text(csv_text, encoding="utf-8")
         logger.info("CSV: %d 字符 → data/cache/scopus_export_raw.csv", len(csv_text))
@@ -201,8 +207,21 @@ class ScopusSearchEngine:
 
     # ── Scopus Export API ─────────────────────────────
 
-    async def _export_via_api(self, query: str, limit: int, fields: list[str] | None = None) -> str:
-        """通过 Scopus Export REST API 导出 CSV（不经 UI）。"""
+    async def _export_via_api(self, query: str, limit: int,
+                              fields: list[str] | None = None,
+                              offset: int = 0,
+                              poll_retries: int = 30,
+                              retry_abort: int | None = None) -> str:
+        """通过 Scopus Export REST API 导出 CSV（不经 UI）。
+
+        offset：导出起始位置（resultSet.offset，Phase 3 概率抽样用）。
+        poll_retries：bulk-job 状态轮询次数（每次 1s）。⚠️ 大导出（itemCount
+        ≥1000）生成时间常超 30s，默认 30 会超时返回空——v2.0.1 depth run
+        传 90+（已踩坑 2026-08-28：d=1000 多条 query 导出超时→0 条）。
+        retry_abort：job 持续 RETRY 状态多少次后提前放弃（默认 None=不启用）。
+        v2.0.1 verify 实测某些 query 的 job 一直 RETRY 不 COMPLETED，傻等
+        poll_retries 浪费 5 分钟——传 60 即 60s 无进展就放弃（2026-08-28）。
+        """
         if fields is None:
             fields = ["titles", "year", "doi", "abstract"]
 
@@ -217,7 +236,7 @@ class ScopusSearchEngine:
                     {"fieldName": "datesort", "order": "desc"},
                     {"fieldName": "relevance", "order": "desc"},
                 ],
-                "resultSet": {"offset": 0, "itemCount": limit},
+                "resultSet": {"offset": offset, "itemCount": limit},
             },
             "fileType": "CSV",
             "exportType": "PUBLICATION",
@@ -264,7 +283,8 @@ class ScopusSearchEngine:
         logger.debug("导出 job: %s", job_id)
 
         # Step 2: 轮询 job 状态
-        for _ in range(30):  # 最多等 30 秒
+        retry_streak = 0
+        for _ in range(poll_retries):  # 默认最多等 30 秒（大导出传更大值）
             await asyncio.sleep(1)
             try:
                 jobs = await self._page.evaluate(f"""
@@ -280,37 +300,58 @@ class ScopusSearchEngine:
                     "Scopus 导出中断：会话可能已过期。\n"
                     "请运行: python -m search_engine login 重新登录。"
                 )
+            matched = None
             for job in jobs.get("jobs", []):
                 if job.get("jobId") == job_id:
-                    if job.get("status") == "COMPLETED":
-                        file_url = job.get("fileUrl", "")
-                        # Step 3: 生成预签名 URL 并下载
-                        try:
-                            csv_content = await self._page.evaluate(f"""
-                                async () => {{
-                                    const genRes = await fetch(
-                                        '{base_url}/bulk-job/{job_id}/generate-url',
-                                        {{ method: 'POST' }}
-                                    );
-                                    const genData = await genRes.json();
-                                    if (!genData.presignedUrl) return '';
-                                    const csvRes = await fetch(genData.presignedUrl);
-                                    return await csvRes.text();
-                                }}
-                            """)
-                        except Exception as e:
-                            logger.warning("下载 CSV 失败（可能会话过期）: %s", e)
-                            raise ScopusAccessError(
-                                "Scopus CSV 下载中断：会话可能已过期。\n"
-                                "请运行: python -m search_engine login 重新登录。"
-                            )
-                        return csv_content
-                    elif job.get("status") == "FAILED":
-                        logger.error("导出失败: %s", job)
-                        return ""
+                    matched = job
                     break
+            if not matched:
+                continue   # job 不在列表（可能被截断），继续轮询
+            st = matched.get("status")
+            if st == "COMPLETED":
+                file_url = matched.get("fileUrl", "")
+                # Step 3: 生成预签名 URL 并下载
+                try:
+                    csv_content = await self._page.evaluate(f"""
+                        async () => {{
+                            const genRes = await fetch(
+                                '{base_url}/bulk-job/{job_id}/generate-url',
+                                {{ method: 'POST' }}
+                            );
+                            const genData = await genRes.json();
+                            if (!genData.presignedUrl) return '';
+                            const csvRes = await fetch(genData.presignedUrl);
+                            return await csvRes.text();
+                        }}
+                    """)
+                except Exception as e:
+                    logger.warning("下载 CSV 失败（可能会话过期）: %s", e)
+                    raise ScopusAccessError(
+                        "Scopus CSV 下载中断：会话可能已过期。\n"
+                        "请运行: python -m search_engine login 重新登录。"
+                    )
+                return csv_content
+            elif st == "FAILED":
+                logger.error("导出失败: %s", matched)
+                return ""
+            elif st == "RETRY":
+                retry_streak += 1
+                if retry_abort and retry_streak >= retry_abort:
+                    logger.warning("导出 RETRY 连续 %ds 无进展，提前放弃（job=%s）",
+                                   retry_streak, job_id)
+                    break   # 走超时 dump 分支
+            else:
+                retry_streak = 0   # PROCESSING 等，重置连续 RETRY 计数
 
-        logger.warning("导出超时")
+        logger.warning("导出超时（job=%s 未在 %d 次轮询内 COMPLETED）", job_id, poll_retries)
+        try:
+            import json as _json
+            (self.data_dir / "cache" / "export_timeout_jobs.json").write_text(
+                _json.dumps({"query": query, "job_id": job_id,
+                             "last_jobs": jobs.get("jobs", [])},
+                            ensure_ascii=False, indent=1), encoding="utf-8")
+        except Exception:
+            pass
         return ""
 
     # ── 浏览器操作：搜索 ───────────────────────────────
@@ -425,6 +466,8 @@ class ScopusSearchEngine:
         "摘要": "abstract", "Abstract": "abstract",
         "作者": "authors", "Authors": "authors",
         "来源出版物名称": "venue", "Source title": "venue",
+        "期刊名": "venue", "Source": "venue", "Publication name": "venue",
+        "Venue": "venue",
         "卷": "volume", "Volume": "volume",
         "页": "pages", "Pages": "pages", "Page start": "pages",
         "被引频次": "cited_by", "Cited by": "cited_by",
