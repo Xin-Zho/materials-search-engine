@@ -1,0 +1,277 @@
+{
+ "version": "round1",
+ "created_at": "2026-08-28",
+ "holdout": {
+  "TC_017": "dimethacrylate monomer → 第二轮（HOLDOUT）"
+ },
+ "communities": {
+  "TC_006": {
+   "community_id": "TC_006",
+   "community_name": "LED curing / light source",
+   "terms": [
+    "light emitting diode",
+    "curing light",
+    "light curing",
+    "visible light",
+    "curing units",
+    "photo activation"
+   ],
+   "slot_mapping": {
+    "P": [
+     "polymerization shrinkage",
+     "shrinkage stress",
+     "volumetric shrinkage"
+    ],
+    "M": [],
+    "R": [
+     "photocuring"
+    ],
+    "C": [
+     "light emitting diode",
+     "curing light",
+     "light curing",
+     "visible light",
+     "curing units",
+     "photo activation"
+    ]
+   },
+   "family_types": [
+    "PC",
+    "PR"
+   ],
+   "families": [
+    "V2C_TC_006_light_emitting_diode",
+    "V2C_TC_006_curing_light",
+    "V2C_TC_006_light_curing",
+    "V2C_TC_006_visible_light",
+    "V2C_TC_006_curing_units",
+    "V2C_TC_006_photo_activation",
+    "V2C_TC_006_R_photocuring"
+   ],
+   "queries": [
+    {
+     "query_id": "V2C_TC_006_light_emitting_diode::Q01",
+     "family_id": "V2C_TC_006_light_emitting_diode",
+     "query": "TITLE-ABS-KEY(\"polymerization shrinkage\" AND \"light emitting diode\")"
+    },
+    {
+     "query_id": "V2C_TC_006_light_emitting_diode::Q02",
+     "family_id": "V2C_TC_006_light_emitting_diode",
+     "query": "TITLE-ABS-KEY(\"shrinkage stress\" AND \"light emitting diode\")"
+    },
+    {
+     "query_id": "V2C_TC_006_light_emitting_diode::Q03",
+     "family_id": "V2C_TC_006_light_emitting_diode",
+     "query": "TITLE-ABS-KEY(\"volumetric shrinkage\" AND \"light emitting diode\")"
+    },
+    {
+     "query_id": "V2C_TC_006_curing_light::Q04",
+     "family_id": "V2C_TC_006_curing_light",
+     "query": "TITLE-ABS-KEY(\"polymerization shrinkage\" AND \"curing light\")"
+    },
+    {
+     "query_id": "V2C_TC_006_curing_light::Q05",
+     "family_id": "V2C_TC_006_curing_light",
+     "query": "TITLE-ABS-KEY(\"shrinkage stress\" AND \"curing light\")"
+    },
+    {
+     "query_id": "V2C_TC_006_curing_light::Q06",
+     "family_id": "V2C_TC_006_curing_light",
+     "query": "TITLE-ABS-KEY(\"volumetric shrinkage\" AND \"curing light\")"
+    },
+    {
+     "query_id": "V2C_TC_006_light_curing::Q07",
+     "family_id": "V2C_TC_006_light_curing",
+     "query": "TITLE-ABS-KEY(\"polymerization shrinkage\" AND \"light curing\")"
+    },
+    {
+     "query_id": "V2C_TC_006_light_curing::Q08",
+     "family_id": "V2C_TC_006_light_curing",
+     "query": "TITLE-ABS-KEY(\"shrinkage stress\" AND \"light curing\")"
+    },
+    {
+     "query_id": "V2C_TC_006_light_curing::Q09",
+     "family_id": "V2C_TC_006_light_curing",
+     "query": "TITLE-ABS-KEY(\"volumetric shrinkage\" AND \"light curing\")"
+    },
+    {
+     "query_id": "V2C_TC_006_visible_light::Q10",
+     "family_id": "V2C_TC_006_visible_light",
+     "query": "TITLE-ABS-KEY(\"polymerization shrinkage\" AND \"visible light\")"
+    },
+    {
+     "query_id": "V2C_TC_006_visible_light::Q11",
+     "family_id": "V2C_TC_006_visible_light",
+     "query": "TITLE-ABS-KEY(\"shrinkage stress\" AND \"visible light\")"
+    },
+    {
+     "query_id": "V2C_TC_006_visible_light::Q12",
+     "family_id": "V2C_TC_006_visible_light",
+     "query": "TITLE-ABS-KEY(\"volumetric shrinkage\" AND \"visible light\")"
+    },
+    {
+     "query_id": "V2C_TC_006_curing_units::Q13",
+     "family_id": "V2C_TC_006_curing_units",
+     "query": "TITLE-ABS-KEY(\"polymerization shrinkage\" AND \"curing units\")"
+    },
+    {
+     "query_id": "V2C_TC_006_curing_units::Q14",
+     "family_id": "V2C_TC_006_curing_units",
+     "query": "TITLE-ABS-KEY(\"shrinkage stress\" AND \"curing units\")"
+    },
+    {
+     "query_id": "V2C_TC_006_curing_units::Q15",
+     "family_id": "V2C_TC_006_curing_units",
+     "query": "TITLE-ABS-KEY(\"volumetric shrinkage\" AND \"curing units\")"
+    },
+    {
+     "query_id": "V2C_TC_006_photo_activation::Q16",
+     "family_id": "V2C_TC_006_photo_activation",
+     "query": "TITLE-ABS-KEY(\"polymerization shrinkage\" AND \"photo activation\")"
+    },
+    {
+     "query_id": "V2C_TC_006_photo_activation::Q17",
+     "family_id": "V2C_TC_006_photo_activation",
+     "query": "TITLE-ABS-KEY(\"shrinkage stress\" AND \"photo activation\")"
+    },
+    {
+     "query_id": "V2C_TC_006_photo_activation::Q18",
+     "family_id": "V2C_TC_006_photo_activation",
+     "query": "TITLE-ABS-KEY(\"volumetric shrinkage\" AND \"photo activation\")"
+    },
+    {
+     "query_id": "V2C_TC_006_R_photocuring::Q19",
+     "family_id": "V2C_TC_006_R_photocuring",
+     "query": "TITLE-ABS-KEY(\"polymerization shrinkage\" AND \"photocuring\")"
+    },
+    {
+     "query_id": "V2C_TC_006_R_photocuring::Q20",
+     "family_id": "V2C_TC_006_R_photocuring",
+     "query": "TITLE-ABS-KEY(\"shrinkage stress\" AND \"photocuring\")"
+    },
+    {
+     "query_id": "V2C_TC_006_R_photocuring::Q21",
+     "family_id": "V2C_TC_006_R_photocuring",
+     "query": "TITLE-ABS-KEY(\"volumetric shrinkage\" AND \"photocuring\")"
+    }
+   ],
+   "n_families": 7,
+   "n_queries": 21,
+   "provenance": {
+    "discovered_from": "citation_bridge + term_community",
+    "channels": [
+     "citation",
+     "term_cooccurrence"
+    ],
+    "qgs_leakage": false
+   }
+  },
+  "TC_015": {
+   "community_id": "TC_015",
+   "community_name": "filler particle size / loading",
+   "terms": [
+    "filler particle size",
+    "filler loading",
+    "filler content",
+    "particle size",
+    "filler particle"
+   ],
+   "slot_mapping": {
+    "P": [
+     "polymerization shrinkage",
+     "shrinkage stress",
+     "volumetric shrinkage"
+    ],
+    "M": [
+     "filler particle size",
+     "filler loading",
+     "filler content",
+     "particle size"
+    ],
+    "R": [],
+    "C": []
+   },
+   "family_types": [
+    "PM"
+   ],
+   "families": [
+    "V2C_TC_015_M_filler_particle_size",
+    "V2C_TC_015_M_filler_loading",
+    "V2C_TC_015_M_filler_content",
+    "V2C_TC_015_M_particle_size"
+   ],
+   "queries": [
+    {
+     "query_id": "V2C_TC_015_M_filler_particle_size::Q01",
+     "family_id": "V2C_TC_015_M_filler_particle_size",
+     "query": "TITLE-ABS-KEY(\"polymerization shrinkage\" AND \"filler particle size\")"
+    },
+    {
+     "query_id": "V2C_TC_015_M_filler_particle_size::Q02",
+     "family_id": "V2C_TC_015_M_filler_particle_size",
+     "query": "TITLE-ABS-KEY(\"shrinkage stress\" AND \"filler particle size\")"
+    },
+    {
+     "query_id": "V2C_TC_015_M_filler_particle_size::Q03",
+     "family_id": "V2C_TC_015_M_filler_particle_size",
+     "query": "TITLE-ABS-KEY(\"volumetric shrinkage\" AND \"filler particle size\")"
+    },
+    {
+     "query_id": "V2C_TC_015_M_filler_loading::Q04",
+     "family_id": "V2C_TC_015_M_filler_loading",
+     "query": "TITLE-ABS-KEY(\"polymerization shrinkage\" AND \"filler loading\")"
+    },
+    {
+     "query_id": "V2C_TC_015_M_filler_loading::Q05",
+     "family_id": "V2C_TC_015_M_filler_loading",
+     "query": "TITLE-ABS-KEY(\"shrinkage stress\" AND \"filler loading\")"
+    },
+    {
+     "query_id": "V2C_TC_015_M_filler_loading::Q06",
+     "family_id": "V2C_TC_015_M_filler_loading",
+     "query": "TITLE-ABS-KEY(\"volumetric shrinkage\" AND \"filler loading\")"
+    },
+    {
+     "query_id": "V2C_TC_015_M_filler_content::Q07",
+     "family_id": "V2C_TC_015_M_filler_content",
+     "query": "TITLE-ABS-KEY(\"polymerization shrinkage\" AND \"filler content\")"
+    },
+    {
+     "query_id": "V2C_TC_015_M_filler_content::Q08",
+     "family_id": "V2C_TC_015_M_filler_content",
+     "query": "TITLE-ABS-KEY(\"shrinkage stress\" AND \"filler content\")"
+    },
+    {
+     "query_id": "V2C_TC_015_M_filler_content::Q09",
+     "family_id": "V2C_TC_015_M_filler_content",
+     "query": "TITLE-ABS-KEY(\"volumetric shrinkage\" AND \"filler content\")"
+    },
+    {
+     "query_id": "V2C_TC_015_M_particle_size::Q10",
+     "family_id": "V2C_TC_015_M_particle_size",
+     "query": "TITLE-ABS-KEY(\"polymerization shrinkage\" AND \"particle size\")"
+    },
+    {
+     "query_id": "V2C_TC_015_M_particle_size::Q11",
+     "family_id": "V2C_TC_015_M_particle_size",
+     "query": "TITLE-ABS-KEY(\"shrinkage stress\" AND \"particle size\")"
+    },
+    {
+     "query_id": "V2C_TC_015_M_particle_size::Q12",
+     "family_id": "V2C_TC_015_M_particle_size",
+     "query": "TITLE-ABS-KEY(\"volumetric shrinkage\" AND \"particle size\")"
+    }
+   ],
+   "n_families": 4,
+   "n_queries": 12,
+   "provenance": {
+    "discovered_from": "citation_bridge + term_community",
+    "channels": [
+     "citation",
+     "term_cooccurrence"
+    ],
+    "qgs_leakage": false
+   }
+  }
+ }
+}
