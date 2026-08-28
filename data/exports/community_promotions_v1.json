@@ -1,0 +1,4510 @@
+{
+ "version": "v1_rules",
+ "created_at": "2026-08-28",
+ "thresholds": {
+  "mean_bridge_min": 2.5,
+  "coherence_min": 0.6,
+  "retrieval_novelty_min": 0.5,
+  "lexical_novelty_ref": 0.7,
+  "note": "lexical novelty 只作参考不作门槛（用户：TC_001 0.93 也会误过线）"
+ },
+ "summary": {
+  "total": 119,
+  "promotion_candidates": 6
+ },
+ "communities": [
+  {
+   "community_id": "TC_001",
+   "role": "CORE_COMMUNITY",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "CORE_COMMUNITY（dental 本体，不晋升不拆）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 178,
+   "term_count": 426,
+   "citation_support": {
+    "mean_bridge_count": 3.44,
+    "max_bridge_count": 16
+   },
+   "term_coherence": {
+    "mean_npmi": 0.5647
+   },
+   "novelty": {
+    "score": 0.9333,
+    "closest_family": "FAM_PM_001003",
+    "closest_similarity": 0.0667
+   },
+   "existing_coverage": 0.483,
+   "retrieval_novelty": 0.517,
+   "top_terms_used": [
+    "bulk fill",
+    "bulk fill resin",
+    "fill resin",
+    "depth cure",
+    "sdr flow",
+    "fill resin composites",
+    "ceram bulk",
+    "ceram bulk fill"
+   ],
+   "supporting_papers": [
+    "W1563405920",
+    "W1970782938",
+    "W1981313904",
+    "W1981408474",
+    "W1992904039",
+    "W2014202838",
+    "W2038460995",
+    "W2043825101",
+    "W2045062988",
+    "W2047950490",
+    "W2050700723",
+    "W2059830050",
+    "W2064243683",
+    "W2064507572",
+    "W2067696737",
+    "W2080833809",
+    "W2090649502",
+    "W2094961846",
+    "W2112932482",
+    "W2114730815",
+    "W2121176710",
+    "W2132592530",
+    "W2133416193",
+    "W2159067756",
+    "W2165771671",
+    "W2171879212",
+    "W2283513836",
+    "W1976172282",
+    "W2002085603",
+    "W2061849231",
+    "W2088892921",
+    "W2093613073",
+    "W2103263047",
+    "W2111855772",
+    "W2121758309",
+    "W2149001240",
+    "W2157532610",
+    "W2171343173",
+    "W2172010081",
+    "W1987702644",
+    "W2007936744",
+    "W2058952149",
+    "W2099975165",
+    "W2108387553",
+    "W2126477041",
+    "W2128888732",
+    "W2179010078",
+    "W2192370821",
+    "W2406224365",
+    "W2417057304",
+    "W2472525057",
+    "W2508384207",
+    "W2551089076",
+    "W2607126828",
+    "W2770900890",
+    "W2787539654",
+    "W2791092760",
+    "W2793350899",
+    "W2794588344",
+    "W2807715277",
+    "W120742939",
+    "W122261895",
+    "W1520814740",
+    "W1974746687",
+    "W1990506603",
+    "W2015046796",
+    "W2052499993",
+    "W2061132771",
+    "W2095123783",
+    "W2115482140",
+    "W2148695455",
+    "W111776197",
+    "W1563835511",
+    "W2014275046",
+    "W2015237123",
+    "W2028593359",
+    "W2030215888",
+    "W2062413685",
+    "W2083619323",
+    "W2099318589",
+    "W2116893589",
+    "W2129740630",
+    "W2136987302",
+    "W2143104752",
+    "W2150442057",
+    "W2153270451",
+    "W2217315048",
+    "W1989647234",
+    "W2100498079",
+    "W2118086447",
+    "W2594221968",
+    "W2811264757",
+    "W1927261955",
+    "W2031601489",
+    "W2509863254",
+    "W2621319643",
+    "W2624665862",
+    "W2661953076",
+    "W2735689856",
+    "W2749057177",
+    "W2754438546",
+    "W2769832677",
+    "W2887026019",
+    "W2898500586",
+    "W2899200623",
+    "W2906898795",
+    "W1977113912",
+    "W1985723892",
+    "W2046180331",
+    "W2127195980",
+    "W2150518925",
+    "W2168270545",
+    "W2174670067",
+    "W2097847970",
+    "W2046992181",
+    "W2109595180",
+    "W2132559624",
+    "W2168561694",
+    "W2402068373",
+    "W4251178059",
+    "W2010890321",
+    "W2022340422",
+    "W2033822118",
+    "W2146498624",
+    "W1990409648",
+    "W2152869735",
+    "W2231373877",
+    "W2275043023",
+    "W2585094733",
+    "W2911296973",
+    "W2967486597",
+    "W108324140",
+    "W1985255925",
+    "W2067989438",
+    "W2118832081",
+    "W2063138271",
+    "W2105051518",
+    "W2023450796",
+    "W2040497555",
+    "W2466611190",
+    "W2526712013",
+    "W2560193442",
+    "W1993265490",
+    "W2056354259",
+    "W2059994723",
+    "W2076111495",
+    "W2089648210",
+    "W2111269106",
+    "W1952131888",
+    "W2163991459",
+    "W2884007097",
+    "W2925595796",
+    "W2972120299",
+    "W2987355649",
+    "W100950536",
+    "W1993788609",
+    "W2114053828",
+    "W2132173848",
+    "W3013907015",
+    "W3029293073",
+    "W3045670837",
+    "W2041121449",
+    "W2160052886",
+    "W2413398252",
+    "W4220859834",
+    "W4413831850",
+    "W2810885402",
+    "W3043949972",
+    "W2091854726",
+    "W2161605601",
+    "W2762506753",
+    "W2773068729",
+    "W2800447971",
+    "W2896154484",
+    "W3042046049",
+    "W2746155276",
+    "W2112029848",
+    "W4391339448"
+   ]
+  },
+  {
+   "community_id": "TC_002",
+   "role": "CORE_COMMUNITY",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "CORE_COMMUNITY（dental 本体，不晋升不拆）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 154,
+   "term_count": 291,
+   "citation_support": {
+    "mean_bridge_count": 3.31,
+    "max_bridge_count": 16
+   },
+   "term_coherence": {
+    "mean_npmi": 0.7029
+   },
+   "novelty": {
+    "score": 0.8636,
+    "closest_family": "FAM_PR_003001",
+    "closest_similarity": 0.1364
+   },
+   "existing_coverage": 0.526,
+   "retrieval_novelty": 0.474,
+   "top_terms_used": [
+    "polymerization shrinkage",
+    "tooth was scanned",
+    "after cavity",
+    "volumetric polymerization",
+    "each tooth",
+    "imported into",
+    "cavity preparation",
+    "volumetric shrinkage"
+   ],
+   "supporting_papers": [
+    "W1970782938",
+    "W2038460995",
+    "W2043825101",
+    "W2045062988",
+    "W2047950490",
+    "W2050700723",
+    "W2059830050",
+    "W2064507572",
+    "W2067696737",
+    "W2080833809",
+    "W2094961846",
+    "W2112932482",
+    "W2114698221",
+    "W2114730815",
+    "W2133416193",
+    "W2139003657",
+    "W2159067756",
+    "W2165771671",
+    "W2171879212",
+    "W2283513836",
+    "W1968790752",
+    "W1976172282",
+    "W2047209381",
+    "W2088892921",
+    "W2103263047",
+    "W2111855772",
+    "W2131118339",
+    "W2135795248",
+    "W2161666449",
+    "W2172010081",
+    "W2058952149",
+    "W2099975165",
+    "W2108387553",
+    "W2126477041",
+    "W2128888732",
+    "W2192370821",
+    "W2406224365",
+    "W2417057304",
+    "W2472525057",
+    "W2551089076",
+    "W2607126828",
+    "W2770900890",
+    "W2787539654",
+    "W2791092760",
+    "W2793350899",
+    "W2794588344",
+    "W2807715277",
+    "W953017642",
+    "W120742939",
+    "W122261895",
+    "W1520814740",
+    "W1974746687",
+    "W1981199429",
+    "W1990506603",
+    "W2015046796",
+    "W2052499993",
+    "W2065062480",
+    "W2095123783",
+    "W2115482140",
+    "W2163087593",
+    "W4255156365",
+    "W111776197",
+    "W1563835511",
+    "W2014275046",
+    "W2028593359",
+    "W2030215888",
+    "W2062413685",
+    "W2083619323",
+    "W2129740630",
+    "W2136987302",
+    "W2150442057",
+    "W2153270451",
+    "W2171059813",
+    "W2217315048",
+    "W1989647234",
+    "W2100498079",
+    "W2594221968",
+    "W1927261955",
+    "W2031601489",
+    "W2509863254",
+    "W2621319643",
+    "W2624665862",
+    "W2661953076",
+    "W2749057177",
+    "W2769832677",
+    "W2898500586",
+    "W2899200623",
+    "W2906898795",
+    "W1977113912",
+    "W1985723892",
+    "W2127195980",
+    "W2150518925",
+    "W2174670067",
+    "W2555541952",
+    "W2097847970",
+    "W2001517136",
+    "W2009988602",
+    "W2109595180",
+    "W2132559624",
+    "W2161673517",
+    "W2168561694",
+    "W2022340422",
+    "W2170345207",
+    "W2231373877",
+    "W2275043023",
+    "W2585094733",
+    "W2911296973",
+    "W2967486597",
+    "W108324140",
+    "W1985255925",
+    "W2118832081",
+    "W2063138271",
+    "W2105051518",
+    "W2135391044",
+    "W2149558697",
+    "W2022345741",
+    "W2023450796",
+    "W2040497555",
+    "W2056998913",
+    "W2099118767",
+    "W2466611190",
+    "W2526712013",
+    "W2560193442",
+    "W1991814943",
+    "W2059994723",
+    "W2089648210",
+    "W2111269106",
+    "W1952131888",
+    "W2884007097",
+    "W2925595796",
+    "W2972120299",
+    "W2987355649",
+    "W100950536",
+    "W1993788609",
+    "W2040370527",
+    "W2114053828",
+    "W2132173848",
+    "W3029293073",
+    "W3045670837",
+    "W2041121449",
+    "W2160052886",
+    "W2413398252",
+    "W2918894528",
+    "W4220859834",
+    "W4413831850",
+    "W2616220932",
+    "W2810885402",
+    "W2091854726",
+    "W2161605601",
+    "W2800447971",
+    "W3042046049",
+    "W2746155276",
+    "W2112029848",
+    "W4391339448"
+   ]
+  },
+  {
+   "community_id": "TC_007",
+   "role": "BOUNDARY_COMMUNITY",
+   "verdict": "PROMOTION_CANDIDATE",
+   "reasons": [],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 12,
+   "term_count": 19,
+   "citation_support": {
+    "mean_bridge_count": 3.67,
+    "max_bridge_count": 16
+   },
+   "term_coherence": {
+    "mean_npmi": 0.9148
+   },
+   "novelty": {
+    "score": 0.7273,
+    "closest_family": "FAM_PC_002005",
+    "closest_similarity": 0.2727
+   },
+   "existing_coverage": 0.417,
+   "retrieval_novelty": 0.583,
+   "top_terms_used": [
+    "academy dental",
+    "academy dental materials",
+    "composites part",
+    "dental materials guidance",
+    "guidance resin",
+    "guidance resin composites",
+    "materials guidance",
+    "materials guidance resin"
+   ],
+   "supporting_papers": [
+    "W2050700723",
+    "W2047209381",
+    "W2108387553",
+    "W2793350899",
+    "W2794588344",
+    "W2039205529",
+    "W2621319643",
+    "W2749057177",
+    "W2754438546",
+    "W2899200623",
+    "W2967486597",
+    "W2987355649"
+   ]
+  },
+  {
+   "community_id": "TC_005",
+   "role": "NOVEL_COMMUNITY_CANDIDATE",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "retrieval_novelty>=0.5"
+   ],
+   "slot_mapping_status": "SLOT_SCHEMA_GAP",
+   "suggested_missing_slot": "method",
+   "paper_count": 20,
+   "term_count": 36,
+   "citation_support": {
+    "mean_bridge_count": 2.8,
+    "max_bridge_count": 10
+   },
+   "term_coherence": {
+    "mean_npmi": 0.8912
+   },
+   "novelty": {
+    "score": 0.9355,
+    "closest_family": "FAM_STRESS",
+    "closest_similarity": 0.0645
+   },
+   "existing_coverage": 0.8,
+   "retrieval_novelty": 0.2,
+   "top_terms_used": [
+    "determined the end",
+    "devices knoop",
+    "devices knoop hardness",
+    "end the observation",
+    "force and hardening",
+    "hardness was determined",
+    "lowest shrinkage",
+    "made devices knoop"
+   ],
+   "supporting_papers": [
+    "W2064507572",
+    "W2132592530",
+    "W2099975165",
+    "W2607126828",
+    "W2807715277",
+    "W2163087593",
+    "W4255156365",
+    "W2100498079",
+    "W2811264757",
+    "W2031601489",
+    "W2749057177",
+    "W2898500586",
+    "W2906898795",
+    "W2105051518",
+    "W1952131888",
+    "W2163991459",
+    "W2132173848",
+    "W3042046049",
+    "W2112029848",
+    "W4391339448"
+   ]
+  },
+  {
+   "community_id": "TC_003",
+   "role": "NOVEL_COMMUNITY_CANDIDATE",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "retrieval_novelty>=0.5"
+   ],
+   "slot_mapping_status": "SLOT_SCHEMA_GAP",
+   "suggested_missing_slot": "method",
+   "paper_count": 28,
+   "term_count": 122,
+   "citation_support": {
+    "mean_bridge_count": 3.0,
+    "max_bridge_count": 8
+   },
+   "term_coherence": {
+    "mean_npmi": 0.9561
+   },
+   "novelty": {
+    "score": 0.9583,
+    "closest_family": "FAM_PM_001003",
+    "closest_similarity": 0.0417
+   },
+   "existing_coverage": 0.643,
+   "retrieval_novelty": 0.357,
+   "top_terms_used": [
+    "activation times",
+    "activation times contraction",
+    "assessment the degree",
+    "bonded cavity",
+    "bonded cavity preparations",
+    "butylated hydroxytoluene",
+    "butylated hydroxytoluene verified",
+    "cavity preparations generates"
+   ],
+   "supporting_papers": [
+    "W2038460995",
+    "W2043825101",
+    "W2064507572",
+    "W1976172282",
+    "W2111855772",
+    "W2058952149",
+    "W2551089076",
+    "W2791092760",
+    "W122261895",
+    "W1520814740",
+    "W2015046796",
+    "W2163087593",
+    "W4255156365",
+    "W111776197",
+    "W1563835511",
+    "W2150442057",
+    "W2217315048",
+    "W2100498079",
+    "W2661953076",
+    "W1985723892",
+    "W2096733817",
+    "W2911296973",
+    "W2023450796",
+    "W2099118767",
+    "W2089648210",
+    "W2111269106",
+    "W100950536",
+    "W2918894528"
+   ]
+  },
+  {
+   "community_id": "TC_004",
+   "role": "BOUNDARY_COMMUNITY",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "retrieval_novelty>=0.5"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 40,
+   "term_count": 41,
+   "citation_support": {
+    "mean_bridge_count": 3.0,
+    "max_bridge_count": 8
+   },
+   "term_coherence": {
+    "mean_npmi": 0.7314
+   },
+   "novelty": {
+    "score": 0.84,
+    "closest_family": "FAM_STRESS",
+    "closest_similarity": 0.16
+   },
+   "existing_coverage": 0.575,
+   "retrieval_novelty": 0.425,
+   "top_terms_used": [
+    "polymerization contraction",
+    "contraction stress",
+    "polymerization contraction stress",
+    "composite was placed",
+    "leakage class",
+    "leakage class cavities",
+    "marginal leakage",
+    "maximum contraction"
+   ],
+   "supporting_papers": [
+    "W2059830050",
+    "W2159067756",
+    "W2111855772",
+    "W2126477041",
+    "W120742939",
+    "W1981199429",
+    "W1990506603",
+    "W2015046796",
+    "W2163087593",
+    "W4255156365",
+    "W111776197",
+    "W1563835511",
+    "W2028593359",
+    "W2030215888",
+    "W2150442057",
+    "W2217315048",
+    "W2031601489",
+    "W2749057177",
+    "W2887026019",
+    "W2906898795",
+    "W2127195980",
+    "W2110706325",
+    "W2170345207",
+    "W2067989438",
+    "W2118832081",
+    "W2063138271",
+    "W2023450796",
+    "W2056998913",
+    "W1991814943",
+    "W1993265490",
+    "W2056354259",
+    "W2089648210",
+    "W2111269106",
+    "W2413398252",
+    "W4413831850",
+    "W2082753587",
+    "W2114057051",
+    "W2161605601",
+    "W2800447971",
+    "W4391339448"
+   ]
+  },
+  {
+   "community_id": "TC_006",
+   "role": "NOVEL_COMMUNITY_CANDIDATE",
+   "verdict": "PROMOTION_CANDIDATE",
+   "reasons": [],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 23,
+   "term_count": 25,
+   "citation_support": {
+    "mean_bridge_count": 2.74,
+    "max_bridge_count": 5
+   },
+   "term_coherence": {
+    "mean_npmi": 0.8065
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.304,
+   "retrieval_novelty": 0.696,
+   "top_terms_used": [
+    "emitting diode",
+    "light emitting",
+    "light emitting diode",
+    "diode led",
+    "emitting diode led",
+    "curing units",
+    "light curing units",
+    "arc curing"
+   ],
+   "supporting_papers": [
+    "W2121176710",
+    "W2171343173",
+    "W2791092760",
+    "W122261895",
+    "W2163087593",
+    "W4255156365",
+    "W2014275046",
+    "W2083619323",
+    "W1989647234",
+    "W2118086447",
+    "W2140954164",
+    "W2899200623",
+    "W1977113912",
+    "W1985723892",
+    "W2174670067",
+    "W2168561694",
+    "W1990409648",
+    "W2911296973",
+    "W1993788609",
+    "W2132173848",
+    "W3029293073",
+    "W2918894528",
+    "W2112029848"
+   ]
+  },
+  {
+   "community_id": "TC_009",
+   "role": "NOVEL_COMMUNITY_CANDIDATE",
+   "verdict": "PROMOTION_CANDIDATE",
+   "reasons": [],
+   "slot_mapping_status": "SLOT_SCHEMA_GAP",
+   "suggested_missing_slot": "method",
+   "paper_count": 3,
+   "term_count": 9,
+   "citation_support": {
+    "mean_bridge_count": 3.0,
+    "max_bridge_count": 5
+   },
+   "term_coherence": {
+    "mean_npmi": 0.9497
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "quartz tungsten",
+    "quartz tungsten halogen",
+    "tungsten halogen",
+    "attenuated total",
+    "attenuated total reflectance",
+    "infrared spectra",
+    "pre set",
+    "total reflectance"
+   ],
+   "supporting_papers": [
+    "W122261895",
+    "W2174670067",
+    "W2041121449"
+   ]
+  },
+  {
+   "community_id": "TC_010",
+   "role": "NOVEL_COMMUNITY_CANDIDATE",
+   "verdict": "PROMOTION_CANDIDATE",
+   "reasons": [],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 3,
+   "term_count": 8,
+   "citation_support": {
+    "mean_bridge_count": 3.67,
+    "max_bridge_count": 5
+   },
+   "term_coherence": {
+    "mean_npmi": 0.9784
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.333,
+   "retrieval_novelty": 0.667,
+   "top_terms_used": [
+    "base bulk",
+    "base bulk fill",
+    "body bulk",
+    "body bulk fill",
+    "flowable base bulk",
+    "full body",
+    "full body bulk",
+    "flowable base"
+   ],
+   "supporting_papers": [
+    "W2121758309",
+    "W2735689856",
+    "W2466611190"
+   ]
+  },
+  {
+   "community_id": "TC_008",
+   "role": "BOUNDARY_COMMUNITY",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "retrieval_novelty>=0.5"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 3,
+   "term_count": 12,
+   "citation_support": {
+    "mean_bridge_count": 3.0,
+    "max_bridge_count": 4
+   },
+   "term_coherence": {
+    "mean_npmi": 0.9738
+   },
+   "novelty": {
+    "score": 0.7273,
+    "closest_family": "FAM_PM_002003",
+    "closest_similarity": 0.2727
+   },
+   "existing_coverage": 0.667,
+   "retrieval_novelty": 0.333,
+   "top_terms_used": [
+    "composite layered",
+    "composite layered reduce",
+    "how should composite",
+    "incremental bulk",
+    "incremental bulk filling",
+    "layered reduce",
+    "layered reduce shrinkage",
+    "shrinkage stress incremental"
+   ],
+   "supporting_papers": [
+    "W1563405920",
+    "W2064243683",
+    "W2749057177"
+   ]
+  },
+  {
+   "community_id": "TC_014",
+   "role": "BOUNDARY_COMMUNITY",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "mean_bridge>=2.5"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 7,
+   "term_count": 4,
+   "citation_support": {
+    "mean_bridge_count": 2.43,
+    "max_bridge_count": 4
+   },
+   "term_coherence": {
+    "mean_npmi": 0.8394
+   },
+   "novelty": {
+    "score": 0.8333,
+    "closest_family": "FAM_P_001",
+    "closest_similarity": 0.1667
+   },
+   "existing_coverage": 0.286,
+   "retrieval_novelty": 0.714,
+   "top_terms_used": [
+    "bond conversion",
+    "double bond",
+    "double bond conversion",
+    "polymerization kinetics"
+   ],
+   "supporting_papers": [
+    "W1970782938",
+    "W2103263047",
+    "W2052499993",
+    "W2118086447",
+    "W2661953076",
+    "W2168561694",
+    "W2041121449"
+   ]
+  },
+  {
+   "community_id": "TC_015",
+   "role": "NOVEL_COMMUNITY_CANDIDATE",
+   "verdict": "PROMOTION_CANDIDATE",
+   "reasons": [],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 3,
+   "term_count": 4,
+   "citation_support": {
+    "mean_bridge_count": 2.67,
+    "max_bridge_count": 4
+   },
+   "term_coherence": {
+    "mean_npmi": 0.9567
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.333,
+   "retrieval_novelty": 0.667,
+   "top_terms_used": [
+    "filler particle",
+    "filler particle size",
+    "size and shape",
+    "particle size"
+   ],
+   "supporting_papers": [
+    "W4251178059",
+    "W2063138271",
+    "W2105051518"
+   ]
+  },
+  {
+   "community_id": "TC_017",
+   "role": "BOUNDARY_COMMUNITY",
+   "verdict": "PROMOTION_CANDIDATE",
+   "reasons": [],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 5,
+   "term_count": 3,
+   "citation_support": {
+    "mean_bridge_count": 2.8,
+    "max_bridge_count": 4
+   },
+   "term_coherence": {
+    "mean_npmi": 0.9103
+   },
+   "novelty": {
+    "score": 0.8,
+    "closest_family": "FAM_PC_001005",
+    "closest_similarity": 0.2
+   },
+   "existing_coverage": 0.4,
+   "retrieval_novelty": 0.6,
+   "top_terms_used": [
+    "dimethacrylate based dental",
+    "based dental",
+    "dimethacrylate based"
+   ],
+   "supporting_papers": [
+    "W2793350899",
+    "W2095123783",
+    "W2171059813",
+    "W1990409648",
+    "W2041121449"
+   ]
+  },
+  {
+   "community_id": "TC_011",
+   "role": "BOUNDARY_COMMUNITY",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "mean_bridge>=2.5"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 7,
+   "term_count": 6,
+   "citation_support": {
+    "mean_bridge_count": 2.14,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.8631
+   },
+   "novelty": {
+    "score": 0.625,
+    "closest_family": "FAM_PM_001003",
+    "closest_similarity": 0.375
+   },
+   "existing_coverage": 0.429,
+   "retrieval_novelty": 0.571,
+   "top_terms_used": [
+    "shrinkage vectors",
+    "shrinkage vectors flowable",
+    "vectors flowable",
+    "vectors flowable composite",
+    "cavity models",
+    "polymerization shrinkage vectors"
+   ],
+   "supporting_papers": [
+    "W2150442057",
+    "W2616220932",
+    "W2091854726",
+    "W2762506753",
+    "W2773068729",
+    "W2896154484",
+    "W3042046049"
+   ]
+  },
+  {
+   "community_id": "TC_018",
+   "role": "NOVEL_COMMUNITY_CANDIDATE",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "mean_bridge>=2.5"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 3,
+   "term_count": 3,
+   "citation_support": {
+    "mean_bridge_count": 2.33,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.9423
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.333,
+   "retrieval_novelty": 0.667,
+   "top_terms_used": [
+    "factors such",
+    "other factors such",
+    "other factors"
+   ],
+   "supporting_papers": [
+    "W2038460995",
+    "W2150442057",
+    "W2114053828"
+   ]
+  },
+  {
+   "community_id": "TC_013",
+   "role": "NOVEL_COMMUNITY_CANDIDATE",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "mean_bridge>=2.5"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 3,
+   "term_count": 5,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.9423
+   },
+   "novelty": {
+    "score": 0.9091,
+    "closest_family": "FAM_PM_001002",
+    "closest_similarity": 0.0909
+   },
+   "existing_coverage": 0.333,
+   "retrieval_novelty": 0.667,
+   "top_terms_used": [
+    "adhesive resin",
+    "bovine teeth",
+    "cavities prepared",
+    "unfilled adhesive",
+    "unfilled adhesive resin"
+   ],
+   "supporting_papers": [
+    "W2148695455",
+    "W1993265490",
+    "W2800447971"
+   ]
+  },
+  {
+   "community_id": "TC_019",
+   "role": "BOUNDARY_COMMUNITY",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "mean_bridge>=2.5"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 4,
+   "term_count": 3,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.8845
+   },
+   "novelty": {
+    "score": 0.8889,
+    "closest_family": "FAM_PM_001002",
+    "closest_similarity": 0.1111
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "resin based materials",
+    "based materials",
+    "cusp deflection"
+   ],
+   "supporting_papers": [
+    "W2093613073",
+    "W2787539654",
+    "W2749057177",
+    "W2041121449"
+   ]
+  },
+  {
+   "community_id": "TC_029",
+   "role": "BOUNDARY_TERM_SIGNAL",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BOUNDARY_TERM_SIGNAL（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 3,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 4.33,
+    "max_bridge_count": 7
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.333,
+   "retrieval_novelty": 0.667,
+   "top_terms_used": [
+    "configuration factor"
+   ],
+   "supporting_papers": [
+    "W2059830050",
+    "W120742939",
+    "W2466611190"
+   ]
+  },
+  {
+   "community_id": "TC_033",
+   "role": "BOUNDARY_TERM_SIGNAL",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BOUNDARY_TERM_SIGNAL（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 3,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 3.33,
+    "max_bridge_count": 4
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.8,
+    "closest_family": "FAM_PM_001003",
+    "closest_similarity": 0.2
+   },
+   "existing_coverage": 0.667,
+   "retrieval_novelty": 0.333,
+   "top_terms_used": [
+    "restorative composites"
+   ],
+   "supporting_papers": [
+    "W2111855772",
+    "W2135795248",
+    "W2015237123"
+   ]
+  },
+  {
+   "community_id": "TC_031",
+   "role": "BOUNDARY_TERM_SIGNAL",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BOUNDARY_TERM_SIGNAL（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 3,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.33,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.75,
+    "closest_family": "FAM_PC_001005",
+    "closest_similarity": 0.25
+   },
+   "existing_coverage": 0.667,
+   "retrieval_novelty": 0.333,
+   "top_terms_used": [
+    "dental restorative"
+   ],
+   "supporting_papers": [
+    "W2038460995",
+    "W2100498079",
+    "W2140954164"
+   ]
+  },
+  {
+   "community_id": "TC_028",
+   "role": "BOUNDARY_TERM_SIGNAL",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BOUNDARY_TERM_SIGNAL（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 3,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.667,
+   "retrieval_novelty": 0.333,
+   "top_terms_used": [
+    "adhesive bonding"
+   ],
+   "supporting_papers": [
+    "W2089362795",
+    "W1993265490",
+    "W2988586217"
+   ]
+  },
+  {
+   "community_id": "TC_030",
+   "role": "BOUNDARY_TERM_SIGNAL",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BOUNDARY_TERM_SIGNAL（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 3,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.75,
+    "closest_family": "FAM_PC_001005",
+    "closest_similarity": 0.25
+   },
+   "existing_coverage": 0.333,
+   "retrieval_novelty": 0.667,
+   "top_terms_used": [
+    "dental resins"
+   ],
+   "supporting_papers": [
+    "W2061132771",
+    "W2156206981",
+    "W1990409648"
+   ]
+  },
+  {
+   "community_id": "TC_032",
+   "role": "BOUNDARY_TERM_SIGNAL",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BOUNDARY_TERM_SIGNAL（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 3,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.8333,
+    "closest_family": "FAM_PC_001003",
+    "closest_similarity": 0.1667
+   },
+   "existing_coverage": 0.667,
+   "retrieval_novelty": 0.333,
+   "top_terms_used": [
+    "photo polymerized"
+   ],
+   "supporting_papers": [
+    "W2031601489",
+    "W2096733817",
+    "W3043949972"
+   ]
+  },
+  {
+   "community_id": "TC_052",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 9.0,
+    "max_bridge_count": 14
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "curing efficiency"
+   ],
+   "supporting_papers": [
+    "W2133416193",
+    "W2171059813"
+   ]
+  },
+  {
+   "community_id": "TC_095",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 6.5,
+    "max_bridge_count": 11
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "premolar teeth"
+   ],
+   "supporting_papers": [
+    "W2112932482",
+    "W1520814740"
+   ]
+  },
+  {
+   "community_id": "TC_090",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 6.0,
+    "max_bridge_count": 10
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.6667,
+    "closest_family": "FAM_P_001",
+    "closest_similarity": 0.3333
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "polymerization behavior"
+   ],
+   "supporting_papers": [
+    "W2099975165",
+    "W2041121449"
+   ]
+  },
+  {
+   "community_id": "TC_020",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 3,
+   "citation_support": {
+    "mean_bridge_count": 5.5,
+    "max_bridge_count": 9
+   },
+   "term_coherence": {
+    "mean_npmi": 1.0
+   },
+   "novelty": {
+    "score": 0.5,
+    "closest_family": "FAM_P_002",
+    "closest_similarity": 0.5
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "shrinkage stress bulk",
+    "stress bulk",
+    "stress bulk fill"
+   ],
+   "supporting_papers": [
+    "W2179010078",
+    "W2911296973"
+   ]
+  },
+  {
+   "community_id": "TC_069",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 7.0,
+    "max_bridge_count": 9
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "filler size"
+   ],
+   "supporting_papers": [
+    "W2014202838",
+    "W122261895"
+   ]
+  },
+  {
+   "community_id": "TC_111",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 5.5,
+    "max_bridge_count": 9
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "through decreasing"
+   ],
+   "supporting_papers": [
+    "W2014202838",
+    "W2114053828"
+   ]
+  },
+  {
+   "community_id": "TC_024",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 2,
+   "citation_support": {
+    "mean_bridge_count": 4.5,
+    "max_bridge_count": 7
+   },
+   "term_coherence": {
+    "mean_npmi": 1.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "bulk fill conventional",
+    "fill conventional"
+   ],
+   "supporting_papers": [
+    "W2080833809",
+    "W2010890321"
+   ]
+  },
+  {
+   "community_id": "TC_034",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 5.0,
+    "max_bridge_count": 7
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "adhesion dentin"
+   ],
+   "supporting_papers": [
+    "W2059830050",
+    "W2023450796"
+   ]
+  },
+  {
+   "community_id": "TC_040",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 5.5,
+    "max_bridge_count": 7
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "clinically relevant"
+   ],
+   "supporting_papers": [
+    "W2059830050",
+    "W2118086447"
+   ]
+  },
+  {
+   "community_id": "TC_043",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 4.5,
+    "max_bridge_count": 7
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.6,
+    "closest_family": "FAM_PM_001003",
+    "closest_similarity": 0.4
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "composites during polymerization"
+   ],
+   "supporting_papers": [
+    "W2043825101",
+    "W2139003657"
+   ]
+  },
+  {
+   "community_id": "TC_071",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 4.5,
+    "max_bridge_count": 7
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "free surfaces"
+   ],
+   "supporting_papers": [
+    "W2059830050",
+    "W2150442057"
+   ]
+  },
+  {
+   "community_id": "TC_103",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 4.5,
+    "max_bridge_count": 7
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.6667,
+    "closest_family": "FAM_P_002",
+    "closest_similarity": 0.3333
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "setting stress"
+   ],
+   "supporting_papers": [
+    "W2059830050",
+    "W2112029848"
+   ]
+  },
+  {
+   "community_id": "TC_108",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 6.0,
+    "max_bridge_count": 7
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.6667,
+    "closest_family": "FAM_P_002",
+    "closest_similarity": 0.3333
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "stress relieving"
+   ],
+   "supporting_papers": [
+    "W2059830050",
+    "W2015046796"
+   ]
+  },
+  {
+   "community_id": "TC_096",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 4.0,
+    "max_bridge_count": 6
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "properties low"
+   ],
+   "supporting_papers": [
+    "W2103263047",
+    "W2417057304"
+   ]
+  },
+  {
+   "community_id": "TC_104",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "SLOT_SCHEMA_GAP",
+   "suggested_missing_slot": "method",
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 4.5,
+    "max_bridge_count": 6
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.6667,
+    "closest_family": "FAM_P_001",
+    "closest_similarity": 0.3333
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "shrinkage assessment"
+   ],
+   "supporting_papers": [
+    "W1563835511",
+    "W2509863254"
+   ]
+  },
+  {
+   "community_id": "TC_117",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 5.0,
+    "max_bridge_count": 6
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.6667,
+    "closest_family": "FAM_P_003",
+    "closest_similarity": 0.3333
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "volumetric contraction"
+   ],
+   "supporting_papers": [
+    "W2111855772",
+    "W1563835511"
+   ]
+  },
+  {
+   "community_id": "TC_089",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 3.5,
+    "max_bridge_count": 5
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "placement techniques"
+   ],
+   "supporting_papers": [
+    "W2787539654",
+    "W2015046796"
+   ]
+  },
+  {
+   "community_id": "TC_091",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 3.5,
+    "max_bridge_count": 5
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.6667,
+    "closest_family": "FAM_P_001",
+    "closest_similarity": 0.3333
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "polymerization rate"
+   ],
+   "supporting_papers": [
+    "W2015046796",
+    "W2041121449"
+   ]
+  },
+  {
+   "community_id": "TC_102",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 3.5,
+    "max_bridge_count": 5
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "same sample"
+   ],
+   "supporting_papers": [
+    "W122261895",
+    "W2099118767"
+   ]
+  },
+  {
+   "community_id": "TC_105",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 3.5,
+    "max_bridge_count": 5
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.6667,
+    "closest_family": "FAM_P_001",
+    "closest_similarity": 0.3333
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "shrinkage similar"
+   ],
+   "supporting_papers": [
+    "W2791092760",
+    "W1952131888"
+   ]
+  },
+  {
+   "community_id": "TC_114",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "SLOT_SCHEMA_GAP",
+   "suggested_missing_slot": "method",
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 4.0,
+    "max_bridge_count": 5
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "tukey test"
+   ],
+   "supporting_papers": [
+    "W1976172282",
+    "W2791092760"
+   ]
+  },
+  {
+   "community_id": "TC_027",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 2,
+   "citation_support": {
+    "mean_bridge_count": 4.0,
+    "max_bridge_count": 4
+   },
+   "term_coherence": {
+    "mean_npmi": 1.0
+   },
+   "novelty": {
+    "score": 0.8333,
+    "closest_family": "FAM_PM_001003",
+    "closest_similarity": 0.1667
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "composites two",
+    "resin composites two"
+   ],
+   "supporting_papers": [
+    "W2121176710",
+    "W2472525057"
+   ]
+  },
+  {
+   "community_id": "TC_045",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 3.0,
+    "max_bridge_count": 4
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.8,
+    "closest_family": "FAM_PM_001003",
+    "closest_similarity": 0.2
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "composites which"
+   ],
+   "supporting_papers": [
+    "W2171343173",
+    "W1981199429"
+   ]
+  },
+  {
+   "community_id": "TC_060",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 3.0,
+    "max_bridge_count": 4
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.8333,
+    "closest_family": "FAM_VOLUME",
+    "closest_similarity": 0.1667
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "dimensional changes"
+   ],
+   "supporting_papers": [
+    "W2031601489",
+    "W2754438546"
+   ]
+  },
+  {
+   "community_id": "TC_065",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 3.5,
+    "max_bridge_count": 4
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "filler fraction"
+   ],
+   "supporting_papers": [
+    "W2009988602",
+    "W2109595180"
+   ]
+  },
+  {
+   "community_id": "TC_067",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 3.0,
+    "max_bridge_count": 4
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "filler particles"
+   ],
+   "supporting_papers": [
+    "W2129740630",
+    "W2063138271"
+   ]
+  },
+  {
+   "community_id": "TC_113",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 3.5,
+    "max_bridge_count": 4
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "time intervals"
+   ],
+   "supporting_papers": [
+    "W2121176710",
+    "W2023450796"
+   ]
+  },
+  {
+   "community_id": "TC_012",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "SLOT_SCHEMA_GAP",
+   "suggested_missing_slot": "method",
+   "paper_count": 2,
+   "term_count": 5,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 1.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "electron microscope",
+    "electron microscope sem",
+    "microscope sem",
+    "scanning electron",
+    "scanning electron microscope"
+   ],
+   "supporting_papers": [
+    "W2770900890",
+    "W2099118767"
+   ]
+  },
+  {
+   "community_id": "TC_025",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 2,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 1.0
+   },
+   "novelty": {
+    "score": 0.8,
+    "closest_family": "FAM_PC_001005",
+    "closest_similarity": 0.2
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "bulk fill dental",
+    "fill dental"
+   ],
+   "supporting_papers": [
+    "W2132559624",
+    "W2040497555"
+   ]
+  },
+  {
+   "community_id": "TC_026",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 2,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 1.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "experimental groups",
+    "groups which"
+   ],
+   "supporting_papers": [
+    "W120742939",
+    "W2010890321"
+   ]
+  },
+  {
+   "community_id": "TC_036",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.8,
+    "closest_family": "FAM_PM_001003",
+    "closest_similarity": 0.2
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "after composite"
+   ],
+   "supporting_papers": [
+    "W2172010081",
+    "W2560193442"
+   ]
+  },
+  {
+   "community_id": "TC_037",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.6667,
+    "closest_family": "FAM_P_001",
+    "closest_similarity": 0.3333
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "axial shrinkage"
+   ],
+   "supporting_papers": [
+    "W2100498079",
+    "W2168270545"
+   ]
+  },
+  {
+   "community_id": "TC_038",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "bonded class"
+   ],
+   "supporting_papers": [
+    "W2062413685",
+    "W2560193442"
+   ]
+  },
+  {
+   "community_id": "TC_044",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.8333,
+    "closest_family": "FAM_PM_001003",
+    "closest_similarity": 0.1667
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "composites was evaluated"
+   ],
+   "supporting_papers": [
+    "W111776197",
+    "W2091854726"
+   ]
+  },
+  {
+   "community_id": "TC_049",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "cross section"
+   ],
+   "supporting_papers": [
+    "W111776197",
+    "W2911296973"
+   ]
+  },
+  {
+   "community_id": "TC_054",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.9,
+    "closest_family": "FAM_STRESS",
+    "closest_similarity": 0.1
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "degree cure"
+   ],
+   "supporting_papers": [
+    "W2128888732",
+    "W2150442057"
+   ]
+  },
+  {
+   "community_id": "TC_056",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 3.0,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.75,
+    "closest_family": "FAM_PC_001005",
+    "closest_similarity": 0.25
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "dental restorations"
+   ],
+   "supporting_papers": [
+    "W2038460995",
+    "W2011729285"
+   ]
+  },
+  {
+   "community_id": "TC_061",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 3.0,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.75,
+    "closest_family": "FAM_PC_001005",
+    "closest_similarity": 0.25
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "experimental dental"
+   ],
+   "supporting_papers": [
+    "W2114698221",
+    "W1977113912"
+   ]
+  },
+  {
+   "community_id": "TC_068",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.8333,
+    "closest_family": "FAM_PM_001002",
+    "closest_similarity": 0.1667
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "filler resin"
+   ],
+   "supporting_papers": [
+    "W2127195980",
+    "W3029293073"
+   ]
+  },
+  {
+   "community_id": "TC_073",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.6667,
+    "closest_family": "FAM_P_002",
+    "closest_similarity": 0.3333
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "highest stress"
+   ],
+   "supporting_papers": [
+    "W2906898795",
+    "W1985723892"
+   ]
+  },
+  {
+   "community_id": "TC_074",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.8,
+    "closest_family": "FAM_PM_001003",
+    "closest_similarity": 0.2
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "hybrid composites"
+   ],
+   "supporting_papers": [
+    "W111776197",
+    "W2129740630"
+   ]
+  },
+  {
+   "community_id": "TC_075",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "image segmentation"
+   ],
+   "supporting_papers": [
+    "W2011729285",
+    "W3042046049"
+   ]
+  },
+  {
+   "community_id": "TC_079",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "literature review"
+   ],
+   "supporting_papers": [
+    "W2509863254",
+    "W2746155276"
+   ]
+  },
+  {
+   "community_id": "TC_080",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "marginal area"
+   ],
+   "supporting_papers": [
+    "W2607126828",
+    "W1993265490"
+   ]
+  },
+  {
+   "community_id": "TC_081",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "marginal quality"
+   ],
+   "supporting_papers": [
+    "W2121758309",
+    "W2150442057"
+   ]
+  },
+  {
+   "community_id": "TC_082",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "material properties"
+   ],
+   "supporting_papers": [
+    "W2038460995",
+    "W2112029848"
+   ]
+  },
+  {
+   "community_id": "TC_083",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.8,
+    "closest_family": "FAM_PM_001003",
+    "closest_similarity": 0.2
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "materials composite"
+   ],
+   "supporting_papers": [
+    "W2038460995",
+    "W2040497555"
+   ]
+  },
+  {
+   "community_id": "TC_084",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "mod cavity"
+   ],
+   "supporting_papers": [
+    "W2607126828",
+    "W1520814740"
+   ]
+  },
+  {
+   "community_id": "TC_087",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "objectives evaluate"
+   ],
+   "supporting_papers": [
+    "W1976172282",
+    "W2911296973"
+   ]
+  },
+  {
+   "community_id": "TC_092",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "post irradiation"
+   ],
+   "supporting_papers": [
+    "W2061849231",
+    "W3013907015"
+   ]
+  },
+  {
+   "community_id": "TC_097",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 3.0,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "purpose the purpose"
+   ],
+   "supporting_papers": [
+    "W2607126828",
+    "W111776197"
+   ]
+  },
+  {
+   "community_id": "TC_101",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "SLOT_SCHEMA_GAP",
+   "suggested_missing_slot": "method",
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "rheological properties"
+   ],
+   "supporting_papers": [
+    "W2114698221",
+    "W2161666449"
+   ]
+  },
+  {
+   "community_id": "TC_106",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "start mixing"
+   ],
+   "supporting_papers": [
+    "W2023450796",
+    "W1952131888"
+   ]
+  },
+  {
+   "community_id": "TC_107",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.6667,
+    "closest_family": "FAM_P_002",
+    "closest_similarity": 0.3333
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "stress depends"
+   ],
+   "supporting_papers": [
+    "W2168270545",
+    "W2111269106"
+   ]
+  },
+  {
+   "community_id": "TC_119",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.5,
+    "max_bridge_count": 3
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "young modulus"
+   ],
+   "supporting_papers": [
+    "W2906898795",
+    "W2555541952"
+   ]
+  },
+  {
+   "community_id": "TC_016",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 4,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 1.0
+   },
+   "novelty": {
+    "score": 0.8571,
+    "closest_family": "FAM_PM_001003",
+    "closest_similarity": 0.1429
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "commercial resin",
+    "commercial resin composites",
+    "ten commercial",
+    "ten commercial resin"
+   ],
+   "supporting_papers": [
+    "W3029293073",
+    "W4391339448"
+   ]
+  },
+  {
+   "community_id": "TC_021",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 3,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 1.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "after thermo",
+    "after thermo cycling",
+    "thermo cycling"
+   ],
+   "supporting_papers": [
+    "W2062413685",
+    "W2010890321"
+   ]
+  },
+  {
+   "community_id": "TC_022",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 3,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 1.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "high viscosity giomers",
+    "low and high",
+    "viscosity giomers"
+   ],
+   "supporting_papers": [
+    "W2103263047",
+    "W2585094733"
+   ]
+  },
+  {
+   "community_id": "TC_023",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 3,
+   "term_count": 2,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 1.0
+   },
+   "novelty": {
+    "score": 0.6,
+    "closest_family": "FAM_PM_001003",
+    "closest_similarity": 0.4
+   },
+   "existing_coverage": 0.667,
+   "retrieval_novelty": 0.333,
+   "top_terms_used": [
+    "shrinkage resin",
+    "shrinkage resin composites"
+   ],
+   "supporting_papers": [
+    "W2088892921",
+    "W2787539654",
+    "W2413398252"
+   ]
+  },
+  {
+   "community_id": "TC_035",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "adhesive systems"
+   ],
+   "supporting_papers": [
+    "W2099118767",
+    "W2800447971"
+   ]
+  },
+  {
+   "community_id": "TC_039",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "cavity configuration"
+   ],
+   "supporting_papers": [
+    "W2111269106",
+    "W2773068729"
+   ]
+  },
+  {
+   "community_id": "TC_041",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.75,
+    "closest_family": "FAM_PC_001005",
+    "closest_similarity": 0.25
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "commercial dental"
+   ],
+   "supporting_papers": [
+    "W2041121449",
+    "W2918894528"
+   ]
+  },
+  {
+   "community_id": "TC_042",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.8,
+    "closest_family": "FAM_PM_001003",
+    "closest_similarity": 0.2
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "composite systems"
+   ],
+   "supporting_papers": [
+    "W2129740630",
+    "W2022345741"
+   ]
+  },
+  {
+   "community_id": "TC_046",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.75,
+    "closest_family": "FAM_P_001",
+    "closest_similarity": 0.25
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "conversion and shrinkage"
+   ],
+   "supporting_papers": [
+    "W2052499993",
+    "W1989647234"
+   ]
+  },
+  {
+   "community_id": "TC_047",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "conversion light"
+   ],
+   "supporting_papers": [
+    "W1990409648",
+    "W2105051518"
+   ]
+  },
+  {
+   "community_id": "TC_048",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "conversion rate"
+   ],
+   "supporting_papers": [
+    "W1985723892",
+    "W2041121449"
+   ]
+  },
+  {
+   "community_id": "TC_050",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "curing conditions"
+   ],
+   "supporting_papers": [
+    "W2021361262",
+    "W2918894528"
+   ]
+  },
+  {
+   "community_id": "TC_051",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.75,
+    "closest_family": "FAM_PC_001005",
+    "closest_similarity": 0.25
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "curing dental"
+   ],
+   "supporting_papers": [
+    "W2118832081",
+    "W2810885402"
+   ]
+  },
+  {
+   "community_id": "TC_053",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "cylindrical cavities"
+   ],
+   "supporting_papers": [
+    "W2800447971",
+    "W3042046049"
+   ]
+  },
+  {
+   "community_id": "TC_055",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.75,
+    "closest_family": "FAM_PC_001005",
+    "closest_similarity": 0.25
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "dental restoration"
+   ],
+   "supporting_papers": [
+    "W2555541952",
+    "W2099118767"
+   ]
+  },
+  {
+   "community_id": "TC_057",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.6667,
+    "closest_family": "FAM_P_001",
+    "closest_similarity": 0.3333
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "dependent shrinkage"
+   ],
+   "supporting_papers": [
+    "W2061132771",
+    "W2150442057"
+   ]
+  },
+  {
+   "community_id": "TC_058",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "depth conversion"
+   ],
+   "supporting_papers": [
+    "W2911296973",
+    "W2041121449"
+   ]
+  },
+  {
+   "community_id": "TC_059",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "developments low"
+   ],
+   "supporting_papers": [
+    "W2749057177",
+    "W2111269106"
+   ]
+  },
+  {
+   "community_id": "TC_062",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "exposure duration"
+   ],
+   "supporting_papers": [
+    "W3013907015",
+    "W2041121449"
+   ]
+  },
+  {
+   "community_id": "TC_063",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "filled and unfilled"
+   ],
+   "supporting_papers": [
+    "W2052499993",
+    "W2148695455"
+   ]
+  },
+  {
+   "community_id": "TC_064",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.8333,
+    "closest_family": "FAM_PM_001002",
+    "closest_similarity": 0.1667
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "filled resin"
+   ],
+   "supporting_papers": [
+    "W2161673517",
+    "W2402068373"
+   ]
+  },
+  {
+   "community_id": "TC_066",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "filler loading"
+   ],
+   "supporting_papers": [
+    "W2787539654",
+    "W2135391044"
+   ]
+  },
+  {
+   "community_id": "TC_070",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "filling materials"
+   ],
+   "supporting_papers": [
+    "W2089362795",
+    "W2413398252"
+   ]
+  },
+  {
+   "community_id": "TC_072",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "gel point"
+   ],
+   "supporting_papers": [
+    "W2150442057",
+    "W2661953076"
+   ]
+  },
+  {
+   "community_id": "TC_076",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "increasing thickness"
+   ],
+   "supporting_papers": [
+    "W2769832677",
+    "W1993265490"
+   ]
+  },
+  {
+   "community_id": "TC_077",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "incremental placement"
+   ],
+   "supporting_papers": [
+    "W1520814740",
+    "W2010890321"
+   ]
+  },
+  {
+   "community_id": "TC_078",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.9,
+    "closest_family": "FAM_STRESS",
+    "closest_similarity": 0.1
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "light cure"
+   ],
+   "supporting_papers": [
+    "W2043825101",
+    "W2114053828"
+   ]
+  },
+  {
+   "community_id": "TC_085",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "nano hybrid"
+   ],
+   "supporting_papers": [
+    "W2002085603",
+    "W3045670837"
+   ]
+  },
+  {
+   "community_id": "TC_086",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "network formation"
+   ],
+   "supporting_papers": [
+    "W2021361262",
+    "W2661953076"
+   ]
+  },
+  {
+   "community_id": "TC_088",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.8,
+    "closest_family": "FAM_PM_001003",
+    "closest_similarity": 0.2
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "placement composite"
+   ],
+   "supporting_papers": [
+    "W1520814740",
+    "W1993265490"
+   ]
+  },
+  {
+   "community_id": "TC_093",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.8333,
+    "closest_family": "FAM_PM_001002",
+    "closest_similarity": 0.1667
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "posterior resin"
+   ],
+   "supporting_papers": [
+    "W2114730815",
+    "W2146498624"
+   ]
+  },
+  {
+   "community_id": "TC_094",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "pre warming"
+   ],
+   "supporting_papers": [
+    "W2040370527",
+    "W2041121449"
+   ]
+  },
+  {
+   "community_id": "TC_098",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "radiant energy"
+   ],
+   "supporting_papers": [
+    "W2769832677",
+    "W1985723892"
+   ]
+  },
+  {
+   "community_id": "TC_099",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.8333,
+    "closest_family": "FAM_PM_001002",
+    "closest_similarity": 0.1667
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "resin materials"
+   ],
+   "supporting_papers": [
+    "W2413398252",
+    "W2746155276"
+   ]
+  },
+  {
+   "community_id": "TC_100",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.8333,
+    "closest_family": "FAM_PM_001003",
+    "closest_similarity": 0.1667
+   },
+   "existing_coverage": 1.0,
+   "retrieval_novelty": 0.0,
+   "top_terms_used": [
+    "resins and composites"
+   ],
+   "supporting_papers": [
+    "W2061132771",
+    "W2031601489"
+   ]
+  },
+  {
+   "community_id": "TC_109",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "SLOT_SCHEMA_GAP",
+   "suggested_missing_slot": "method",
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.6667,
+    "closest_family": "FAM_P_002",
+    "closest_similarity": 0.3333
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "stress testing"
+   ],
+   "supporting_papers": [
+    "W1991814943",
+    "W2111269106"
+   ]
+  },
+  {
+   "community_id": "TC_110",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "teeth were restored"
+   ],
+   "supporting_papers": [
+    "W1520814740",
+    "W2800447971"
+   ]
+  },
+  {
+   "community_id": "TC_112",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "time dependent"
+   ],
+   "supporting_papers": [
+    "W2150442057",
+    "W2585094733"
+   ]
+  },
+  {
+   "community_id": "TC_115",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "varied which"
+   ],
+   "supporting_papers": [
+    "W2918894528",
+    "W2800447971"
+   ]
+  },
+  {
+   "community_id": "TC_116",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "MAPPABLE",
+   "suggested_missing_slot": null,
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 0.8333,
+    "closest_family": "FAM_PM_001002",
+    "closest_similarity": 0.1667
+   },
+   "existing_coverage": 0.5,
+   "retrieval_novelty": 0.5,
+   "top_terms_used": [
+    "viscosity resin"
+   ],
+   "supporting_papers": [
+    "W2925595796",
+    "W2114053828"
+   ]
+  },
+  {
+   "community_id": "TC_118",
+   "role": "NOISE_SMALL_CLUSTER",
+   "verdict": "NOT_PROMOTED",
+   "reasons": [
+    "status=BELOW_THRESHOLD（未达 CANDIDATE 门槛）"
+   ],
+   "slot_mapping_status": "SLOT_SCHEMA_GAP",
+   "suggested_missing_slot": "method",
+   "paper_count": 2,
+   "term_count": 1,
+   "citation_support": {
+    "mean_bridge_count": 2.0,
+    "max_bridge_count": 2
+   },
+   "term_coherence": {
+    "mean_npmi": 0.0
+   },
+   "novelty": {
+    "score": 1.0,
+    "closest_family": null,
+    "closest_similarity": 0.0
+   },
+   "existing_coverage": 0.0,
+   "retrieval_novelty": 1.0,
+   "top_terms_used": [
+    "year evaluation"
+   ],
+   "supporting_papers": [
+    "W2114730815",
+    "W2108387553"
+   ]
+  }
+ ]
+}

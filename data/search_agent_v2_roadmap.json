@@ -1,0 +1,436 @@
+{
+ "roadmap_id": "search_agent_v2_roadmap",
+ "frozen_at": "2026-08-28",
+ "decision_by": "用户（领域专家）",
+ "v1_root_cause": "22 条 query 全部共享 'bulk-fill composite' 固定锚点（Anchor Concentration ≈ 1），其他 community 的论文从未进入 candidate pool（P3-E 证据：117/117 missed 与 Agent retrieval footprint 无交集；DIRECTION_GAP 114）。",
+ "v2_principle": "取消'所有搜索必须共享一个固定 material/direction anchor'。Research Question → Concept Slots（P/M/R/C）→ Query Families → Queries。",
+ "roadmap": [
+  {
+   "phase": "v2.0",
+   "name": "Query-Family Diversification",
+   "status": "DONE",
+   "scope": "只改 query 生成架构；单一变量实验 A=v1 22 query vs B=query-family；其他组件（screening/ranking/verification）完全不变",
+   "decisions": {
+    "K_semantics": {
+     "batch_budget": "K=500 只作为 screening/extraction 处理批次预算（一批送多少篇给 LLM/extractor）",
+     "forbidden": "K 严禁作为 candidate retention cap——检索到的 unique paper 全部进 Candidate DB，不因 K 删除",
+     "leakage_rule": "任何 budget/depth 分配严禁参考 QGS 命中密度（benchmark leakage）；只可用 total_hits / unique_before_cap / marginal unique gain / duplicate rate / 新 venue·年份·概念出现率"
+    },
+    "depth_policy": {
+     "status": "不冻结 depth=500——knee 是成本曲线局部最优，不是完备数据库深度；500→1000 找回 11/134 QGS，不算小",
+     "decision_input": "待 verify_export_depth rank 分布（101-200/201-500/501-1000/>1000/ABSENT）出来后定 retrieval strategy",
+     "final_goal": "adaptive retrieval depth：Top100 → 新增率高继续加深 → 直到 marginal gain 明显下降（依据系统可观察信号）"
+    },
+    "official_metrics": {
+     "Retrieval_Recall_Candidate_Recall": "raw 进入 Candidate DB 的 QGS / 134 = 61.9%（depth=1000）——Search Agent 正式召回率",
+     "Screening_Recall": "已检索 QGS 中未被误杀的 / 已检索 QGS（相关性判断阶段）",
+     "End_to_End_Recall": "最终进知识库的 QGS / 134",
+     "RR_retained": "不再作为 Search Agent 召回率——它是人为 K 截断后的残余，反映的是资源预算不是搜全度"
+    },
+    "remaining_target": "51/134 未进入 raw Candidate DB = 41 EXPORT_DEPTH_CANDIDATE + 10 DIRECTION_GAP（reverse-route 交叉，0 遗漏）",
+    "venue_bug": "fieldGroupIdentifiers \"venue\" 非法被 Scopus 静默忽略（22133/22133 空）→ 已改 \"source\" + 宽列名 fallback"
+   },
+   "frozen_at": "2026-08-28",
+   "freeze_evidence": {
+    "AC": "1.0 -> 0.238",
+    "Candidate_RR": "~3% -> 61.9% (83/134)；执行链修复后 26 篇验证 0 新增，61.9% 即为最终值",
+    "PRE_2006": "0% -> 44.8%",
+    "depth_closed": "41 篇 1000->2000 新增 = 0 (composite 0/9 + dental 0/2 + photopolymer 0/15 + 原 15 篇 0)"
+   }
+  },
+  {
+   "phase": "v2.0.1",
+   "name": "Depth / Reverse-Route / Budget-Sweep Diagnosis",
+   "status": "DONE",
+   "frozen_at": "2026-08-28",
+   "scope": "诊断阶段：不动 query/family/ranking，只改导出深度与 family budget 重放",
+   "findings": {
+    "F3a_export_depth": "RR_raw 22.4%(d=100) → 35.8%(200) → 53.7%(500) → 61.9%(1000)；Δ(100→1000)=+39.6pp ≥10pp 实锤",
+    "reverse_route": "112 missed = 100 EXPORT_DEPTH_CANDIDATE / 12 DIRECTION_GAP / 0 QUERY_TERMINOLOGY_GAP",
+    "budget_sweep_depth500": {
+     "purpose": "量化资源开销曲线（K=200/300/500/1000/no-cap → RR_retained、pipeline rows），不代表 retention 决策",
+     "K200": "37/134=27.6% (F3b=35, pipeline 2890)",
+     "K300": "47/134=35.1% (F3b=25)",
+     "K500": "69/134=51.5% (F3b=3, pipeline 5927)",
+     "K1000": "71/134=53.0%",
+     "no_cap": "72/134=53.7% (pipeline 7570)",
+     "reinterpretation": "K 截断造成的 33.5pp（61.9%→28.4%）是架构问题（把计算预算当数据保留预算），不是参数问题——从架构消除：K 只决定先处理谁，不决定谁能留下",
+     "knee_meaning": "K=500 是成本曲线 knee，仅指导 batch 大小，不冻结为 retention cap"
+    },
+    "failure_taxonomy_rename": "F1F2_QUERY_OR_DIRECTION_GAP → UNVERIFIED_BEYOND_DEPTH_OR_QUERY_GAP=51（含 12 篇 reverse-route 已确认 LIKELY_DIRECTION_GAP；其余可能 rank>1000 或 query 不覆盖，暂不下结论）",
+    "verify_export_depth": {
+     "run": "10 queries / depth_cap=2000 / 100 EXPORT_DEPTH_CANDIDATE",
+     "overall_status": {
+      "FOUND_DEEP": 31,
+      "FOUND_TOP100": 2,
+      "NOT_FOUND_WITHIN_CAP": 30,
+      "EXPORT_FAILED_RETRY": 37
+     },
+     "found_deep_rank": {
+      "101-200": 5,
+      "201-500": 2,
+      "501-1000": 2,
+      "1001-2000": 22
+     },
+     "CRITICAL_reinterpretation": "31 FOUND_DEEP 全部属于 59 篇已救回组（已被其他 query 在 Top1000 捞到）；matched query 下 rank 1001-2000 不增加最终 recall。对当前 41 篇 unresolved：0 篇在 matched query Top2000 内",
+     "current_unresolved_41": {
+      "FOUND_DEEP": 0,
+      "NOT_FOUND_WITHIN_CAP": 15,
+      "EXPORT_FAILED_RETRY": 26
+     },
+     "unresolved_in_depth_run": "41/41 在 depth run（147 queries × Top1000）完全缺席——不是 depth 问题",
+     "FOUND_TOP100_check": "2 篇假警报：verify rank 9/90 与 depth run 完全一致 → Scopus 排序稳定，无 run inconsistency",
+     "new_gap_found": "depth run 147 queries 缺 \"polymerization shrinkage\" 族（FAM_VOLUME 只有 contraction/volume change/dimensional change 4 个 query）；reverse_route 43 篇 matched 到它但从未在 depth run 执行；verify 补跑单独 query 成功(2000条)，AND 组合（composite/dental/photo）全部 bulk RETRY",
+     "next_step": "① 解决 AND query bulk 导出（26 篇未判定）② 15 篇 NOT_FOUND = rank>2000 或 query 不覆盖 → cross-community 候选 ③ adaptive depth 对 41 篇边际价值≈0"
+    }
+   },
+   "conclusion": "100->1000 重大价值 (22.4%->61.9%)；1000->2000 对 unresolved 41 新增 = 0"
+  },
+  {
+   "phase": "v2.0.2",
+   "name": "Execution Completeness（修 F0 QUERY_EXECUTION_GAP）",
+   "status": "DONE",
+   "frozen_at": "2026-08-28",
+   "scope": "不扩方向不加 depth——保证设计好的 query 真正执行成功，execution coverage 可量化可审计",
+   "rationale": "depth 100→1000 曾是大瓶颈（已修）；当前剩余缺口更优先的问题是 query 设计存在但执行链没跑通（reverse-route 43 篇 matched 的 query 与 depth run 执行不一致）",
+   "QER_now": "130/147 = 88.4%（17 空需区分真 0 vs 静默失败）",
+   "F0_taxonomy": {
+    "F0a_PLAN_GAP": "query 设计存在但 run plan 没执行",
+    "F0b_EXPORT_FAILURE": "执行但 bulk export RETRY/timeout —— 26 篇（AND composite/dental/photo 族）",
+    "F0c_RESULT_PARSE_FAILURE": "Scopus 已返回但没进 Candidate DB",
+    "F0d_PROVENANCE_TRUNCATION": {
+     "definition": "诊断用 query provenance 被截断存储（reverse_route matched_queries 存残缺文本如 ...AND \"comp）→ verify 执行的不是原始 frozen query，Scopus 收到残缺表达式",
+     "status": "临时修复 resolve_full_query（registry startswith 最短消歧）已救火；长期方案见 provenance_fix",
+     "discovered": "2026-08-28 与 diagnose 完整 query 对比时发现"
+    }
+   },
+   "unresolved_41_split": {
+    "EXECUTION_UNRESOLVED_F0b": 26,
+    "QUERY_OR_DIRECTION_UNRESOLVED": 15
+   },
+   "direction_gap": "12 篇与 verify 100 完全独立（不与 15 NOT_FOUND 重叠）；v2.1 候选 = 15 + 10~12",
+   "candidate_recall_status": "83/134=61.9% 改称 observed under incomplete execution——不是 v2.0 架构上限",
+   "steps": [
+    "STEP1 修 F0：26 EXPORT_FAILED_RETRY + 核查 147 frozen queries 执行情况",
+    "STEP2 query execution manifest：PLANNED/SUCCESS/FAILED/RETRIED/FALLBACK_SUCCESS，QER→100%",
+    "STEP3 所有可执行 query 完成后重算 Candidate Recall",
+    "STEP4 重新形成真正的 unresolved set",
+    "STEP5 剩余 missed 才进 v2.1 Cross-Community"
+   ],
+   "engineering_hypothesis": "AND query RETRY 疑似 bulk-jobs 队列堆积（dump: 100 jobs，大量 FAILED）而非 query syntax——depth run 时同 query 1000 条成功；待清队列后重试验证",
+   "adaptive_depth": "暂缓（Top1000 0/41、Top2000 成功判定部分 0 新增——无证据支持 1000→2000 提升 recall）",
+   "F0b_diagnosis": {
+    "result": "TRANSIENT_EXPORT_INSTABILITY_NOT_REPRODUCED",
+    "evidence": "queue active=0（total=100: COMPLETED=79/FAILED=21）时，同 AND query \"polymerization shrinkage AND composite\" limit=1000 和 2000 均 COMPLETED，重复测试仍成功",
+    "excluded": [
+     "QUEUE_CONTAMINATION_CONFIRMED",
+     "BULK_SIZE_LIMIT（至少该 query 2000 导出无问题）",
+     "AND syntax 问题（同 query 现在成功）"
+    ],
+    "meaning_for_26": "上一轮 export job 暂时失败，非稳定可复现 bug——26 篇保持 EXECUTION_UNRESOLVED，不算 F1/F2/F3a",
+    "reclassify_after_resume": {
+     "found_1001_2000": "F3a EXPORT_DEPTH_GAP",
+     "exported_full_2000_still_absent": "QUERY_OR_DIRECTION_UNRESOLVED",
+     "retry_again": "F0b EXPORT_JOB_UNSTABLE 实锤"
+    }
+   },
+   "QER_status": {
+    "observed_successful_record_rate": "130/147 = 88.4%（临时名，非最终 QER）",
+    "final_QER_formula": "(SUCCESS + TRUE_ZERO) / 147",
+    "empty_17": "search 探针 17/17 UNKNOWN 无判别力 → 弃用；改 limit=1 execution probe（SUCCESS+≥1行→F0；COMPLETED+CSV空→TRUE_ZERO_CANDIDATE；RETRY/FAILED→EXECUTION_FAILED；无显式 zero 证据不当 TRUE_ZERO）"
+   },
+   "execution_manifest_schema": {
+    "required": [
+     "query_id",
+     "query",
+     "planned",
+     "total_hits",
+     "requested_depth",
+     "exported_count",
+     "status",
+     "attempts",
+     "job_ids",
+     "failure_reason"
+    ],
+    "status_values": [
+     "SUCCESS",
+     "SUCCESS_ZERO_RESULTS",
+     "EXPORT_FAILED"
+    ],
+    "sample_success": {
+     "query_id": "FAM_PM_001003::24",
+     "total_hits": 3814,
+     "requested_depth": 1000,
+     "exported_count": 1000,
+     "status": "SUCCESS",
+     "attempts": 2,
+     "failure_reason": null
+    },
+    "sample_failed": {
+     "status": "EXPORT_FAILED",
+     "attempts": 3,
+     "failure_reason": "RETRY_STALLED"
+    },
+    "sample_zero": {
+     "status": "SUCCESS_ZERO_RESULTS",
+     "total_hits": 0
+    },
+    "purpose": "消除 records=0 的语义混淆（没论文？没执行？export 挂了？）"
+   },
+   "immediate_action": "python tools/verify_export_depth.py --resume（export service 已恢复，判掉 26 篇）——不改 engine、不进 v2.1",
+   "verify_stats_bugs_fixed": {
+    "A_resume_duplication": "results 改 dict(upsert 按 query 覆盖) + targets 按 eid 去重取最新 + assert 总数==100——旧数据验证：137→100、RETRY 74→37",
+    "B_current_unresolved": "冻结 EID 集合 candidate.eid not in depth1000_eids，assert==41——旧数据验证 126→41",
+    "C_run_rank_lookup": "FOUND_TOP100 核查用全局 eid_min_rank 重查（不再依赖 targets 存储字段）"
+   },
+   "request_fingerprint": {
+    "added_to": [
+     "tools/verify_export_depth.py",
+     "tools/diagnose_export_queue.py"
+    ],
+    "fields": [
+     "query/limit/offset/sort/field_groups/locale/endpoint/document_classification/export_type/file_type"
+    ],
+    "hash": "SHA256(payload sorted) 前16位，两条路径输出同构"
+   },
+   "path_diff_hypothesis": {
+    "verify": "export_query 先 engine.search(query, limit=depth=2000)——search 内部会发起一次 limit=2000 的导出 job（poll_retries=30），随后 verify 再分页导出（offset=0/1000, page=1000）",
+    "diagnose": "不调 search，直接 initiate（limit=1000/2000 单发）——已被证明 COMPLETED",
+    "suspicion": "verify 独有的 search 预热（含 2000 条内部导出 job）可能是 RETRY 来源（会话/队列状态差异），fingerprint 已覆盖 search_session_limit 字段",
+    "fix_direction": "⑤ 让 verify 走 diagnose 已验证的路径（去掉/降级 search 预热）——待用户拍板"
+   },
+   "provenance_fix": {
+    "long_term": "reverse_route 关联从 query text → query_id：存 matched_query_id（FAM_PM_001003::Q04）+ matched_family_id；执行时查 frozen query_registry_v2.json 拿完整 text",
+    "why": "startswith 最短消歧有歧义（composite/composites/composite resin 并存时会猜错）——query text 不该作关联主键",
+    "when": "本轮 verify 验证结束后实施"
+   },
+   "smoke_test_cmd": "python tools/verify_export_depth.py --only composite（CMD 无单引号包裹，substring 匹配即可；连续两次 COMPLETED 后 --resume）",
+   "fixed": [
+    "reverse_route query 截断 (F0d，临时 resolve_full_query，长期改存 query_id)",
+    "verify prewarm 重复 job + 残缺 query 执行路径",
+    "resume 重复累计 (results dict upsert + eid 去重 + assert)",
+    "CURRENT_UNRESOLVED 集合 bug (冻结 EID 集合)"
+   ],
+   "evidence": "composite/dental/photopolymer 修复后稳定导出 (RETRY=0 可复现)，对 41 子集 Top2000 新增 = 0"
+  },
+  {
+   "phase": "v2.1",
+   "name": "Cross-Community Discovery",
+   "status": "NEXT",
+   "scope": "社区级发现（dental/holography/coating 等动态扩展）",
+   "goal": "不硬编码 41 篇 (leakage)——设计机制让 Agent 从已触达文献社区自主发现邻接但术语不同的社区 (holography/UV-NIL/historical dental)，生成新 query family，从 61.9% 往 80%/90%+ 走",
+   "development_signals": [
+    {
+     "signal": "COMMUNITY_ISOLATION",
+     "community": "holography",
+     "evidence": "photopolymer 组 15 篇 QGS-v1 missed：query 导出仅 13 条 (ABSENT_EXHAUSTIVE=15)，这些论文根本不在 \"polymerization shrinkage AND photopolymer\" 的 Scopus 搜索集合里",
+     "source": "QGS-v1 failure analysis",
+     "leakage": true
+    },
+    {
+     "signal": "COMMUNITY_ISOLATION",
+     "community": "UV-NIL / historical dental",
+     "evidence": "12 篇 DIRECTION_GAP 含 UV-NIL 仿真 (207/213/225)、Bowen 1967、thiol-yne 边界",
+     "source": "reverse-route",
+     "leakage": true
+    }
+   ],
+   "key_insight": "语义上属于某个大方向 != 某个具体 Scopus query 能检索到它——不同 community 用不同语言描述同一现象，现有 query family 穿不过社区边界",
+   "design_doc": "docs/specs/2026-08-28-v2.1-community-discovery-design.md",
+   "mvp": {
+    "mechanism": "Community Explorer（社区发现器）——不是扩 query 生成器",
+    "signals": [
+     "Citation Bridge（主）",
+     "Term Co-occurrence",
+     "Review Bridge（MVP 仅额外证据）"
+    ],
+    "promotion": "固定阈值（citation_support≥τc AND term_coherence≥τt AND novelty_vs_registry≥τn），不学权重",
+    "novelty": "与 query_registry_v2.json 比（1 - max Sim），不是与论文库比",
+    "concept_mapping": "P/M/R/C → concept_slots.py 的 problem/material/reaction/context",
+    "modules": [
+     "discovery/citation_bridge.py",
+     "discovery/term_community.py",
+     "discovery/review_bridge.py(可选)",
+     "discovery/community_candidate.py",
+     "discovery/community_ranker.py",
+     "discovery/community_promoter.py"
+    ],
+    "data": [
+     "data/community_registry_v2.json",
+     "data/community_evidence_v2.json（含 qgs_leakage 标记）"
+    ],
+    "metrics": [
+     "CDR",
+     "Community Novelty",
+     "Retrieval Expansion",
+     "MCG",
+     "RR_QGS1 只作 regression"
+    ],
+    "leakage_rules": [
+     "禁止 QGS missed 作 seed",
+     "holography/UV-NIL 只作 failure-analysis 标签",
+     "community 必须可追溯",
+     "QGS 得知的 term → leakage=true + CLEAN 排除"
+    ],
+    "10_steps": "design doc STEP 1-10"
+   },
+   "citation_data_audit": {
+    "date": "2026-08-28",
+    "tool": "tools/audit_citation_coverage.py",
+    "sources": {
+     "scopus": "19783 papers，仅 citation_count 数字，无引用列表",
+     "kb": "64 records，无引用字段",
+     "openalex": "14318 works，12739 有 referenced_works，总引用边 770323——唯一引用图数据源"
+    },
+    "candidate_coverage": "6572 candidates：OpenAlex 缓存命中 15.9%，有 refs 15.6%（DOI 桥接）",
+    "relevant_coverage": "40 RELEVANT（staging）：OA 命中 100%，Coverage_ref=82.5%（33/40）≥70% → 直接实现 Citation Bridge",
+    "cited_by": "Coverage_cited=0%——任何源无 cited_by 列表（Scopus 只有次数；OpenAlex 需引文索引接口）→ 第一版只做 backward (references)",
+    "identity": "referenced_works 全为 W id 可 canonicalize；13535/14318 有 DOI 可桥接 Scopus EID",
+    "verdict": "Coverage_ref≥70% → 直接实现 citation_bridge.py（backward 方向）；forward chasing 待补 OpenAlex cited_by 数据源"
+   },
+   "citation_bridge_v1": {
+    "status": "DONE（offline backward，OpenAlex cache only）",
+    "module": "search_engine/discovery/citation_bridge.py",
+    "output": "data/exports/citation_bridge_v1.json",
+    "key_numbers": {
+     "unique_referenced_neighbors": 850,
+     "bridge_ge2": 220,
+     "bridge_ge3": 105,
+     "new_neighbor": 656,
+     "already_retrieved": 179,
+     "already_relevant": 15,
+     "bridge_distribution": {
+      "1": 630,
+      "2": 115,
+      "3": 46,
+      "4": 21,
+      "5": 11,
+      "6": 7,
+      "7": 8,
+      "8": 3,
+      "9": 3,
+      "10": 2,
+      "11": 1,
+      "12": 1,
+      "14": 1,
+      "16": 1
+     }
+    },
+    "observations": {
+     "mechanism_works": "850 neighbors / 220 ge2 / 656 NEW——bridge 图有实质内容",
+     "hop1_mostly_dental": "1-hop 主要落在 dental 社区内部（bulk-fill 82/光引发 60/adhesion 43）——预期，seeds 全 dental",
+     "edge_signal": "已出现 6 个光聚合物/折射率信号（如 Refractive Index Mismatch and Monomer Reactivity，bridge=3）——邻接社区边缘",
+     "metadata_gap": "850 里 475 无 title/year（refs 里的 W id 不在 OA 缓存）——第二轮需补元数据",
+     "cross_community_limited": "1-hop 跨到 holography 的能力有限——可能需 2-hop 或 term 信号补强"
+    },
+    "next_step": "用户拍板：人工看 Top 30 → 若出现新术语簇则接 term_community.py；475 无元数据 neighbor 待 OpenAlex 批量补"
+   },
+   "term_community_v1": {
+    "status": "DONE（phrase noise 修复 + role 层 + ExistingCoverage）",
+    "module": "search_engine/discovery/term_community.py",
+    "output": "data/exports/term_communities_v2.json",
+    "phrase_noise_fix": "stopword 扩展 + 首尾非 stopword + content tokens>=2——candidate_phrases 1467→1137，edges 26312→15542，TC_001 768→426 terms",
+    "role_system": {
+     "CORE_COMMUNITY": 2,
+     "NOVEL_COMMUNITY_CANDIDATE": 8,
+     "BOUNDARY_COMMUNITY": 7,
+     "BOUNDARY_TERM_SIGNAL": 6,
+     "NOISE_SMALL_CLUSTER": 96
+    },
+    "existing_coverage": "TC_001 cov=0.483 retNov=0.517——lexical 0.93 但被现有检索半覆盖"
+   },
+   "community_promoter_v1": {
+    "status": "DONE",
+    "module": "search_engine/discovery/community_promoter.py",
+    "output": "data/exports/community_promotions_v1.json",
+    "rules": "paper>=3 & terms>=3 & mean_bridge>=2.5 & mean_npmi>=0.6 & retrieval_novelty>=0.5 & role!=CORE；lexical novelty 只作参考",
+    "promotion_candidates": 6,
+    "key_candidates": [
+     "TC_006 LED/固化光源（23 篇, retNov=0.696, lex=1.0）",
+     "TC_009 光谱表征（3 篇, retNov=1.0, lex=1.0）",
+     "TC_007 dental guidelines（12 篇）",
+     "TC_010/TC_015/TC_017"
+    ],
+    "validation": "lexical 单独会误判（TC_001 0.93 / TC_005 0.94 / TC_003 0.96 全高），RetrievalNovelty 正确区分：TC_005 retNov=0.2 拒绝、TC_009 retNov=1.0 晋升——指标价值验证成功",
+    "next_step": "PROMOTED → Concept Slot（P/M/R/C）→ 新 Query Family → Scopus 搜索（用户设计 STEP 9）——待用户确认候选"
+   }
+  },
+  {
+   "phase": "v2.2",
+   "name": "Historical Terminology Expansion",
+   "status": "BLOCKED",
+   "scope": "contraction/setting stress/hardening stress 等历史术语体系"
+  },
+  {
+   "phase": "v2.3",
+   "name": "Review-Reference Community Seeding",
+   "status": "BLOCKED",
+   "scope": "权威综述 references 作社区种子"
+  },
+  {
+   "phase": "v2.4",
+   "name": "Temporal Exploration",
+   "status": "BLOCKED",
+   "scope": "时间维度探索（早期文献）"
+  },
+  {
+   "phase": "v2.5",
+   "name": "Citation Bridge / Second-source",
+   "status": "BLOCKED",
+   "scope": "引用桥 + 第二数据库兜底"
+  },
+  {
+   "phase": "v2.6",
+   "name": "Ranking / Screening Optimization",
+   "status": "BLOCKED",
+   "scope": "排序与筛选优化（最后做：131 missed 里绝大部分未进候选）"
+  },
+  {
+   "phase": "v2.final",
+   "name": "Independent QGS v2",
+   "status": "BLOCKED",
+   "scope": "构造完全独立 QGS v2 → Final Relative Recall"
+  }
+ ],
+ "v2_0_constraints": [
+  "❌ BLOCK：ranking optimization / classifier retraining / relevance threshold / QGS missed DOI·title 注入 / 手写 131 篇对应 query",
+  "✅ ALLOW：QGS v1 结论'单锚点 query 架构有问题'→ 架构改 multi-family exploration",
+  "QGS-learned 术语（setting stress/hardening stress/contraction 系/dental/holography/coating）可用于开发，但必须登记 data/leakage_ledger_v2.json（leakage=true）",
+  "每个 family 相同 retrieval 预算 K（第一版不做动态预算）；coverage merge 保证无 family 被挤死",
+  "QGS v1（140 篇）此后只作 regression benchmark（benchmark recovery），正式评估等 QGS v2"
+ ],
+ "v2_0_metrics": [
+  {
+   "metric": "Anchor concentration",
+   "formula": "AC = max_t #{queries containing anchor t} / #{all queries}",
+   "v1": "≈1",
+   "v2_target": "<0.4"
+  },
+  {
+   "metric": "Family coverage",
+   "formula": "FC = #active families / #generated families",
+   "purpose": "避免生成一堆 family 未执行"
+  },
+  {
+   "metric": "Retrieval reach",
+   "components": [
+    "unique papers",
+    "unique venues",
+    "unique years",
+    "unique concept clusters",
+    "unique citation communities"
+   ],
+   "purpose": "v2 出现大量 v1 从未触达的 venue/era/concept community"
+  },
+  {
+   "metric": "QGS v1 regression RR",
+   "formula": "RR = |found ∩ B_scopus| / 134",
+   "naming": "论文中叫 QGS v1 recovery / regression recall，不叫 independent external recall"
+  }
+ ],
+ "data_files": {
+  "registry": "data/query_registry_v2.json",
+  "leakage_ledger": "data/leakage_ledger_v2.json",
+  "family_stats": "data/exports/query_family_runs.json"
+ }
+}
