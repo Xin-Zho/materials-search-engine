@@ -77,8 +77,8 @@ python -m venv .venv && .venv/Scripts/pip install -e .[dev]
 # 零 API 复核：R06 三层 recall 重算（labels 已回填）
 .venv/Scripts/python tools/compute_r06_recall.py --labels data/exports/completeness_labels/pc_001__20260908012830_filled.json
 
-# 零 API 复核：v1.0 完整性校验（39 文件 sha256，检出任何版本漂移）
-.venv/Scripts/python -c "import json,hashlib;[print(f['path'],'OK' if hashlib.sha256(open(f['path'],'rb').read()).hexdigest()==f['sha256'] else 'MISMATCH') for f in json.load(open('data/exports/releases/v1.0_manifest.json',encoding='utf-8'))['files']]"
+# 零 API 复核：v1.0 完整性校验（39 文件；git 跟踪文件锚 v1.0 tag blob、CRLF 无关）
+.venv/Scripts/python tools/verify_v1.0_manifest.py
 
 # 测试
 pytest tests/
