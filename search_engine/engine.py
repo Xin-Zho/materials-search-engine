@@ -129,6 +129,8 @@ class ScopusSearchEngine:
         skip_cache: bool = False,
         offset: int = 0,
         write_cache: bool = True,
+        poll_retries: int = 30,
+        retry_abort: int | None = None,
     ) -> SearchResult:
         """执行 Scopus 高级搜索，通过 CSV 导出获取结果。
 
@@ -177,7 +179,9 @@ class ScopusSearchEngine:
             return result
 
         # 2. 通过 Scopus Export API 获取 CSV
-        csv_text = await self._export_via_api(full_query, limit, offset=offset)
+        csv_text = await self._export_via_api(full_query, limit, offset=offset,
+                                              poll_retries=poll_retries,
+                                              retry_abort=retry_abort)
         # 保存原始 CSV 以便调试字段名
         (self.data_dir / "cache" / "scopus_export_raw.csv").write_text(csv_text, encoding="utf-8")
         logger.info("CSV: %d 字符 → data/cache/scopus_export_raw.csv", len(csv_text))

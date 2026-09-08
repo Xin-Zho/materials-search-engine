@@ -287,7 +287,8 @@ async def run_query_layer(q_acts: list[dict], args, s5_keys: set,
                 else:
                     # 强制 skip_cache：防缓存命中覆盖（S1 depth=50 教训）
                     res = await engine.search(q["query_string"], limit=args.depth,
-                                              skip_cache=True)
+                                              skip_cache=True,
+                                              poll_retries=90, retry_abort=45)
                     papers = res.papers
                     total_hits = getattr(res, "total_count", len(papers))
             except Exception as e:
