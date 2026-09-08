@@ -1,0 +1,41 @@
+{
+  "topic_id": "thermochromic_materials",
+  "version": "P1B1_QUERY_GATE_V1",
+  "status": "FROZEN_VIA_USER_FINAL_20260908",
+  "origin": "用户终裁 2026-09-08：全新主题首轮 live 前必须 query safety gate（generic A 加 topic umbrella），防 A AND B 裸扫大量非热致变色文献；specificity 判定资产化，禁 if topic== 特判。",
+  "purpose": "把 36 条 cut actions 分成两通道：Discovery（specific A，anchor-free）/ Precision（generic A + umbrella）。umbrella 使 generic 机制词（phase transition/aggregation/lattice 类）不裸搜——加词面限定保 precision，同时不把全部 query 锁死在 thermochromic 词面上（specific 机制通道保留召回开放性）。",
+  "default_class": "generic",
+  "default_class_note": "A-term 未在 specificity 表中标注 → 默认 generic（安全侧，宁加 umbrella 不漏 precision）。仅按 actions 的 terms[0]（A 词）判定；B（observable）不判定。",
+  "umbrella": {
+    "or_terms": [
+      "thermochrom*",
+      "thermal color change",
+      "temperature-responsive color",
+      "temperature-induced optical change"
+    ],
+    "or_terms_note": "词面来自 termbank lexical role + rubric scope 措辞。thermochrom* 词干覆盖 thermochromism/thermochromic/thermochromics。Scopus TITLE-ABS-KEY 支持 * 词干与引号短语。禁含 qa_contrast_vocabulary（photochromic/electrochromic 等会误捞）。",
+    "scopus_fragment": "((\"thermochrom*\") OR (\"thermal color change\") OR (\"temperature-responsive color\") OR (\"temperature-induced optical change\"))"
+  },
+  "specificity": [
+    {"term": "leuco dye", "class": "specific", "reason": "体系名（用户 high 例），变色语境基本专属"},
+    {"term": "microencapsulated thermochromic pigment", "class": "specific", "reason": "词面已含 thermochromic"},
+    {"term": "chiral nematic", "class": "specific", "reason": "光学构型体系名（用户 high 例 cholesteric LC）"},
+    {"term": "vanadium dioxide", "class": "specific", "reason": "体系名（用户 high 例 VO2）"},
+    {"term": "metal-insulator transition", "class": "specific",
+     "reason": "MIT 配温度类 B（switching temperature）自带热驱动语境；电驱动 MIT 文用 voltage/field 不用 switching temperature"},
+    {"term": "lactone ring-opening", "class": "specific", "reason": "leuco 隐色染料专属机制"},
+    {"term": "spirolactone equilibrium", "class": "specific", "reason": "与 lactone ring-opening 同机制簇（同义），D 类 transfer 用"},
+    {"term": "spin crossover", "class": "specific", "reason": "用户 high 例；SCO 热致自旋转变本身即 thermo 邻域"},
+    {"term": "selective reflection", "class": "specific", "reason": "胆甾相/结构色特异光学机制，配温度 B 即热响应语境"},
+    {"term": "photonic bandgap shift", "class": "specific", "reason": "光子带隙特异机制，配 switching temperature 锁定热响应"},
+    {"term": "thermochromic phase change material", "class": "specific", "reason": "词面已含 thermochromic"},
+    {"term": "eutectic melting", "class": "generic", "reason": "eutectic 跨金属合金/PCM 语境，需 umbrella 限 leuco 热致变色"},
+    {"term": "proton transfer", "class": "generic", "reason": "质子转移遍布化学（非变色海量），需 umbrella"},
+    {"term": "ligand field change", "class": "generic", "reason": "配位场变化文献海量（d-d 光谱非变色为主）"},
+    {"term": "LCST", "class": "generic", "reason": "温敏聚合物大量非变色（PNIPAM 相变文），需 umbrella 滤至变色关联"},
+    {"term": "bandgap change", "class": "generic", "reason": "带隙工程非变色海量（半导体），需 umbrella"},
+    {"term": "aggregation/deaggregation equilibrium", "class": "generic", "reason": "aggregation 用户明列泛化例，跨 AIE/胶体语境"},
+    {"term": "metallophilic interaction", "class": "generic", "reason": "非温度发光文多（luminescent thermo 需 self-framing），需 umbrella"},
+    {"term": "liquid-crystal phase transition", "class": "generic", "reason": "液晶相变海量非变色（显示领域），恢复条专为看 yield → umbrella 保 precision"}
+  ]
+}
