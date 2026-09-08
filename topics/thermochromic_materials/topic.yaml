@@ -1,42 +1,53 @@
-# 主题配置：thermochromic_materials（P0-2 空骨架——证明新建主题零 Python 复制）
+# 主题配置：thermochromic_materials（V1 frozen 2026-09-08 用户审）
 #
-# 状态: BOOTSTRAP_PENDING。研究问题已定（用户 2026-09-08），rubric/seed/termbank 待建。
-# 建法: python tools/bootstrap_topic.py --topic thermochromic_materials（已存在则跳过）。
-# 推进顺序: 1) rubric.md 落定（需人工） 2) seeds.json 收集 3) termbank.json term expansion
-#          4) QA/检索（run_s6_qa --topic thermochromic_materials 等，算法零改动）
+# 状态: V1 FROZEN（2026-09-08）。research question/rubric/seeds/termbank 均用户 freeze。
+# 范围修订（用户审意见）：reversible-only 删除 → 可逆+不可逆均入界；可见光门槛删除 →
+# NIR/solar 光学调制入界；发光类分层判定（波长/谱比/色变=核心，纯强度/lifetime 须
+# self-framed luminescence thermochromism）；photochromic 等 4 词禁 hard-NOT 作 contrast。
+# 后续: 1) P1-A2 工程化（词汇资产化/桥接 query） 2) S6 词源三层 VERIFIED 冻结
+#      3) P1-B --live 全量（Scopus/OpenAlex）→ 产物 topics/<id>/runs/
 
 topic_id: thermochromic_materials
-name: Thermochromic Materials
+name: Thermochromic Materials & Thermochromism
 research_question: >-
-  Identify materials, mechanisms, structures and processing strategies governing
-  thermochromic behavior: material systems, color-change mechanisms, switching
-  temperature, cyclability/stability, response time, and application directions.
+  温度驱动材料光学状态变化（thermochromism，可逆与不可逆均含）的识别、表征与设计：
+  变色机制（leuco dye 开环/质子转移/供受体平衡与溶剂共晶熔融、胆甾相液晶螺旋节距、
+  VO2/金属氧化物的 MIT 与结构相变、配位场/配位几何/自旋态变化（spin crossover）、
+  金属簇的 metallophilic 与激发态变化、共轭聚合物构象转变（LCST/UCST/体积相变）、
+  光子带隙/晶格间距变化（结构色）、能带变化、聚集-解聚集）、以及转变温度、色差/色度、
+  光谱移动、滞后、响应/恢复动力学、可逆性/循环稳定性、可见-NIR-太阳光调制等可测性能，
+  与面向温度指示/防伪/智能窗/纺织/传感等应用的体系设计。
+  Scope note: visible-light 非硬门槛（NIR/solar 调制入界）；luminescent thermochromism
+  按波长/谱比/色变分层纳入（纯强度/lifetime 须 self-framing）。
 
 rubric:
-  version: TBD                       # TODO: 定义后升 V1 并落 rubric.md
-  file: rubric.md                    # TODO: 待撰写（材料体系/变色机制/响应温度/循环稳定性/响应时间/应用）
-  frozen_at: null
+  version: THERMOCHROMIC_RUBRIC_V1    # frozen 2026-09-08；校准改动须升 V2，禁改已冻结文本
+  file: rubric.md                      # 相对本目录；全文 = run_s6_qa.py RUBRIC_SYSTEM_PROMPT 注入物
+  frozen_at: "2026-09-08"
 
 retrieval:
-  backends: [openalex]               # TODO: 需要时加 scopus
-  anchor: thermochromic materials
+  backends: [scopus, openalex]         # P1-B 双后端（与 pc001 同等级）
+  anchor: thermochromism
   default_max_results: 20
 
 labels:
   relevant: RELEVANT
   uncertain: UNCERTAIN
   irrelevant: IRRELEVANT
+  operational_promotion: RELEVANT|UNCERTAIN     # R1: U 缓收（北星恒等式同 pc001）
+  strict_promotion: RELEVANT                    # R2
 
 identity:
   preserve: [doi, scopus_eid, openalex_id]
   canonical_priority: [doi, openalex_id, scopus_eid]
 
-assets:
-  rubric: rubric.md
-  termbank: termbank.json            # TODO: 空，待 term expansion（S6 同款词源三层）
-  seeds: seeds.json                  # TODO: 空，待 seed 收集
+# audit: 本主题暂无 frame（R0x 独立审计 frame 须分主题重建，禁复用 pc_001 FRAME_V2）。
+#   P1-B 产出 candidate/KB 后按 Roadmap v2 #2 流程构建 thermo frame 再审计。
+
+assets:                       # 相对本目录的决策资产（代码经 topic_config 解析）
+  rubric: rubric.md           # relevance rubric 全文（THERMOCHROMIC_RUBRIC_V1 frozen 09-08）
+  termbank: termbank.json     # TermBank 候选词表（THERMOCHROMIC_TERMBANK_V1 frozen；VERIFIED 待 S6 词源三层）
+  seeds: seeds.json           # seed corpus（THERMOCHROMIC_SEEDS_V1 frozen：29 篇机制类别平衡）
   runs_dir: runs/
 
-legacy_v1:
-  # 该主题无 v1.0 历史——不走 pc_001 遗留产物映射
-  exports: null
+# 该主题无 v1.0 legacy 产物——输出自动路由 topics/thermochromic_materials/runs/（非 legacy 判定）

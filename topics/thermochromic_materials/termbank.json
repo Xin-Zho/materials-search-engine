@@ -1,10 +1,407 @@
 {
  "topic_id": "thermochromic_materials",
+ "origin": "P1-A freeze 2026-09-08（用户审）：41→60，重点补 mechanism + measurable observable，不堆近义词；VERIFIED 冻结待 S6 词源三层。",
+ "version": "THERMOCHROMIC_TERMBANK_V1",
+ "created_at": "2026-09-08",
+ "architecture": "P1-A 候选池：semantic_role x domain 双轴；待 S6 同款词源三层验证后冻结 V1",
  "counts": {
+  "raw_terms": 60,
+  "CANDIDATE": 60,
   "VERIFIED_EXACT": 0,
   "SEMANTIC_CANDIDATE": 0,
   "REJECTED": 0
  },
- "terms": [],
- "definition": "TermBank 待 term expansion"
+ "semantic_role_distribution": {
+  "lexical": 10,
+  "mechanism": 27,
+  "observable": 18,
+  "context": 5
+ },
+ "domain_distribution": {
+  "application": 4,
+  "coordination": 3,
+  "general": 18,
+  "hydrogel": 1,
+  "inorganic": 2,
+  "leuco_dye": 14,
+  "liquid_crystal": 5,
+  "luminescent": 1,
+  "microcapsule": 1,
+  "photonic": 2,
+  "polymer": 2,
+  "smart_window": 4,
+  "vo2": 3
+ },
+ "terms": [
+  {
+   "term": "thermochromism",
+   "semantic_role": "lexical",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "reversible thermochromism",
+   "semantic_role": "lexical",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "thermochromic materials",
+   "semantic_role": "lexical",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "leuco dye",
+   "semantic_role": "lexical",
+   "domain": "leuco_dye",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "color former",
+   "semantic_role": "lexical",
+   "domain": "leuco_dye",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "developer",
+   "semantic_role": "lexical",
+   "domain": "leuco_dye",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "microencapsulated thermochromic pigment",
+   "semantic_role": "lexical",
+   "domain": "leuco_dye",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "thermotropic liquid crystal",
+   "semantic_role": "lexical",
+   "domain": "liquid_crystal",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "chiral nematic",
+   "semantic_role": "lexical",
+   "domain": "liquid_crystal",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "vanadium dioxide",
+   "semantic_role": "lexical",
+   "domain": "vo2",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "metal-insulator transition",
+   "semantic_role": "mechanism",
+   "domain": "vo2",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "lactone ring-opening",
+   "semantic_role": "mechanism",
+   "domain": "leuco_dye",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "spirolactone equilibrium",
+   "semantic_role": "mechanism",
+   "domain": "leuco_dye",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "color development equilibrium",
+   "semantic_role": "mechanism",
+   "domain": "leuco_dye",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "eutectic melting",
+   "semantic_role": "mechanism",
+   "domain": "leuco_dye",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "solvent-mediated color switch",
+   "semantic_role": "mechanism",
+   "domain": "leuco_dye",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "selective reflection",
+   "semantic_role": "mechanism",
+   "domain": "liquid_crystal",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "pitch change",
+   "semantic_role": "mechanism",
+   "domain": "liquid_crystal",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "monoclinic-rutile phase transition",
+   "semantic_role": "mechanism",
+   "domain": "vo2",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "phase transition",
+   "semantic_role": "mechanism",
+   "domain": "inorganic",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "reversible phase change",
+   "semantic_role": "mechanism",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "ligand field change",
+   "semantic_role": "mechanism",
+   "domain": "coordination",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "coordination geometry change",
+   "semantic_role": "mechanism",
+   "domain": "coordination",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "thermochromic phase change material",
+   "semantic_role": "mechanism",
+   "domain": "microcapsule",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "switching temperature",
+   "semantic_role": "observable",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "coloration temperature",
+   "semantic_role": "observable",
+   "domain": "leuco_dye",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "decoloration temperature",
+   "semantic_role": "observable",
+   "domain": "leuco_dye",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "thermal hysteresis",
+   "semantic_role": "observable",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "color contrast",
+   "semantic_role": "observable",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "color difference",
+   "semantic_role": "observable",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "reversibility",
+   "semantic_role": "observable",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "cycling stability",
+   "semantic_role": "observable",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "response time",
+   "semantic_role": "observable",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "luminous transmittance modulation",
+   "semantic_role": "observable",
+   "domain": "smart_window",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "solar modulation ability",
+   "semantic_role": "observable",
+   "domain": "smart_window",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "thermochromic performance",
+   "semantic_role": "observable",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "smart window",
+   "semantic_role": "context",
+   "domain": "smart_window",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "temperature indicator",
+   "semantic_role": "context",
+   "domain": "application",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "anti-counterfeiting",
+   "semantic_role": "context",
+   "domain": "application",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "thermochromic ink",
+   "semantic_role": "context",
+   "domain": "application",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "thermochromic textile",
+   "semantic_role": "context",
+   "domain": "application",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "spin crossover",
+   "semantic_role": "mechanism",
+   "domain": "coordination",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "proton transfer",
+   "semantic_role": "mechanism",
+   "domain": "leuco_dye",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "electron donor-acceptor interaction",
+   "semantic_role": "mechanism",
+   "domain": "leuco_dye",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "tautomerism",
+   "semantic_role": "mechanism",
+   "domain": "leuco_dye",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "liquid-crystal phase transition",
+   "semantic_role": "mechanism",
+   "domain": "liquid_crystal",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "LCST",
+   "semantic_role": "mechanism",
+   "domain": "polymer",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "UCST",
+   "semantic_role": "mechanism",
+   "domain": "polymer",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "volume phase transition",
+   "semantic_role": "mechanism",
+   "domain": "hydrogel",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "photonic bandgap shift",
+   "semantic_role": "mechanism",
+   "domain": "photonic",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "lattice spacing change",
+   "semantic_role": "mechanism",
+   "domain": "photonic",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "bandgap change",
+   "semantic_role": "mechanism",
+   "domain": "inorganic",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "aggregation/deaggregation equilibrium",
+   "semantic_role": "mechanism",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "metallophilic interaction",
+   "semantic_role": "mechanism",
+   "domain": "luminescent",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "transition temperature",
+   "semantic_role": "observable",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "chromaticity",
+   "semantic_role": "observable",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "spectral shift",
+   "semantic_role": "observable",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "recovery time",
+   "semantic_role": "observable",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "fatigue",
+   "semantic_role": "observable",
+   "domain": "general",
+   "verdict": "CANDIDATE"
+  },
+  {
+   "term": "NIR modulation",
+   "semantic_role": "observable",
+   "domain": "smart_window",
+   "verdict": "CANDIDATE"
+  }
+ ],
+ "next": "rubric/seeds/termbank 均 V1 frozen → P1-A2 工程化（词汇资产化/桥接 query 生成）→ S6 同款词源三层 VERIFIED 冻结 → P1-B --live 全量",
+ "qa_contrast_vocabulary": {
+  "note": "以下 4 词【禁止】作 hard-NOT query / hard exclusion——thermochromic 材料常 multifunctional (thermo+photo/electro chromic 双响应)。QA 判定用 contrast test：温度是否为光学变化/显色的实质驱动变量？YES→继续 thermochromic relevance 判定；NO→IRRELEVANT。见 rubric.md frozen V1。",
+  "terms": [
+   "photochromic",
+   "electrochromic",
+   "mechanochromic",
+   "solvatochromic"
+  ]
+ }
 }

@@ -1,6 +1,297 @@
 {
  "topic_id": "thermochromic_materials",
- "n": 0,
- "seeds": [],
- "definition": "seed corpus 待收集"
+ "n": 29,
+ "definition": "THERMOCHROMIC_SEEDS_V1 (2026-09-08 freeze)：机制类别平衡——VO2 降权 5→3，新增 coordination-SCO/luminescent/PDA/photonic/ionic/irreversible 7 篇（inorganic salt 未单列 seed：Day 1968 Chem Rev 综述已覆盖 Cu2HgI4/Ag2HgI4 类，且现代该类文献偏导电/结构无光学维度）。类别按变色机制而非应用划分，避免向 smart-window 单话语收敛。",
+ "seeds": [
+  {
+   "paper_id": "openalex:W1979917603",
+   "doi": "10.1021/ed076p1201",
+   "openalex_id": "W1979917603",
+   "scopus_eid": null,
+   "title": "Thermochromism in Commercial Products",
+   "year": 1999,
+   "candidate_category": "review",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W2054492004",
+   "doi": "10.1021/cr60256a001",
+   "openalex_id": "W2054492004",
+   "scopus_eid": null,
+   "title": "Thermochromism of inorganic compounds",
+   "year": 1968,
+   "candidate_category": "review",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W1970034140",
+   "doi": "10.3390/ma3125143",
+   "openalex_id": "W1970034140",
+   "scopus_eid": null,
+   "title": "Thermotropic and Thermochromic Polymer Based Materials for Adaptive Solar Control",
+   "year": 2010,
+   "candidate_category": "polymer_host",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W2512254295",
+   "doi": "10.1016/j.dyepig.2016.08.050",
+   "openalex_id": "W2512254295",
+   "scopus_eid": null,
+   "title": "The relation between colour and structural changes in thermochromic systems comprising crystal violet lactone, bisphenol A, and tetradecanol",
+   "year": 2016,
+   "candidate_category": "leuco_dye",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W2080687594",
+   "doi": "10.1016/j.tca.2003.08.001",
+   "openalex_id": "W2080687594",
+   "scopus_eid": null,
+   "title": "Studies on the synthesis and thermochromic properties of crystal violet lactone and its reversible thermochromic complexes",
+   "year": 2004,
+   "candidate_category": "leuco_dye",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W2175102195",
+   "doi": "10.1139/cjc-2014-0251",
+   "openalex_id": "W2175102195",
+   "scopus_eid": null,
+   "title": "Control of thermochromic behaviour in crystal violet lactone (CVL)/alkyl gallate/alcohol ternary mixtures",
+   "year": 2014,
+   "candidate_category": "leuco_dye",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W2464258597",
+   "doi": "10.1016/j.dyepig.2016.06.046",
+   "openalex_id": "W2464258597",
+   "scopus_eid": null,
+   "title": "Optical and structural dynamical behavior of Crystal Violet Lactone – Phenolphthalein binary thermochromic systems",
+   "year": 2016,
+   "candidate_category": "leuco_dye",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W2168315299",
+   "doi": "10.1039/c1cc15854f",
+   "openalex_id": "W2168315299",
+   "scopus_eid": null,
+   "title": "Intrinsically thermochromic fluorans",
+   "year": 2011,
+   "candidate_category": "leuco_dye",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W2267028201",
+   "doi": "10.1016/j.dyepig.2016.01.036",
+   "openalex_id": "W2267028201",
+   "scopus_eid": null,
+   "title": "Synthesis of novel tert-butyl substituted fluorans and an investigation of their thermochromic behavior",
+   "year": 2016,
+   "candidate_category": "leuco_dye",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W1983510109",
+   "doi": "10.1143/jjap.33.5925",
+   "openalex_id": "W1983510109",
+   "scopus_eid": null,
+   "title": "Thermochromic Properties of Mixture Systems of Octadecylphosphonic Acid and Fluoran Dye",
+   "year": 1994,
+   "candidate_category": "leuco_dye",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W2790064897",
+   "doi": "10.1016/j.apenergy.2018.02.150",
+   "openalex_id": "W2790064897",
+   "scopus_eid": null,
+   "title": "Reversible thermochromic microencapsulated phase change materials for thermal energy storage application in thermal protective clothing",
+   "year": 2018,
+   "candidate_category": "microcapsule",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W3008573106",
+   "doi": "10.1016/j.apenergy.2020.114729",
+   "openalex_id": "W3008573106",
+   "scopus_eid": null,
+   "title": "Development of reversible and durable thermochromic phase-change microcapsules for real-time indication of thermal energy storage and management",
+   "year": 2020,
+   "candidate_category": "microcapsule",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W3005318473",
+   "doi": "10.1021/acsami.9b21330",
+   "openalex_id": "W3005318473",
+   "scopus_eid": null,
+   "title": "Reversible Nontoxic Thermochromic Microcapsules",
+   "year": 2020,
+   "candidate_category": "microcapsule",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W4200328553",
+   "doi": "10.1126/science.abg0291",
+   "openalex_id": "W4200328553",
+   "scopus_eid": null,
+   "title": "Scalable thermochromic smart windows with passive radiative cooling regulation",
+   "year": 2021,
+   "candidate_category": "vo2_oxide",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W2883067073",
+   "doi": "10.1016/j.joule.2018.06.018",
+   "openalex_id": "W2883067073",
+   "scopus_eid": null,
+   "title": "Thermochromic VO2 for Energy-Efficient Smart Windows",
+   "year": 2018,
+   "candidate_category": "vo2_oxide",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W4402623362",
+   "doi": "10.1038/s41377-024-01560-9",
+   "openalex_id": "W4402623362",
+   "scopus_eid": null,
+   "title": "Phase-change VO2-based thermochromic smart windows",
+   "year": 2024,
+   "candidate_category": "vo2_oxide",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W2037283364",
+   "doi": "10.1080/02678292.2011.631302",
+   "openalex_id": "W2037283364",
+   "scopus_eid": null,
+   "title": "Thermochromic liquid crystals",
+   "year": 2011,
+   "candidate_category": "liquid_crystal",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W1978218668",
+   "doi": "10.1021/cm052632w",
+   "openalex_id": "W1978218668",
+   "scopus_eid": null,
+   "title": "Room Temperature Operational Thermochromic Liquid Crystals",
+   "year": 2006,
+   "candidate_category": "liquid_crystal",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W2785018848",
+   "doi": "10.1038/s41563-017-0006-0",
+   "openalex_id": "W2785018848",
+   "scopus_eid": null,
+   "title": "Thermochromic halide perovskite solar cells",
+   "year": 2018,
+   "candidate_category": "perovskite",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W2605243710",
+   "doi": "10.1021/acs.chemmater.6b05112",
+   "openalex_id": "W2605243710",
+   "scopus_eid": null,
+   "title": "Thermochromic Perovskite Inks for Reversible Smart Window Applications",
+   "year": 2017,
+   "candidate_category": "perovskite",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W2739000038",
+   "doi": "10.1039/c7tc02077e",
+   "openalex_id": "W2739000038",
+   "scopus_eid": null,
+   "title": "A new approach for the preparation of durable and reversible color changing polyester fabrics using thermochromic leuco dye-loaded silica nanocapsules",
+   "year": 2017,
+   "candidate_category": "textile",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W2899863680",
+   "doi": "10.1016/j.joule.2018.10.019",
+   "openalex_id": "W2899863680",
+   "scopus_eid": null,
+   "title": "Broadband Light Management with Thermochromic Hydrogel Microparticles for Smart Windows",
+   "year": 2018,
+   "candidate_category": "hydrogel",
+   "source": "P1-A OpenAlex curated draft 2026-09-08 (待用户 freeze)"
+  },
+  {
+   "paper_id": "openalex:W2022535420",
+   "doi": "10.1002/ejic.201200980",
+   "openalex_id": "W2022535420",
+   "scopus_eid": null,
+   "title": "Spin Crossover and Thermochromism of Iron(II) Coordination Compounds with 1,2,4‐Triazoles and Tris(pyrazol‐1‐yl)methanes",
+   "year": 2012,
+   "candidate_category": "coordination_sco",
+   "source": "P1-A seed v2 2026-09-08 (用户 freeze 机制平衡版：VO2 5→3 + 补 8 机制类别)"
+  },
+  {
+   "paper_id": "openalex:W2893269882",
+   "doi": "10.1016/j.ccr.2018.09.004",
+   "openalex_id": "W2893269882",
+   "scopus_eid": null,
+   "title": "Metal-containing crystalline luminescent thermochromic materials",
+   "year": 2018,
+   "candidate_category": "luminescent",
+   "source": "P1-A seed v2 2026-09-08 (用户 freeze 机制平衡版：VO2 5→3 + 补 8 机制类别)"
+  },
+  {
+   "paper_id": "openalex:W2045176933",
+   "doi": "10.1021/ja103431d",
+   "openalex_id": "W2045176933",
+   "scopus_eid": null,
+   "title": "Mechanochromic and Thermochromic Luminescence of a Copper Iodide Cluster",
+   "year": 2010,
+   "candidate_category": "luminescent",
+   "source": "P1-A seed v2 2026-09-08 (用户 freeze 机制平衡版：VO2 5→3 + 补 8 机制类别)"
+  },
+  {
+   "paper_id": "openalex:W2055924646",
+   "doi": "10.1063/1.435361",
+   "openalex_id": "W2055924646",
+   "scopus_eid": null,
+   "title": "Thermochromism in a polydiacetylene crystal",
+   "year": 1977,
+   "candidate_category": "conjugated_polymer",
+   "source": "P1-A seed v2 2026-09-08 (用户 freeze 机制平衡版：VO2 5→3 + 补 8 机制类别)"
+  },
+  {
+   "paper_id": "openalex:W2975650050",
+   "doi": "10.1021/acsami.9b16411",
+   "openalex_id": "W2975650050",
+   "scopus_eid": null,
+   "title": "Thermal-Responsive Photonic Crystal with Function of Color Switch Based on Thermochromic System",
+   "year": 2019,
+   "candidate_category": "photonic_structural",
+   "source": "P1-A seed v2 2026-09-08 (用户 freeze 机制平衡版：VO2 5→3 + 补 8 机制类别)"
+  },
+  {
+   "paper_id": "openalex:W2886404995",
+   "doi": "10.1039/c8nj03294g",
+   "openalex_id": "W2886404995",
+   "scopus_eid": null,
+   "title": "Structural and physical properties of a new reversible and continuous thermochromic ionic liquid in a wide temperature interval: [BMIM] 4 [Ni(NCS) 6 ]",
+   "year": 2018,
+   "candidate_category": "ionic_liquid",
+   "source": "P1-A seed v2 2026-09-08 (用户 freeze 机制平衡版：VO2 5→3 + 补 8 机制类别)"
+  },
+  {
+   "paper_id": "openalex:W4394985611",
+   "doi": "10.1007/s10853-024-09637-x",
+   "openalex_id": "W4394985611",
+   "scopus_eid": null,
+   "title": "Synthesis of low-temperature irreversible thermochromic indicator based on functional polydiacetylene for food storage applications",
+   "year": 2024,
+   "candidate_category": "irreversible",
+   "source": "P1-A seed v2 2026-09-08 (用户 freeze 机制平衡版：VO2 5→3 + 补 8 机制类别)"
+  }
+ ]
 }

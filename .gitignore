@@ -15,6 +15,9 @@ env/
 # data/ 包含：Scopus 登录会话 (state.json)、缓存、导出 CSV、调试文件
 data/
 
+# ── v2 主题运行产物（runs/ = 检索/QA/审计输出；决策资产只在 topics/<id> 根）──
+topics/*/runs/
+
 # ── 环境变量 / 密钥 ─────────────────────────────────
 .env
 .env.local
