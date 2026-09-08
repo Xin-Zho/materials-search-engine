@@ -42,11 +42,13 @@ from pilot_round3_query_utility import (  # noqa: E402
     IdentityResolver, build_r_old, paper_key_and_info,
 )
 from run_search_s1 import is_usable  # noqa: E402
+from search_engine.topic_config import DEFAULT_TOPIC, resolve_input, resolve_output  # noqa: E402
 
 T = os.path.join(BASE, "data", "exports", "terminology")
 MEMORY = os.path.join(T, "s7_relation_memory.json")
 S6_SEEN = os.path.join(T, "s6_seen_set.json")
 COVERAGE = os.path.join(T, "s7_coverage_matrix.json")
+# P0-2: 以下为 v1.0 legacy 冻结原址；非 legacy topic 自动路由 topics/<id>/runs/ 通用名
 DEFAULT_Q_REC = os.path.join(T, "s7_execute_query_records.json")
 DEFAULT_DELTA = os.path.join(T, "s7_execute_delta.json")
 DEFAULT_DEPTH = 1000
@@ -66,10 +68,6 @@ CTX = {
 }
 # process 词面（判定左锚是否 process 类；去星号比较——polymeriz* 匹配 polymeriz）
 PROCESS_WORDS = {"curing", "polymeriz", "photocuring", "photopolymeriz"}
-
-
-def load(name):
-    return json.load(open(os.path.join(T, name), encoding="utf-8"))
 
 
 def q(s):
@@ -118,14 +116,14 @@ def compile_query(dom, b_concept, a_concepts, need_process_bridge=False):
     return "TITLE-ABS-KEY(" + " AND ".join(parts) + ")"
 
 
-def build_groups():
+def build_groups(memory_path: str):
     """memory 未执行 RUN → (group_id, domain, B, A 锚组, recall_layer, run_ids)。
 
     组级 dedup（round4 粒度盲区修复 2026-09-07）：deny 是 (A,B) pair 级、检索是
     (domain,B) 组级——EX 执行后同 (domain,B) 的新 A 锚 RUN 不再聚合（重复扫零增益）。
     只取：decision==RUN ∧ 未 searched ∧ 非 ABANDONED ∧ (domain,B) 不在已执行 EX 组。
     group_id 从已执行 EX 最大编号续排（防与 EX-01~11 冲突）。"""
-    mem = load("s7_relation_memory.json")
+    mem = json.load(open(memory_path, encoding="utf-8"))
     # 已执行/处置的 (domain, B) 组合
     executed = set()
     ex_ids = []
@@ -182,16 +180,38 @@ def build_groups():
 
 def main():
     ap = argparse.ArgumentParser(description="S7 RUN 真实检索（清纸面 RUN）")
+    ap.add_argument("--topic", default=None,
+                    help="topic_id（默认 v1.0 legacy 主题；输出自动路由 topics/<id>/runs/）")
     ap.add_argument("--depth", type=int, default=DEFAULT_DEPTH)
-    ap.add_argument("--query-records", default=DEFAULT_Q_REC)
-    ap.add_argument("--delta", default=DEFAULT_DELTA)
+    ap.add_argument("--query-records", default=None,
+                    help="默认: pc001 legacy → data/exports/terminology/s7_execute_query_records.json；"
+                         "新主题 → topics/<topic>/runs/execute_query_records.json")
+    ap.add_argument("--delta", default=None)
     ap.add_argument("--engine-data-dir", default="data")
     ap.add_argument("--plan-only", action="store_true")
+    ap.add_argument("--live", action="store_true",
+                    help="允许真实 Scopus 检索写缓存（P0-2 默认 dry-run：防误跑）")
     ap.add_argument("--from-cache", action="store_true")
     ap.add_argument("--only", default=None)
     args = ap.parse_args()
 
-    groups = build_groups()
+    # ── P0-2: 主题命名空间（relation memory / seen / 输出默认随 topic 路由）──
+    if not args.topic:
+        args.topic = DEFAULT_TOPIC
+    memory_path = resolve_input(args.topic, MEMORY, "relation_memory.json")
+    seen_path = resolve_input(args.topic, S6_SEEN, "seen_set.json")
+    if not args.query_records:
+        args.query_records = resolve_output(args.topic, DEFAULT_Q_REC,
+                                            "execute_query_records.json")
+    if not args.delta:
+        args.delta = resolve_output(args.topic, DEFAULT_DELTA, "execute_delta.json")
+
+    # ── --live 门禁（P0-2 默认 dry-run；真实 Scopus 检索须显式 --live）──
+    if not args.plan_only and not args.live and not args.from_cache:
+        raise SystemExit("[dry-run] 真实 Scopus 检索被禁止：传 --live 执行，"
+                         "--plan-only 预览，或 --from-cache 缓存重放")
+
+    groups = build_groups(memory_path)
     # --only 组过滤（逗号分隔组号，如 --only EX-10,EX-11；也接受裸序号 10）
     if args.only:
         only = {x.strip().upper()
@@ -200,7 +220,7 @@ def main():
                   if g["group_id"].replace("EX-", "") in only]
         if not groups:
             print(f"[WARN] --only={args.only} 无匹配组；全部组如下：")
-            for g in build_groups():
+            for g in build_groups(memory_path):
                 print(f"  {g['group_id']} [{g['domain']}] {g['concept_B']}")
             return
     # 编译
@@ -211,7 +231,7 @@ def main():
         g["type"] = "scopus_query"
         g["round"] = "S7_EXECUTE"
 
-    s6_keys = set(load("s6_seen_set.json")["keys"])
+    s6_keys = set(json.load(open(seen_path, encoding="utf-8"))["keys"])
     print("=" * 78)
     print("S7 RUN 真实检索（清纸面 RUN —— reward 落地）")
     print("=" * 78)

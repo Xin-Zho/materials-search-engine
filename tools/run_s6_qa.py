@@ -46,6 +46,10 @@ DEFAULT_LLM_OUT = os.path.join(T, "s6_qa_llm_labels.json")
 RUBRIC_VERSION = "S6_QA_RUBRIC_V1"
 VALID = {"RELEVANT", "UNCERTAIN", "IRRELEVANT"}
 
+# ── P0-2: 活跃 rubric（--topic 注入）。未注入时 = 模块常量（v1.0 freeze 原义）。
+ACTIVE_RUBRIC_PROMPT = None
+ACTIVE_RUBRIC_VERSION = None
+
 # ⚠️ 冻结对象：盲评 rubric。校准只允许改这里 → 版本升 V2。禁止注入任何 query/family 来源。
 RUBRIC_SYSTEM_PROMPT = f"""You are a careful literature relevance screener for a materials-science knowledge base. Rubric version {RUBRIC_VERSION}.
 
@@ -125,7 +129,7 @@ async def run_qa(items, args, llm_out_path):
         for attempt in range(3):
             try:
                 resp = await backend.chat(
-                    RUBRIC_SYSTEM_PROMPT,
+                    (ACTIVE_RUBRIC_PROMPT or RUBRIC_SYSTEM_PROMPT),
                     user_msg,
                     temperature=0.0)
                 parsed = parse_llm_json(resp)
@@ -153,7 +157,8 @@ async def run_qa(items, args, llm_out_path):
                                   + ("\n\nOnly output the JSON object. No explanation. No markdown fences."
                                      if args.retry_missing else ""))
                         fallback = await backend.chat(
-                            RUBRIC_SYSTEM_PROMPT, fb_msg, temperature=0.0)
+                            (ACTIVE_RUBRIC_PROMPT or RUBRIC_SYSTEM_PROMPT), fb_msg,
+                            temperature=0.0)
                         fb = parse_llm_json(fallback)
                         if isinstance(fb, dict) and "labels" in fb:
                             fb = fb["labels"]
@@ -170,7 +175,7 @@ async def run_qa(items, args, llm_out_path):
         # 每批落盘（断点续跑安全）
         with open(llm_out_path, "w", encoding="utf-8") as f:
             json.dump({"version": "s6_qa_llm_labels",
-                       "rubric_version": RUBRIC_VERSION,
+                       "rubric_version": ACTIVE_RUBRIC_VERSION or RUBRIC_VERSION,
                        "labels": existing}, f, ensure_ascii=False, indent=1)
         if (i // args.batch + 1) % 20 == 0:
             print(f"  progress: {min(i + args.batch, len(todo))}/{len(todo)}")
@@ -258,16 +263,24 @@ def compare(gold_path, llm_path, out_path=None, meta_path=None):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="S6 blind LLM relevance QA")
+    ap = argparse.ArgumentParser(description="S6 blind LLM relevance QA (topic-parameterized)")
     ap.add_argument("--mode", choices=["run", "compare"], required=True)
+    # P0-2: 主题命名空间（rubric 全文/版本 + 默认输出落点均来自 topic 配置）
+    ap.add_argument("--topic", default=None,
+                    help="topic_id（topics/<id>/ 配置；默认 v1.0 legacy 主题）")
     # run
     ap.add_argument("--set", help="校准集或 corpus json")
-    ap.add_argument("--llm-out", default=DEFAULT_LLM_OUT)
+    ap.add_argument("--llm-out", default=None,
+                    help="默认: pc001 → data/exports/terminology/s6_qa_llm_labels.json；"
+                         "新主题 → topics/<topic>/runs/qa_llm_labels.json")
     ap.add_argument("--batch", type=int, default=5)
     ap.add_argument("--provider", default="deepseek",
                     choices=["deepseek", "ollama", "tencent"])
     ap.add_argument("--model", default=None)
     ap.add_argument("--api-key", default=None)
+    ap.add_argument("--live", action="store_true",
+                    help="允许真实 LLM 调用（P0-2 默认 dry-run：防误烧 API 额度；"
+                         "run 模式必须显式 --live 才调 DeepSeek）")
     ap.add_argument("--retry-missing", action="store_true",
                     help="只补 NO_LABEL/缺失 key（断点续跑语义），强制单篇调用 + "
                          "追加 'Only output JSON array. No explanation.' 强格式约束。"
@@ -281,9 +294,39 @@ def main():
                          "不进入 relevance 定义。")
     args = ap.parse_args()
 
+    # P0-2: 注入 topic rubric（topic_config 已注册；pc001 内容 == RUBRIC_V1 freeze）
+    from search_engine.topic_config import (DEFAULT_TOPIC, load_topic,
+                                            outputs_dir, resolve_output,
+                                            TopicNotFound)
+    if not args.topic:
+        args.topic = DEFAULT_TOPIC
+    try:
+        cfg = load_topic(args.topic)
+    except TopicNotFound as e:
+        raise SystemExit(f"[topic] {e}")
+    if cfg.rubric_text:
+        global ACTIVE_RUBRIC_PROMPT, ACTIVE_RUBRIC_VERSION
+        ACTIVE_RUBRIC_PROMPT = cfg.rubric_text
+        ACTIVE_RUBRIC_VERSION = cfg.rubric_version
+        print(f"[topic] {args.topic} rubric={cfg.rubric_version} "
+              f"(assets/rubric.md, {len(cfg.rubric_text)} chars)")
+    else:
+        print(f"[WARN] topic {args.topic} rubric.md 缺失/为空，回退模块常量 RUBRIC_V1")
+
+    # 默认 llm-out 落点（run 输出 / compare 输入同文件；mode 无关解析）
+    if not args.llm_out:
+        import os
+        args.llm_out = resolve_output(args.topic, DEFAULT_LLM_OUT,
+                                      "qa_llm_labels.json")
+        print(f"[topic] 默认 llm-out: {args.llm_out}")
+
     if args.mode == "run":
         if not args.set:
             raise SystemExit("--mode run 需要 --set <corpus/calib json>")
+        if not args.live:
+            raise SystemExit(
+                "[dry-run] run 模式真实 LLM 判定被禁止：传 --live 才调用 "
+                "DeepSeek（P0-2 防误烧额度）。compare 模式无此限制。")
         items = load_set(args.set)
         if args.retry_missing and args.batch > 1:
             args.batch = 1  # 补判单篇调用，降低再失败概率

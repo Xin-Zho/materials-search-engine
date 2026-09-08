@@ -11,16 +11,45 @@
 
 输出：s8_finalkb_catalog.json
 """
+import argparse
 import json
 import os
 import re
 import sqlite3
+import sys
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
+from search_engine.topic_config import (  # noqa: E402
+    DEFAULT_TOPIC, is_legacy_topic, resolve_output,
+)
 
 T = "data/exports/terminology"
 KB_DB = "data/cache/knowledge_base.db"
 SCOPUS_DB = "data/cache/scopus_cache.db"
 OPENALEX_CACHE = "data/cache/openalex_cache.json"
-OUT = os.path.join(T, "s8_finalkb_catalog.json")
+
+# ── P0-2: 主题命名空间 ──
+# 输入（s7_candidate_set / keep_pool / ex12 / s6_candidate_labels / s6_pilot_query_records）
+# 是 pc001 阶段产物，非 legacy 主题无对应物——P1 将改为读 topic_papers 表做通用 promotion。
+# 本脚本 --topic 仅路由输出落点 + 拒绝非 legacy（防错误主题下静默复用 pc001 候选）。
+ap = argparse.ArgumentParser(description="S8 FinalKB 轻收录目录构建")
+ap.add_argument("--topic", default=None,
+                help="topic_id（默认 v1.0 legacy 主题；非 legacy 主题禁止——输入耦合 pc001 产物）")
+ap.add_argument("--dry-run", action="store_true",
+                help="只算统计与去重，不写盘（防误覆盖冻结 catalog）")
+ap.add_argument("--out", default=None, help="输出路径覆盖（默认随 topic 路由）")
+args = ap.parse_args()
+TOPIC = args.topic or DEFAULT_TOPIC
+if not is_legacy_topic(TOPIC):
+    raise SystemExit(
+        f"[topic] {TOPIC}: 本脚本输入耦合 pc001 阶段候选产物（S6/S7 candidate），"
+        f"非 legacy 主题不可用；通用 promotion（读 topic_papers）列入 P1。")
+if args.out:
+    OUT = args.out
+else:
+    OUT = resolve_output(TOPIC, os.path.join(T, "s8_finalkb_catalog.json"),
+                         "finalkb_catalog.json")
 
 
 def norm_doi(d):
@@ -230,10 +259,12 @@ out = {
 out["candidate_R2_keys"] = [p["key"] for p in papers.values()
                             if p["label"] == "RELEVANT"]
 
-with open(OUT, "w", encoding="utf-8") as f:
-    json.dump(out, f, ensure_ascii=False, indent=1)
-
-print(f"[ok] {OUT}")
+if args.dry_run:
+    print("[dry-run] 未写盘（--dry-run 防误覆盖）；stats/去重见上。")
+else:
+    with open(OUT, "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, indent=1)
+    print(f"[ok] {OUT}")
 print(f"  收录 {stats['n_papers']} 篇 = S6+S7 R/U（R1 口径）")
 for src, d in sorted(by_source.items()):
     print(f"    {src:<8} {d}")

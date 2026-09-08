@@ -117,11 +117,15 @@ def test_real_pc001_definition_loaded():
     d = load_definition("pc_001")
     assert d.sources == ["openalex"]
     assert d.date_start == 1990 and d.date_end == 2026
-    # 所有 search channel 的 query 都含 AND；citation 通道是 seed 标记
-    search_qs = (d.channels.get("CORE_UMBRELLA", [])
-                 + d.channels.get("SUPPLEMENTAL_ROUTE", []))
-    assert len(search_qs) >= 10
-    assert all("AND" in q for q in search_qs)
+    # CORE_UMBRELLA：只描述研究问题本身 → 必须多 term 合取，防 seed 词全库扫
+    core_qs = d.channels.get("CORE_UMBRELLA", [])
+    assert len(core_qs) >= 10
+    assert all("AND" in q for q in core_qs)
+    # SUPPLEMENTAL_ROUTE：Agent 学到的 route 词，只扩大 universe（可含单 term
+    # route 词，如 "oxanorbornene"）；仅要求非空合法 query
+    supp_qs = d.channels.get("SUPPLEMENTAL_ROUTE", [])
+    assert len(supp_qs) >= 10
+    assert all(isinstance(q, str) and q.strip() for q in supp_qs)
     # 分层：CORE_UMBRELLA 只描述研究问题（不含机制路线名），SUPPLEMENTAL 才含路线
     core = " ".join(d.channels.get("CORE_UMBRELLA", [])).lower()
     assert "ring-opening" not in core and "thiol-ene" not in core

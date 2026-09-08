@@ -37,11 +37,13 @@ from pilot_round3_query_utility import (  # noqa: E402
     IdentityResolver, build_r_old, paper_key_and_info,
 )
 from run_search_s1 import is_usable  # noqa: E402
+from search_engine.topic_config import DEFAULT_TOPIC, resolve_input, resolve_output  # noqa: E402
 
 T = os.path.join(BASE, "data", "exports", "terminology")
 CONFIG = os.path.join(T, "s6_bridge_queries.json")
 MANIFEST = os.path.join(T, "s6_freeze_manifest.json")
 S5_SEEN = os.path.join(T, "s5_seen_set.json")
+# P0-2: 以下为 v1.0 legacy 冻结原址；非 legacy topic 自动路由 topics/<id>/runs/ 通用名
 DEFAULT_Q_REC = os.path.join(T, "s6_pilot_query_records.json")
 DEFAULT_DELTA = os.path.join(T, "s6_pilot_delta_vs_s5.json")
 DEFAULT_ZERO_HITS = os.path.join(T, "s6_pilot_zero_hits.json")
@@ -59,13 +61,19 @@ def sha256_file(path: str) -> str:
 
 def main():
     ap = argparse.ArgumentParser(description="S6 pilot retrieval（17 semantic bridge actions, development）")
+    ap.add_argument("--topic", default=None,
+                    help="topic_id（默认 v1.0 legacy 主题；输出自动路由 topics/<id>/runs/）")
     ap.add_argument("--config", default=CONFIG)
     ap.add_argument("--s5-seen", default=S5_SEEN)
     ap.add_argument("--manifest", default=MANIFEST)
     ap.add_argument("--depth", type=int, default=DEFAULT_DEPTH)
-    ap.add_argument("--query-records", default=DEFAULT_Q_REC)
-    ap.add_argument("--delta", default=DEFAULT_DELTA)
+    ap.add_argument("--query-records", default=None,
+                    help="默认: pc001 legacy → data/exports/terminology/s6_pilot_query_records.json；"
+                         "新主题 → topics/<topic>/runs/pilot_query_records.json")
+    ap.add_argument("--delta", default=None)
     ap.add_argument("--engine-data-dir", default="data")
+    ap.add_argument("--live", action="store_true",
+                    help="允许真实 Scopus 检索写缓存（P0-2 默认 dry-run：防误跑）")
     ap.add_argument("--plan-only", action="store_true")
     ap.add_argument("--from-cache", action="store_true",
                     help="从 scopus_cache.db 重放（不启动浏览器不重抓 Scopus）。"
@@ -73,11 +81,28 @@ def main():
     ap.add_argument("--only", default=None,
                     help="live 补跑单条：逗号分隔 action_id（如 S6-C-14）。"
                          "只检索指定 query 写缓存；随后 --from-cache 全量重建 records")
-    ap.add_argument("--zero-hits", default=DEFAULT_ZERO_HITS,
+    ap.add_argument("--zero-hits", default=None,
                     help="0-hit query 登记文件（live 验证 hits=0 的 action_id 清单）。"
                          "engine 语义：total_count==0 不写 api_cache（L198），from-cache 无法"
                          "重放 → 经此登记恢复为 ZERO_HIT record，而非 CACHE_MISS")
     args = ap.parse_args()
+
+    # ── P0-2: 主题命名空间（输出默认落点随 topic；pc001 legacy → v1.0 冻结原址）──
+    if not args.topic:
+        args.topic = DEFAULT_TOPIC
+    if not args.query_records:
+        args.query_records = resolve_output(args.topic, DEFAULT_Q_REC,
+                                            "pilot_query_records.json")
+    if not args.delta:
+        args.delta = resolve_output(args.topic, DEFAULT_DELTA, "pilot_delta.json")
+    if not args.zero_hits:
+        args.zero_hits = resolve_output(args.topic, DEFAULT_ZERO_HITS,
+                                        "pilot_zero_hits.json")
+
+    # ── --live 门禁（P0-2 默认 dry-run；真实 Scopus 检索须显式 --live）──
+    if not args.plan_only and not args.live and not args.from_cache:
+        raise SystemExit("[dry-run] 真实 Scopus 检索被禁止：传 --live 执行，"
+                         "--plan-only 预览，或 --from-cache 缓存重放")
 
     # ── 冻结校验 ──
     cfg = json.load(open(args.config, encoding="utf-8"))

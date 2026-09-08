@@ -1,0 +1,52 @@
+# 主题配置：photopolymerization_shrinkage（v1.0 已跑通主题，第一个正式注册 topic）
+# P0-2 定稿 2026-09-08。rubric/seeds/termbank 从 v1.0 冻结产物 materialized（只读历史在
+# data/exports/terminology + data/exports/releases/v1.0_manifest.json，未改动）。
+
+topic_id: photopolymerization_shrinkage
+name: Photopolymerization Shrinkage & Shrinkage Stress
+research_question: >-
+  光固化聚合物降低聚合收缩与收缩应力的机制。Mechanisms of reducing polymerization
+  shrinkage and shrinkage stress in photocurable / light-cured polymer systems
+  (volume change, contraction stress, warpage, dimensional accuracy; dental,
+  SLA/DLP 3D-printing, coatings, packaging, adhesives).
+
+rubric:
+  version: S6_QA_RUBRIC_V1        # freeze 对象；校准改动须升 V2，禁改历史产物
+  file: rubric.md                 # 相对本目录；全文 = run_s6_qa.py RUBRIC_SYSTEM_PROMPT
+  frozen_at: 2026-09-05
+  blind_rules: title+abstract+rubric only; 禁注入 query/family/domain/source
+
+retrieval:
+  backends: [scopus, openalex]
+  anchor: polymerization shrinkage
+  default_max_results: 20
+
+labels:
+  relevant: RELEVANT
+  uncertain: UNCERTAIN
+  irrelevant: IRRELEVANT
+  operational_promotion: RELEVANT|UNCERTAIN     # R1: U 缓收
+  strict_promotion: RELEVANT                    # R2
+
+identity:
+  preserve: [doi, scopus_eid, openalex_id]
+  canonical_priority: [doi, openalex_id, scopus_eid]
+
+audit:                          # R06 冻结 frame（audit 分主题独立——禁跨主题复用 frame）
+  frame_version: FRAME_V2
+  frame_universe_id: pc_001-2026-08-31T162811    # completeness_universes.json 注册的 universe
+  r05_excluded_sample: data/exports/completeness_labels/pc_001__20260831162811.json
+  output_prefix: pc_001                          # sample 文件名/audit_id 前缀
+  label_scheme_note: R06 LABEL_SCHEME（REL/IRR/NONCURE/UNC）见 tools/build_r06_sample.py，主题决策资产
+
+assets:                       # 相对本目录的决策资产（代码经 topic_config 解析）
+  rubric: rubric.md           # relevance rubric 全文
+  termbank: termbank.json     # S6 TermBank 冻结 40 VERIFIED + 16 SEMANTIC（verbatim）
+  seeds: seeds.json           # 63 篇 seed corpus（preS8 KB-only）
+  runs_dir: runs/
+
+legacy_v1:
+  # v1.0 阶段产物原址（s6_*/s7_*/r06_* 与 manifest）——不可变历史证据
+  exports: data/exports/terminology
+  manifest: data/exports/releases/v1.0_manifest.json
+  db: data/cache/knowledge_base.db

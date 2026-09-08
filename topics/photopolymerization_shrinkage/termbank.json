@@ -1,0 +1,577 @@
+{
+ "topic_id": "photopolymerization_shrinkage",
+ "origin": "data/exports/terminology/s6_term_bank.json (S6 FROZEN, verbatim copy)",
+ "version": "s6_term_bank_v1",
+ "created_at": "2026-09-04T22:39:03",
+ "architecture": "V2 domain-conditioned expansion（用户 2026-09-01）：双轴 semantic_role × domain；三层验证 VERIFIED_EXACT / SEMANTIC_CANDIDATE / REJECTED",
+ "disciplines": {
+  "r05_miss_papers_as_term_source": false,
+  "llm_generates_query": false,
+  "query_gate": "正式 S6 query 只允许 VERIFIED_EXACT；SEMANTIC_CANDIDATE 保留待更大 TermBank 反查",
+  "bridge_query_note": "后续 query 允许 (curing OR polymerization OR photocuring) AND (observable terms) AND (context)——不强制 AND shrinkage（防杀 expressivity）"
+ },
+ "inputs": {
+  "corpus_n": 63,
+  "domains": [
+   "dental",
+   "composites",
+   "sla",
+   "coatings",
+   "optics",
+   "packaging",
+   "general"
+  ],
+  "llm": {
+   "provider": "deepseek",
+   "model": "deepseek-chat"
+  }
+ },
+ "counts": {
+  "raw_terms": 89,
+  "dedup_dropped": 33,
+  "validated_terms": 56,
+  "VERIFIED_EXACT": 40,
+  "SEMANTIC_CANDIDATE": 16,
+  "REJECTED": 0
+ },
+ "semantic_role_distribution": {
+  "lexical": 8,
+  "mechanism": 13,
+  "observable": 19
+ },
+ "domain_distribution": {
+  "dental": 11,
+  "composites": 3,
+  "sla": 3,
+  "coatings": 6,
+  "optics": 7,
+  "packaging": 6,
+  "general": 4
+ },
+ "terms_verified_exact": [
+  {
+   "term": "polymerization shrinkage",
+   "semantic_role": "lexical",
+   "domain": "dental",
+   "evidence_paper_id": "W3215662041",
+   "source_paper": "W3215662041",
+   "source_sentence": "Role of Composition on Polymerization Shrinkage and Shrinkage Stress in Dental Composites Polymer-based dental compos",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "polymerization contraction",
+   "semantic_role": "lexical",
+   "domain": "dental",
+   "evidence_paper_id": "W2015046796",
+   "source_paper": "W2015046796",
+   "source_sentence": "f dental composites is accompanied by significant polymerization contraction, resulting in the generation of stresses within the material and at t",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "shrinkage stress",
+   "semantic_role": "mechanism",
+   "domain": "dental",
+   "evidence_paper_id": "W2749057177",
+   "source_paper": "W2749057177",
+   "source_sentence": "Polymerization shrinkage stress of composite resins and resin cements – What do we need to know? Poly",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "polymerization contraction stress",
+   "semantic_role": "mechanism",
+   "domain": "dental",
+   "evidence_paper_id": "W1026172336",
+   "source_paper": "W1026172336",
+   "source_sentence": "The influence of delayed light curing on the polymerization contraction stress and degree of conversion in dual-cured resin luting agents The purpos",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "polymerization-induced shrinkage stress",
+   "semantic_role": "mechanism",
+   "domain": "dental",
+   "evidence_paper_id": "W2181354506",
+   "source_paper": "W2181354506",
+   "source_sentence": "nding of the processes relevant to the origins of polymerization-induced shrinkage stress. In this thesis, addition-fragmentation chain transfer (AFCT) was uti",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "cusp deflection",
+   "semantic_role": "observable",
+   "domain": "dental",
+   "evidence_paper_id": "W2749057177",
+   "source_paper": "W2749057177",
+   "source_sentence": "l consequences, such as enamel crack propagation, cusp deflection, marginal and internal gaps, and decreased bond strength. Despite the",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "internal gap",
+   "semantic_role": "observable",
+   "domain": "dental",
+   "evidence_paper_id": "W2749057177",
+   "source_paper": "W2749057177",
+   "source_sentence": " crack propagation, cusp deflection, marginal and internal gaps, and decreased bond strength. Despite the absence of strong evidence",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "enamel crack propagation",
+   "semantic_role": "observable",
+   "domain": "dental",
+   "evidence_paper_id": "W2749057177",
+   "source_paper": "W2749057177",
+   "source_sentence": "o several unwanted clinical consequences, such as enamel crack propagation, cusp deflection, marginal and internal gaps, and decreased bond stre",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "marginal leakage",
+   "semantic_role": "observable",
+   "domain": "dental",
+   "evidence_paper_id": "W3215662041",
+   "source_paper": "W3215662041",
+   "source_sentence": " stress, cusp deflection, enamel/dentinal cracks, marginal leakage, marginal discoloration, secondary caries, and postoperative sensitiv",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "marginal discoloration",
+   "semantic_role": "observable",
+   "domain": "dental",
+   "evidence_paper_id": "W3215662041",
+   "source_paper": "W3215662041",
+   "source_sentence": "ection, enamel/dentinal cracks, marginal leakage, marginal discoloration, secondary caries, and postoperative sensitivity, needs eradication t",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "void formation",
+   "semantic_role": "observable",
+   "domain": "dental",
+   "evidence_paper_id": "W4399222967",
+   "source_paper": "W4399222967",
+   "source_sentence": "f the influence of light-curing modes on internal void formation in bulk-fill composites Introduction: Polymerization reactions in a n",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "shrinkage force",
+   "semantic_role": "mechanism",
+   "domain": "composites",
+   "evidence_paper_id": "W3048276138",
+   "source_paper": "W3048276138",
+   "source_sentence": "y curing. METHODS: Real-time linear shrinkage and shrinkage force of 1.5 mm thick composite specimens were measured for 15 min after th",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "shrinkage",
+   "semantic_role": "lexical",
+   "domain": "composites",
+   "evidence_paper_id": "W2039619486",
+   "source_paper": "W2039619486",
+   "source_sentence": "Low polymerization-shrinkage nanoparticle-polymer composite films based on thiol-ene photopolymeri",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "low contraction of polymerization",
+   "semantic_role": "lexical",
+   "domain": "composites",
+   "evidence_paper_id": "W2760641798",
+   "source_paper": "W2760641798",
+   "source_sentence": " composites are dental materials that feature the low contraction of polymerization. These resin composites can reduce shrinkage and shrinkage stress tha",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "reduced shrinkage stress",
+   "semantic_role": "mechanism",
+   "domain": "sla",
+   "evidence_paper_id": "W4386835484",
+   "source_paper": "W4386835484",
+   "source_sentence": "rs with near-net-zero shrinkage and significantly reduced shrinkage stress.",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "near-net-zero shrinkage",
+   "semantic_role": "observable",
+   "domain": "sla",
+   "evidence_paper_id": "W4386835484",
+   "source_paper": "W4386835484",
+   "source_sentence": "ic poly(ether esters) from spiro-orthoesters with near-net-zero shrinkage and significantly reduced shrinkage stress.",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "printability",
+   "semantic_role": "observable",
+   "domain": "sla",
+   "evidence_paper_id": "W3026448945",
+   "source_paper": "W3026448945",
+   "source_sentence": "s and characteristics designed to achieve optimal printability and photo-curability goals in ceramic resins and discuss in details a",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "volume contraction",
+   "semantic_role": "lexical",
+   "domain": "coatings",
+   "evidence_paper_id": "W2985660657",
+   "source_paper": "W2985660657",
+   "source_sentence": "aman spectral measurements. Film shrinkage due to volume contraction during radical polymerization reactions was relieved by heating at 60",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "stress relaxation",
+   "semantic_role": "mechanism",
+   "domain": "coatings",
+   "evidence_paper_id": "W2181354506",
+   "source_paper": "W2181354506",
+   "source_sentence": "Stress Relaxation by Addition-fragmentation Chain Transfer in Glassy Polymer Networks S",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "relaxation",
+   "semantic_role": "mechanism",
+   "domain": "coatings",
+   "evidence_paper_id": "W2985660657",
+   "source_paper": "W2985660657",
+   "source_sentence": " sample containing no disulfide bonds. This quick relaxation would be due to relaxing the internal stress by exchange reactions be",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "low-shrinkage",
+   "semantic_role": "observable",
+   "domain": "coatings",
+   "evidence_paper_id": "W2039619486",
+   "source_paper": "W2039619486",
+   "source_sentence": ".2%. The reduced shrinkage is comparable to other low-shrinkage dry photopolymer systems such as those including a high content of in",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "reduced shrinkage",
+   "semantic_role": "observable",
+   "domain": "coatings",
+   "evidence_paper_id": "W2039619486",
+   "source_paper": "W2039619486",
+   "source_sentence": "hich shrinkage can be reduced as low as 0.2%. The reduced shrinkage is comparable to other low-shrinkage dry photopolymer systems such as",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "film shrinkage",
+   "semantic_role": "observable",
+   "domain": "coatings",
+   "evidence_paper_id": "W2985660657",
+   "source_paper": "W2985660657",
+   "source_sentence": "zed by DSC, XPS, and Raman spectral measurements. Film shrinkage due to volume contraction during radical polymerization reactions was",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "fabrication error",
+   "semantic_role": "observable",
+   "domain": "optics",
+   "evidence_paper_id": "W1976202199",
+   "source_paper": "W1976202199",
+   "source_sentence": "te that this resist can be used to bring down the fabrication error to less than 2% in the vertical direction at a proper thickness of th",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "volume holographic recording",
+   "semantic_role": "observable",
+   "domain": "optics",
+   "evidence_paper_id": "W2039619486",
+   "source_paper": "W2039619486",
+   "source_sentence": "ation for holographic data storage We demonstrate volume holographic recording in nanoparticle-polymer composites using thiol-ene monomers capable o",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "holographic recording characteristics",
+   "semantic_role": "observable",
+   "domain": "optics",
+   "evidence_paper_id": "W1989773801",
+   "source_paper": "W1989773801",
+   "source_sentence": "on of the photopolymerization kinetics and volume holographic recording characteristics of silica nanoparticle-polymer nanocomposites using thiol-ene monomer",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "recording media",
+   "semantic_role": "observable",
+   "domain": "optics",
+   "evidence_paper_id": "W2158396880",
+   "source_paper": "W2158396880",
+   "source_sentence": "ymers are very interesting as optically sensitive recording media due to the fact that they are inexpensive, self-processing materials ",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "data storage capacity",
+   "semantic_role": "observable",
+   "domain": "optics",
+   "evidence_paper_id": "W2158396880",
+   "source_paper": "W2158396880",
+   "source_sentence": "outstanding issues, which limit in particular the data storage capacity in holographic data storage media. In an attempt to further develop t",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "curing kinetics",
+   "semantic_role": "mechanism",
+   "domain": "optics",
+   "evidence_paper_id": "W2046639120",
+   "source_paper": "W2046639120",
+   "source_sentence": "imetry are used to characterize the visible light curing kinetics of a thiol-ene monomer system consisting of secondary dithiol with hi",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "delayed gel point",
+   "semantic_role": "mechanism",
+   "domain": "optics",
+   "evidence_paper_id": "W1976202199",
+   "source_paper": "W1976202199",
+   "source_sentence": "-based resist We propose in this paper to use the delayed gel point character of thiol-ene-based resist to reduce the influence of polyme",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "low shrinkage stress",
+   "semantic_role": "observable",
+   "domain": "packaging",
+   "evidence_paper_id": "W4289022570",
+   "source_paper": "W4289022570",
+   "source_sentence": "Developing Low Shrinkage Stress Thiol-Ene Dental Resins & Two-color Photopolymerization Chemistries P",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "photopolymerization",
+   "semantic_role": "lexical",
+   "domain": "packaging",
+   "evidence_paper_id": "W4289022570",
+   "source_paper": "W4289022570",
+   "source_sentence": "inkage Stress Thiol-Ene Dental Resins & Two-color Photopolymerization Chemistries Photopolymerizations are an important class of chemical r",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "addition-fragmentation chain transfer",
+   "semantic_role": "mechanism",
+   "domain": "packaging",
+   "evidence_paper_id": "W2181354506",
+   "source_paper": "W2181354506",
+   "source_sentence": "Stress Relaxation by Addition-fragmentation Chain Transfer in Glassy Polymer Networks Since polymer materials have come to domin",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "glassy polymer networks",
+   "semantic_role": "lexical",
+   "domain": "packaging",
+   "evidence_paper_id": "W2181354506",
+   "source_paper": "W2181354506",
+   "source_sentence": "ation by Addition-fragmentation Chain Transfer in Glassy Polymer Networks Since polymer materials have come to dominate our life by replacing m",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "two-color photopolymerization chemistries",
+   "semantic_role": "lexical",
+   "domain": "packaging",
+   "evidence_paper_id": "W4289022570",
+   "source_paper": "W4289022570",
+   "source_sentence": "ng Low Shrinkage Stress Thiol-Ene Dental Resins & Two-color Photopolymerization Chemistries Photopolymerizations are an important class of chemical reactions tha",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "spatial and temporal control",
+   "semantic_role": "mechanism",
+   "domain": "packaging",
+   "evidence_paper_id": "W4289022570",
+   "source_paper": "W4289022570",
+   "source_sentence": " and matter in these systems allows unprecedented spatial and temporal control of polymerization lending these systems to innumerable applications i",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "modulus development",
+   "semantic_role": "mechanism",
+   "domain": "general",
+   "evidence_paper_id": "W3113545149",
+   "source_paper": "W3113545149",
+   "source_sentence": "A model for modulus development of dual‐cure resin systems Abstract A phenomenological model for cure",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "softening effect",
+   "semantic_role": "observable",
+   "domain": "general",
+   "evidence_paper_id": "W3113545149",
+   "source_paper": "W3113545149",
+   "source_sentence": "opment of the elastic modulus, with an observable softening effect and the potential for large structural deformations. In this study, t",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "structural deformation",
+   "semantic_role": "observable",
+   "domain": "general",
+   "evidence_paper_id": "W3113545149",
+   "source_paper": "W3113545149",
+   "source_sentence": "able softening effect and the potential for large structural deformations. In this study, the elastic modulus was measured at discrete levels ",
+   "verdict": "VERIFIED_EXACT"
+  },
+  {
+   "term": "conversion",
+   "semantic_role": "mechanism",
+   "domain": "general",
+   "evidence_paper_id": "W2912117570",
+   "source_paper": "W2912117570",
+   "source_sentence": "activity accompanied by a significant increase in conversion and it leads to an enhanced reduction of polymerization-induced shrin",
+   "verdict": "VERIFIED_EXACT"
+  }
+ ],
+ "terms_semantic_candidates": [
+  {
+   "term": "volume change",
+   "semantic_role": "lexical",
+   "domain": "dental",
+   "evidence_paper_id": "W4367336810",
+   "source_paper": null,
+   "source_sentence": null,
+   "verdict": "SEMANTIC_CANDIDATE",
+   "note": "evidence paper 无原词，corpus 也未命中——保留待更大 TermBank 反查"
+  },
+  {
+   "term": "polymerization shrinkage stress",
+   "semantic_role": "mechanism",
+   "domain": "dental",
+   "evidence_paper_id": "W2406224365",
+   "source_paper": "W2127319543",
+   "source_sentence": "Novel dental restorative materials having low polymerization shrinkage stress via stress relaxation by addition-fragmentation chain transfer",
+   "verdict": "SEMANTIC_CANDIDATE",
+   "note": "evidence paper 无原词，corpus 其他论文命中"
+  },
+  {
+   "term": "marginal gap",
+   "semantic_role": "observable",
+   "domain": "dental",
+   "evidence_paper_id": "W2749057177",
+   "source_paper": null,
+   "source_sentence": null,
+   "verdict": "SEMANTIC_CANDIDATE",
+   "note": "evidence paper 无原词，corpus 也未命中——保留待更大 TermBank 反查"
+  },
+  {
+   "term": "post-operative sensitivity",
+   "semantic_role": "observable",
+   "domain": "dental",
+   "evidence_paper_id": "W3215662041",
+   "source_paper": "W2749057177",
+   "source_sentence": " teeth, shrinkage stress has been associated with post-operative sensitivity and marginal stain. The latter is often erroneously used as a criteri",
+   "verdict": "SEMANTIC_CANDIDATE",
+   "note": "evidence paper 无原词，corpus 其他论文命中"
+  },
+  {
+   "term": "cure-induced stress",
+   "semantic_role": "mechanism",
+   "domain": "sla",
+   "evidence_paper_id": "W4289022570",
+   "source_paper": null,
+   "source_sentence": null,
+   "verdict": "SEMANTIC_CANDIDATE",
+   "note": "evidence paper 无原词，corpus 也未命中——保留待更大 TermBank 反查"
+  },
+  {
+   "term": "warpage",
+   "semantic_role": "observable",
+   "domain": "sla",
+   "evidence_paper_id": "W4408330450",
+   "source_paper": "W4205354421",
+   "source_sentence": "terials exhibit reduced shrinkage stress, reduced warpage, higher overall conversion and higher glass transition temperatures c",
+   "verdict": "SEMANTIC_CANDIDATE",
+   "note": "evidence paper 无原词，corpus 其他论文命中"
+  },
+  {
+   "term": "deformation",
+   "semantic_role": "observable",
+   "domain": "sla",
+   "evidence_paper_id": "W4408330450",
+   "source_paper": "W3113545149",
+   "source_sentence": "ing effect and the potential for large structural deformations. In this study, the elastic modulus was measured at discrete levels ",
+   "verdict": "SEMANTIC_CANDIDATE",
+   "note": "evidence paper 无原词，corpus 其他论文命中"
+  },
+  {
+   "term": "residual stress",
+   "semantic_role": "mechanism",
+   "domain": "sla",
+   "evidence_paper_id": "W4408330450",
+   "source_paper": null,
+   "source_sentence": null,
+   "verdict": "SEMANTIC_CANDIDATE",
+   "note": "evidence paper 无原词，corpus 也未命中——保留待更大 TermBank 反查"
+  },
+  {
+   "term": "dimensional accuracy",
+   "semantic_role": "observable",
+   "domain": "sla",
+   "evidence_paper_id": "W3026448945",
+   "source_paper": null,
+   "source_sentence": null,
+   "verdict": "SEMANTIC_CANDIDATE",
+   "note": "evidence paper 无原词，corpus 也未命中——保留待更大 TermBank 反查"
+  },
+  {
+   "term": "internal stress",
+   "semantic_role": "mechanism",
+   "domain": "sla",
+   "evidence_paper_id": "W3123510402",
+   "source_paper": "W2985660657",
+   "source_sentence": "his quick relaxation would be due to relaxing the internal stress by exchange reactions between disulfide bonds.",
+   "verdict": "SEMANTIC_CANDIDATE",
+   "note": "evidence paper 无原词，corpus 其他论文命中"
+  },
+  {
+   "term": "volume shrinkage",
+   "semantic_role": "lexical",
+   "domain": "general",
+   "evidence_paper_id": "W7170061635",
+   "source_paper": null,
+   "source_sentence": null,
+   "verdict": "SEMANTIC_CANDIDATE",
+   "note": "evidence paper 无原词，corpus 也未命中——保留待更大 TermBank 反查"
+  },
+  {
+   "term": "cure shrinkage",
+   "semantic_role": "lexical",
+   "domain": "general",
+   "evidence_paper_id": "W3113545149",
+   "source_paper": null,
+   "source_sentence": null,
+   "verdict": "SEMANTIC_CANDIDATE",
+   "note": "evidence paper 无原词，corpus 也未命中——保留待更大 TermBank 反查"
+  },
+  {
+   "term": "stress development",
+   "semantic_role": "mechanism",
+   "domain": "general",
+   "evidence_paper_id": "W3113545149",
+   "source_paper": "W7129038217",
+   "source_sentence": "Effect of delayed modulus formation on shrinkage stress development in dental resin composites: A theoretical treatment",
+   "verdict": "SEMANTIC_CANDIDATE",
+   "note": "evidence paper 无原词，corpus 其他论文命中"
+  },
+  {
+   "term": "crack",
+   "semantic_role": "observable",
+   "domain": "general",
+   "evidence_paper_id": "W4381431553",
+   "source_paper": "W2749057177",
+   "source_sentence": "al unwanted clinical consequences, such as enamel crack propagation, cusp deflection, marginal and internal gaps, and decreas",
+   "verdict": "SEMANTIC_CANDIDATE",
+   "note": "evidence paper 无原词，corpus 其他论文命中"
+  },
+  {
+   "term": "delamination",
+   "semantic_role": "observable",
+   "domain": "general",
+   "evidence_paper_id": "W4381431553",
+   "source_paper": null,
+   "source_sentence": null,
+   "verdict": "SEMANTIC_CANDIDATE",
+   "note": "evidence paper 无原词，corpus 也未命中——保留待更大 TermBank 反查"
+  },
+  {
+   "term": "crosslinking density",
+   "semantic_role": "mechanism",
+   "domain": "general",
+   "evidence_paper_id": "W4381431553",
+   "source_paper": null,
+   "source_sentence": null,
+   "verdict": "SEMANTIC_CANDIDATE",
+   "note": "evidence paper 无原词，corpus 也未命中——保留待更大 TermBank 反查"
+  }
+ ],
+ "terms_rejected": [],
+ "next": "TermBank → semantic bridge query composition → novelty/specificity gate → pilot → quality gate → freeze S6 → fresh R06；RL 在动作空间丰富之后"
+}

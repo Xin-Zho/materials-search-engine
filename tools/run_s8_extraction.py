@@ -10,11 +10,11 @@
       canonical_paper_id = 'doi:10.xxx'（有 doi 时）
   - 断点续跑：已完成的 key 跳过（读 output 文件）
 
-用法：
-  python tools/run_s8_extraction.py                # 全量 dry-run → JSON
-  python tools/run_s8_extraction.py --batch 20     # 每批暂停？否——批次仅用于打印
-  python tools/run_s8_extraction.py --commit       # dry-run 后补写 DB
-  python tools/run_s8_extraction.py --keys k1,k2   # 指定重跑
+用法（--live 门禁：真实 LLM 抽取须显式确认，默认连 dry-run 也禁止）：
+  python tools/run_s8_extraction.py                     # 纯离线：replay/统计，待抽被 gate 拦
+  python tools/run_s8_extraction.py --live              # 允许真实 LLM 全量 dry-run → JSON
+  python tools/run_s8_extraction.py --live --commit     # 抽取 + 写 DB（replay 已有产物无需 --live）
+  python tools/run_s8_extraction.py --live --keys k1,k2 # 指定重跑
 """
 import argparse
 import asyncio
@@ -23,6 +23,11 @@ import os
 import sys
 import time
 
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
+from search_engine.topic_config import (  # noqa: E402
+    DEFAULT_TOPIC, resolve_input, resolve_output,
+)
 from search_engine.llm import DeepSeekBackend
 from search_engine.models import Paper
 from search_engine.knowledge_extractor import KnowledgeExtractor
@@ -32,8 +37,9 @@ try:
 except Exception:
     pass
 
-CATALOG = "data/exports/terminology/s8_finalkb_catalog.json"
-OUT = "data/exports/terminology/s8_extraction_output.json"
+# P0-2: v1.0 legacy 冻结原址；非 legacy topic 自动路由 topics/<id>/runs/（main 内 global 覆盖）
+CATALOG = os.path.join(BASE, "data/exports/terminology/s8_finalkb_catalog.json")
+OUT = os.path.join(BASE, "data/exports/terminology/s8_extraction_output.json")
 
 
 def load_done():
@@ -143,13 +149,26 @@ def store_entry(kb, key, doi, entry):
 
 async def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--topic", default=None,
+                    help="topic_id（默认 v1.0 legacy 主题；catalog 输入与 output 随 topic 路由；"
+                         "抽取结果始终写全局 knowledge_base.db——v2 主题共享语义）")
     ap.add_argument("--commit", action="store_true",
                     help="抽取成功后写 knowledge_base.db（默认只写 JSON）")
     ap.add_argument("--keys", default="",
                     help="只抽取指定 keys（逗号分隔，重跑用）")
     ap.add_argument("--include-uncertain", action="store_true",
                     help="同时抽取 UNCERTAIN label（默认只抽 RELEVANT）")
+    ap.add_argument("--live", action="store_true",
+                    help="允许真实 LLM 抽取（默认禁止，防误耗 API 额度）")
     args = ap.parse_args()
+
+    # ── P0-2: 主题命名空间（catalog 输入 = 该主题 finalkb_catalog；output 随 topic 路由）──
+    global CATALOG, OUT
+    topic = args.topic or DEFAULT_TOPIC
+    CATALOG = resolve_input(topic, CATALOG, "finalkb_catalog.json")
+    OUT = resolve_output(topic, OUT, "extraction_output.json")
+    print(f"[topic] {topic} | catalog={os.path.relpath(CATALOG, BASE)} | "
+          f"out={os.path.relpath(OUT, BASE)}")
 
     catalog = json.load(open(CATALOG, encoding="utf-8"))
     want = [p for p in catalog["papers"]
@@ -165,13 +184,7 @@ async def main():
     done = load_done()
     todo = [p for p in want if p["key"] not in done]
     print(f"已完成 {len(done)} / 待抽 {len(todo)}")
-
-    # 需抽取时才要 LLM key（commit replay 已有产物不需要）
-    if todo:
-        key = os.environ.get("DEEPSEEK_API_KEY", "")
-        if not key:
-            print("未设 DEEPSEEK_API_KEY（有待抽论文）", file=sys.stderr)
-            return 1
+    key = ""
 
     # 保留已有 entries（断点续跑）：output 是累积产物。
     # 只删除本次待抽（todo，含 --keys 重跑）key 的旧记录，其余 ok 原样保留。
@@ -204,6 +217,22 @@ async def main():
             kb.close()
         save_results(entries, status_counts)
         return 0
+
+    # ── LLM 门禁：S8 抽取是真实 LLM 调用——默认(含 dry-run)禁止，--live 才放行 ──
+    # 位置在 commit replay 之后：--commit 纯搬运已有 ok 产物无需 LLM，不受 gate 影响
+    if not args.live:
+        print(f"[GATE] 待抽 {len(todo)} 篇需真实 LLM——加 --live 确认"
+              f"（默认禁止，防误耗 API 额度；replay 已有产物无需 LLM）",
+              file=sys.stderr)
+        if kb is not None:
+            kb.close()
+        return 1
+    key = os.environ.get("DEEPSEEK_API_KEY", "")
+    if not key:
+        print("未设 DEEPSEEK_API_KEY（有待抽论文）", file=sys.stderr)
+        if kb is not None:
+            kb.close()
+        return 1
 
     llm = DeepSeekBackend(api_key=key)
     ex = KnowledgeExtractor(llm, extractor_version="2.0-edges")

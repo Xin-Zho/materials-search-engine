@@ -18,11 +18,16 @@
 用法：
   .venv\\Scripts\\python.exe tools\\build_s7_community_verdict.py
 """
+import argparse
 import datetime
 import json
 import os
+import sys
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
+from search_engine.topic_config import DEFAULT_TOPIC, is_legacy_topic  # noqa: E402
+
 T = os.path.join(BASE, "data", "exports", "terminology")
 AGG = os.path.join(T, "s7_community_qa_aggregate.json")
 MEM = os.path.join(T, "s7_community_memory.json")
@@ -63,6 +68,21 @@ TOPUP_OVERRIDES = {
 
 
 def main():
+    ap = argparse.ArgumentParser(description="S7 community 簇级 KEEP/FAIL 裁决冻结")
+    ap.add_argument("--topic", default=None,
+                    help="topic_id（默认 v1.0 legacy 主题；非 legacy 禁止——HUMAN_OVERRIDES/"
+                         "TOPUP_OVERRIDES 是 pc001 人工裁决冻结，换主题须新裁决）")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="只裁决不写盘（防误覆盖冻结 verdict）")
+    ap.add_argument("--out", default=None, help="输出路径覆盖")
+    args = ap.parse_args()
+    topic = args.topic or DEFAULT_TOPIC
+    if not is_legacy_topic(topic):
+        raise SystemExit(
+            f"[topic] {topic}: 本脚本内嵌 pc001 人工裁决（HUMAN/TOPUP_OVERRIDES，"
+            f"2026-09-07 22:30/22:55 冻结）；换主题须人工新裁决，勿复用。")
+    out_path = args.out or OUT
+
     agg = json.load(open(AGG, encoding="utf-8"))
     mem = json.load(open(MEM, encoding="utf-8"))
     rec = json.load(open(REC, encoding="utf-8"))
@@ -138,7 +158,10 @@ def main():
         out["summary"][dec] = {"n_clusters": len(ids), "ids": ids,
                                "n_papers": n_papers}
         out["pool_sizes"][dec] = n_papers
-    with open(OUT, "w", encoding="utf-8") as f:
+    if args.dry_run:
+        print("[dry-run] 未写盘；裁决概览见上。")
+        return
+    with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=1)
 
     print("=" * 90)
@@ -154,7 +177,7 @@ def main():
                  else "  n/a")
         print(f"  {gid} [{v['recall_layer']}]  {v['n_keep_pool']:>4}/"
               f"{v['n_rows_unique']:<4} KEEP（{ratio}）")
-    print(f"\n[OK] verdict: {OUT}")
+    print(f"\n[OK] verdict: {out_path}")
     print("→ KEEP 池 6 簇论文 = S7 execute 候选池（~750 篇）")
     print("→ 回灌：EX community outcome 加 community_qa 字段（builder 读 verdict）")
 

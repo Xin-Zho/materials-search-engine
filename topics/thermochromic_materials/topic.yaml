@@ -1,0 +1,42 @@
+# 主题配置：thermochromic_materials（P0-2 空骨架——证明新建主题零 Python 复制）
+#
+# 状态: BOOTSTRAP_PENDING。研究问题已定（用户 2026-09-08），rubric/seed/termbank 待建。
+# 建法: python tools/bootstrap_topic.py --topic thermochromic_materials（已存在则跳过）。
+# 推进顺序: 1) rubric.md 落定（需人工） 2) seeds.json 收集 3) termbank.json term expansion
+#          4) QA/检索（run_s6_qa --topic thermochromic_materials 等，算法零改动）
+
+topic_id: thermochromic_materials
+name: Thermochromic Materials
+research_question: >-
+  Identify materials, mechanisms, structures and processing strategies governing
+  thermochromic behavior: material systems, color-change mechanisms, switching
+  temperature, cyclability/stability, response time, and application directions.
+
+rubric:
+  version: TBD                       # TODO: 定义后升 V1 并落 rubric.md
+  file: rubric.md                    # TODO: 待撰写（材料体系/变色机制/响应温度/循环稳定性/响应时间/应用）
+  frozen_at: null
+
+retrieval:
+  backends: [openalex]               # TODO: 需要时加 scopus
+  anchor: thermochromic materials
+  default_max_results: 20
+
+labels:
+  relevant: RELEVANT
+  uncertain: UNCERTAIN
+  irrelevant: IRRELEVANT
+
+identity:
+  preserve: [doi, scopus_eid, openalex_id]
+  canonical_priority: [doi, openalex_id, scopus_eid]
+
+assets:
+  rubric: rubric.md
+  termbank: termbank.json            # TODO: 空，待 term expansion（S6 同款词源三层）
+  seeds: seeds.json                  # TODO: 空，待 seed 收集
+  runs_dir: runs/
+
+legacy_v1:
+  # 该主题无 v1.0 历史——不走 pc_001 遗留产物映射
+  exports: null

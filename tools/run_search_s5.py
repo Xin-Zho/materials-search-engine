@@ -40,10 +40,12 @@ from pilot_round3_query_utility import (  # noqa: E402
 )
 from build_r02_seen import _norm_doi, _norm_title  # noqa: E402
 from run_search_s1 import is_usable  # noqa: E402
+from search_engine.topic_config import DEFAULT_TOPIC, resolve_input, resolve_output  # noqa: E402
 
 T = os.path.join(BASE, "data", "exports", "terminology")
 CONFIG = os.path.join(T, "s5_final_actions.json")
 S4_SEEN = os.path.join(T, "s4_seen_set.json")
+# P0-2: 以下为 v1.0 legacy 冻结原址；非 legacy topic 自动路由 topics/<id>/runs/ 通用名
 DEFAULT_SNAP = os.path.join(T, "s5_candidate_snapshot.json")
 DEFAULT_SEEN = os.path.join(T, "s5_seen_set.json")
 DEFAULT_Q_REC = os.path.join(T, "s5_query_records.json")
@@ -65,16 +67,41 @@ def config_hash(cfg: dict) -> str:
 
 def main():
     ap = argparse.ArgumentParser(description="Search S5 正式执行（36 cross-layer queries）")
+    ap.add_argument("--topic", default=None,
+                    help="topic_id（默认 v1.0 legacy 主题；输出自动路由 topics/<id>/runs/）")
     ap.add_argument("--config", default=CONFIG)
-    ap.add_argument("--s4-seen", default=S4_SEEN)
+    ap.add_argument("--s4-seen", default=None)
     ap.add_argument("--depth", type=int, default=DEFAULT_DEPTH)
-    ap.add_argument("--snapshot", default=DEFAULT_SNAP)
-    ap.add_argument("--seen-set", default=DEFAULT_SEEN)
-    ap.add_argument("--query-records", default=DEFAULT_Q_REC)
-    ap.add_argument("--delta", default=DEFAULT_DELTA)
+    ap.add_argument("--snapshot", default=None)
+    ap.add_argument("--seen-set", default=None)
+    ap.add_argument("--query-records", default=None)
+    ap.add_argument("--delta", default=None)
     ap.add_argument("--engine-data-dir", default="data")
     ap.add_argument("--plan-only", action="store_true")
+    ap.add_argument("--live", action="store_true",
+                    help="允许真实 Scopus 检索写缓存（P0-2 默认 dry-run：防误跑）")
     args = ap.parse_args()
+
+    # ── P0-2: 主题命名空间（base seen 与输出随 topic 路由）──
+    if not args.topic:
+        args.topic = DEFAULT_TOPIC
+    if not args.s4_seen:
+        args.s4_seen = resolve_input(args.topic, S4_SEEN, "base_seen_set.json")
+    if not args.snapshot:
+        args.snapshot = resolve_output(args.topic, DEFAULT_SNAP,
+                                       "candidate_snapshot.json")
+    if not args.seen_set:
+        args.seen_set = resolve_output(args.topic, DEFAULT_SEEN, "seen_set.json")
+    if not args.query_records:
+        args.query_records = resolve_output(args.topic, DEFAULT_Q_REC,
+                                            "query_records.json")
+    if not args.delta:
+        args.delta = resolve_output(args.topic, DEFAULT_DELTA, "delta_vs_base.json")
+
+    # ── --live 门禁（P0-2 默认 dry-run；真实 Scopus 检索须显式 --live）──
+    if not args.plan_only and not args.live:
+        raise SystemExit("[dry-run] 真实 Scopus 检索被禁止：传 --live 执行，"
+                         "或 --plan-only 预览")
 
     # ── 冻结校验（用户定，写死）──
     cfg = json.load(open(args.config, encoding="utf-8"))

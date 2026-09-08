@@ -41,8 +41,10 @@ from collections import Counter, defaultdict
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE)
+from search_engine.topic_config import DEFAULT_TOPIC, resolve_input, resolve_output  # noqa: E402
 
 T = os.path.join(BASE, "data", "exports", "terminology")
+# P0-2: 以下为 v1.0 legacy 冻结原址；非 legacy topic 自动路由 topics/<id>/runs/ 通用名
 DEFAULT_RECORDS = os.path.join(T, "s7_execute_query_records.json")
 DEFAULT_OUT = os.path.join(T, "s7_community_memory.json")
 DEFAULT_CORPUS = os.path.join(T, "s7_community_qa_corpus.json")
@@ -218,9 +220,11 @@ def sample_clusters(clusters, per_cluster, seed):
 
 def main():
     ap = argparse.ArgumentParser(description="S7 execute new 论文语义聚类 → 簇级抽样")
-    ap.add_argument("--records", default=DEFAULT_RECORDS)
-    ap.add_argument("--out", default=DEFAULT_OUT)
-    ap.add_argument("--corpus", default=DEFAULT_CORPUS)
+    ap.add_argument("--topic", default=None,
+                    help="topic_id（默认 v1.0 legacy 主题；输入/输出自动路由 topics/<id>/runs/）")
+    ap.add_argument("--records", default=None)
+    ap.add_argument("--out", default=None)
+    ap.add_argument("--corpus", default=None)
     ap.add_argument("--k-range", default="20,24,28,32,36",
                     help="silhouette 扫描的簇数候选（逗号分隔）")
     ap.add_argument("--sample", type=int, default=20, help="每簇抽样上限")
@@ -228,7 +232,20 @@ def main():
     args = ap.parse_args()
     args.k_range = [int(x) for x in args.k_range.split(",") if x.strip()]
 
-    s6_keys = set(load_json(S6_SEEN)["keys"])
+    # ── P0-2: 主题命名空间（records 输入 = 该主题 execute 产物；输出随 topic 路由）──
+    if not args.topic:
+        args.topic = DEFAULT_TOPIC
+    if not args.records:
+        args.records = resolve_input(args.topic, DEFAULT_RECORDS,
+                                     "execute_query_records.json")
+    if not args.out:
+        args.out = resolve_output(args.topic, DEFAULT_OUT, "community_memory.json")
+    if not args.corpus:
+        args.corpus = resolve_output(args.topic, DEFAULT_CORPUS,
+                                     "community_qa_corpus.json")
+    seen_path = resolve_input(args.topic, S6_SEEN, "seen_set.json")
+
+    s6_keys = set(load_json(seen_path)["keys"])
     papers = collect_papers(args.records)
     # new_vs_S6 过滤
     new_papers = {k: p for k, p in papers.items() if k not in s6_keys}
@@ -261,7 +278,7 @@ def main():
         "schema_version": "1.0",
         "role": "S7_EXECUTE community layer",
         "built_at": now,
-        "base_seen": os.path.basename(S6_SEEN),
+        "base_seen": os.path.basename(seen_path),
         "base_seen_size": len(s6_keys),
         "n_papers": len(new_papers),
         "n_with_abstract": n_abs,

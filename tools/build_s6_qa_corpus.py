@@ -27,9 +27,14 @@ import os
 import random
 import re
 import sqlite3
+import sys
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
+from search_engine.topic_config import DEFAULT_TOPIC, resolve_input, resolve_output  # noqa: E402
+
 T = os.path.join(BASE, "data", "exports", "terminology")
+# P0-2: 以下为 v1.0 legacy 冻结原址；非 legacy topic 自动路由 topics/<id>/runs/ 通用名
 RECORDS = os.path.join(T, "s6_pilot_query_records.json")
 S5_SEEN = os.path.join(T, "s5_seen_set.json")
 DEFAULT_CORPUS = os.path.join(T, "s6_qa_corpus.json")
@@ -47,6 +52,9 @@ BC_QUERIES = {"S6-B-09", "S6-B-10", "S6-C-11", "S6-C-12", "S6-C-13",
               "S6-C-14", "S6-C-15"}
 
 # 边界补充：title 无 shrink 词面、但含 consequence 词（S6 校准核心防误杀检查）
+# ⚠️ P0-2 决策资产：A8/D/BC/A_OTHER 白名单 + 词表是 pc001 主题的 S6 校准分层方案
+# （query id 来自 pc001 冻结 s6_bridge_queries）。换主题须按其 rubric/query 结构重写，
+# 属主题决策而非算法——算法（分层配额/抽样/互斥归属）保持主题无关。
 CONSEQUENCE_WORDS = [
     "deform", "warp", "distortion", "distort", "deflection", "curl",
     "dimensional accura", "dimensional error", "marginal gap", "internal gap",
@@ -90,15 +98,30 @@ def load_paper_abstract(con, doi: str, eid: str) -> str:
 
 def main():
     ap = argparse.ArgumentParser(description="S6 pilot QA corpus builder")
-    ap.add_argument("--records", default=RECORDS)
-    ap.add_argument("--s5-seen", default=S5_SEEN)
-    ap.add_argument("--out", default=DEFAULT_CORPUS)
+    ap.add_argument("--topic", default=None,
+                    help="topic_id（默认 v1.0 legacy 主题；输入/输出自动路由 topics/<id>/runs/）")
+    ap.add_argument("--records", default=None)
+    ap.add_argument("--s5-seen", default=None)
+    ap.add_argument("--out", default=None)
     ap.add_argument("--calibrate", action="store_true",
                     help="额外输出分层校准集（--calib-out）")
-    ap.add_argument("--calib-out", default=DEFAULT_CALIB)
+    ap.add_argument("--calib-out", default=None)
     ap.add_argument("--calib-n", type=int, default=0,
                     help="校准集目标规模（默认按分层配额 ~70；可显式覆盖）")
     args = ap.parse_args()
+
+    # ── P0-2: 主题命名空间（输入 = 该主题 pilot 产物；输出随 topic 路由）──
+    if not args.topic:
+        args.topic = DEFAULT_TOPIC
+    if not args.records:
+        args.records = resolve_input(args.topic, RECORDS, "pilot_query_records.json")
+    if not args.s5_seen:
+        args.s5_seen = resolve_input(args.topic, S5_SEEN, "base_seen_set.json")
+    if not args.out:
+        args.out = resolve_output(args.topic, DEFAULT_CORPUS, "qa_corpus.json")
+    if not args.calib_out:
+        args.calib_out = resolve_output(args.topic, DEFAULT_CALIB,
+                                        "qa_calibration_set.json")
 
     rec = json.load(open(args.records, encoding="utf-8"))
     rbq = rec["records_by_query"]

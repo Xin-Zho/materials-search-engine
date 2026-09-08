@@ -1,0 +1,574 @@
+{
+ "topic_id": "photopolymerization_shrinkage",
+ "n": 63,
+ "definition": "v1.0 seed corpus（preS8 KB records 中不在 S8 catalog 的论文，gold 起点）",
+ "seeds": [
+  {
+   "paper_id": "openalex:W4406102006",
+   "doi": null,
+   "openalex_id": "W4406102006",
+   "scopus_eid": null,
+   "title": "Visible-Light-Fueled Polymerizations for 3D Printing",
+   "year": 2025,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.26434/chemrxiv-2024-s1436",
+   "doi": "10.26434/chemrxiv-2024-s1436",
+   "openalex_id": "W4403436111",
+   "scopus_eid": null,
+   "title": "Highly Strained Tricyclic Oxanorbornenes with Uncommon Reactivity Enable Rapid ROMP for High-Performance Polyenes",
+   "year": 2024,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1021/prechem.5c00424",
+   "doi": "10.1021/prechem.5c00424",
+   "openalex_id": "W7155086367",
+   "scopus_eid": null,
+   "title": "Sulfur-Based Dynamic Covalent Polymers: From Reversible Bonds to Smart Materials",
+   "year": 2026,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1016/j.dental.2013.09.002",
+   "doi": "10.1016/j.dental.2013.09.002",
+   "openalex_id": "W2148569343",
+   "scopus_eid": null,
+   "title": "Property evolution during vitrification of dimethacrylate photopolymer networks",
+   "year": 2013,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1021/acs.macromol.4c02601",
+   "doi": "10.1021/acs.macromol.4c02601",
+   "openalex_id": "W4409160795",
+   "scopus_eid": null,
+   "title": "Highly Strained Tricyclic Oxanorbornenes with Uncommon Reactivity Enable Rapid ROMP for Thermally High-Performing Polyenes",
+   "year": 2025,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1021/acs.macromol.4c02601.s001",
+   "doi": "10.1021/acs.macromol.4c02601.s001",
+   "openalex_id": "W7111174545",
+   "scopus_eid": null,
+   "title": "Highly Strained Tricyclic Oxanorbornenes with Uncommon Reactivity Enable Rapid ROMP for Thermally High-Performing Polyenes",
+   "year": 2025,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1002/adhm.202502057",
+   "doi": "10.1002/adhm.202502057",
+   "openalex_id": "W4416686459",
+   "scopus_eid": null,
+   "title": "Engineering a Self‐Defensive Restoration‐Tooth Interface via Bioactive nMgO/E‐POSS Bulk‐Fill Resin Composites for Enhanced Dental Restorations",
+   "year": 2025,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.3788/lop260842",
+   "doi": "10.3788/lop260842",
+   "openalex_id": "W7170061635",
+   "scopus_eid": null,
+   "title": "改善光致聚合物全息记录材料体积收缩率的研究进展（特邀）",
+   "year": 2026,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1016/j.dental.2016.05.006",
+   "doi": "10.1016/j.dental.2016.05.006",
+   "openalex_id": "W2406224365",
+   "scopus_eid": null,
+   "title": "Polymerization shrinkage kinetics and shrinkage-stress in dental resin-composites",
+   "year": 2016,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "openalex:W2595949009",
+   "doi": null,
+   "openalex_id": "W2595949009",
+   "scopus_eid": null,
+   "title": "Synthesis of Novel RAFT Monomers and Applications into Advances in Covalent Adaptable Networks",
+   "year": 2014,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1016/j.dental.2023.03.016",
+   "doi": "10.1016/j.dental.2023.03.016",
+   "openalex_id": "W4323980698",
+   "scopus_eid": null,
+   "title": "The effect of high-irradiance rapid polymerization on degree of conversion, monomer elution, polymerization shrinkage and porosity of bulk-fill resin composites",
+   "year": 2023,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.2494/photopolymer.32.623",
+   "doi": "10.2494/photopolymer.32.623",
+   "openalex_id": "W2985660657",
+   "scopus_eid": null,
+   "title": "Relief of Shrinkage of UV-cured Materials by Exchange Reactions of Disulfide Bonds",
+   "year": 2019,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.3390/polym14102074",
+   "doi": "10.3390/polym14102074",
+   "openalex_id": "W4280619650",
+   "scopus_eid": null,
+   "title": "A Review on Modeling Cure Kinetics and Mechanisms of Photopolymerization",
+   "year": 2022,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1016/j.ceramint.2022.06.314",
+   "doi": "10.1016/j.ceramint.2022.06.314",
+   "openalex_id": "W4285600308",
+   "scopus_eid": null,
+   "title": "Influence of filler characteristics on the performance of dental composites: A comprehensive review",
+   "year": 2022,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.6028/jres.110.081",
+   "doi": "10.6028/jres.110.081",
+   "openalex_id": "W2055782377",
+   "scopus_eid": null,
+   "title": "Chemistry of silanes: Interfaces in dental polymers and composites",
+   "year": 2005,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1590/1807-3107bor-2017.vol31.0062",
+   "doi": "10.1590/1807-3107bor-2017.vol31.0062",
+   "openalex_id": "W2749057177",
+   "scopus_eid": null,
+   "title": "Polymerization shrinkage stress of composite resins and resin cements – What do we need to know?",
+   "year": 2017,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.2341/07-bl2",
+   "doi": "10.2341/07-bl2",
+   "openalex_id": "W2015046796",
+   "scopus_eid": null,
+   "title": "Placing Dental Composites—A Stressful Experience",
+   "year": 2008,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1002/pola.10317",
+   "doi": "10.1002/pola.10317",
+   "openalex_id": "W2078826917",
+   "scopus_eid": null,
+   "title": "Cure kinetics of the ring‐opening metathesis polymerization of dicyclopentadiene",
+   "year": 2002,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1002/app.52455",
+   "doi": "10.1002/app.52455",
+   "openalex_id": "W4225014769",
+   "scopus_eid": null,
+   "title": "Highly stretchable dual‐cure photosensitive resin for digital light processing printing",
+   "year": 2022,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "openalex:W2599866287",
+   "doi": null,
+   "openalex_id": "W2599866287",
+   "scopus_eid": null,
+   "title": "Development and Characterization of Covalent Adaptable Networks for Functional Polymeric Materials",
+   "year": 2016,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1002/pen.25628",
+   "doi": "10.1002/pen.25628",
+   "openalex_id": "W3113545149",
+   "scopus_eid": null,
+   "title": "A model for modulus development of dual‐cure resin systems",
+   "year": 2020,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.26692/surjss.v57i1.7596",
+   "doi": "10.26692/surjss.v57i1.7596",
+   "openalex_id": "W4414137712",
+   "scopus_eid": null,
+   "title": "A Comprehensive Review: Influence of Hexagonal Boron Nitride and Mesoporous Silica Nanoparticles on Dental Composite.",
+   "year": 2025,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.7912/c2/1618",
+   "doi": "10.7912/c2/1618",
+   "openalex_id": "W1026172336",
+   "scopus_eid": null,
+   "title": "The influence of delayed light curing on the polymerization contraction stress and degree of conversion in dual-cured resin luting agents",
+   "year": 2010,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1364/ome.1.000207",
+   "doi": "10.1364/ome.1.000207",
+   "openalex_id": "W2046639120",
+   "scopus_eid": null,
+   "title": "Holographic nanoparticle-polymer composites based on step-growth thiol-ene photopolymerization",
+   "year": 2011,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1117/12.886713",
+   "doi": "10.1117/12.886713",
+   "openalex_id": "W1989773801",
+   "scopus_eid": null,
+   "title": "Photopolymerizable thiol-ene nanocomposite materials for holographic applications",
+   "year": 2011,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1021/jacs.8b13120",
+   "doi": "10.1021/jacs.8b13120",
+   "openalex_id": "W2913584997",
+   "scopus_eid": null,
+   "title": "Sequence-Controlled Polymers Through Entropy-Driven Ring-Opening Metathesis Polymerization: Theory, Molecular Weight Control, and Monomer Design",
+   "year": 2019,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "openalex:W2181354506",
+   "doi": null,
+   "openalex_id": "W2181354506",
+   "scopus_eid": null,
+   "title": "Stress Relaxation by Addition-fragmentation Chain Transfer in Glassy Polymer Networks",
+   "year": 2011,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "openalex:W4289022570",
+   "doi": null,
+   "openalex_id": "W4289022570",
+   "scopus_eid": null,
+   "title": "Developing Low Shrinkage Stress Thiol-Ene Dental Resins & Two-color Photopolymerization Chemistries",
+   "year": 2019,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1364/ao.50.004063",
+   "doi": "10.1364/ao.50.004063",
+   "openalex_id": "W1976202199",
+   "scopus_eid": null,
+   "title": "Replication of micro-optical elements with continuous relief by ultraviolet embossing with thiol-ene-based resist",
+   "year": 2011,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "openalex:W2760641798",
+   "doi": null,
+   "openalex_id": "W2760641798",
+   "scopus_eid": null,
+   "title": "Low shrinkage resin composite in operative dentistry; เรซนคอมโพสตชนดทมคณสมบตการหดตวตำในงานทนตกรรมหตถการ",
+   "year": 2017,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1021/ma9607325",
+   "doi": "10.1021/ma9607325",
+   "openalex_id": "W2005386085",
+   "scopus_eid": null,
+   "title": "Cationic Ring-Opening Polymerization of Cyclic Carbonates with Alkyl Halides To Yield Polycarbonate without the Ether Unit by Suppression of Elimination of Carbon Dioxide",
+   "year": 1997,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1039/c8py01540f",
+   "doi": "10.1039/c8py01540f",
+   "openalex_id": "W2912117570",
+   "scopus_eid": null,
+   "title": "Enhanced reduction of polymerization-induced shrinkage stress <i>via</i> combination of radical ring opening and addition fragmentation chain transfer",
+   "year": 2019,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1039/d3py00787a",
+   "doi": "10.1039/d3py00787a",
+   "openalex_id": "W4386835484",
+   "scopus_eid": null,
+   "title": "Stereolithographic 3D printing of pure poly(ether–ester) networks from spirocyclic monomers via cationic ring-opening photopolymerization at high temperatures",
+   "year": 2023,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1007/s00784-026-07045-w",
+   "doi": "10.1007/s00784-026-07045-w",
+   "openalex_id": "W7169881141",
+   "scopus_eid": null,
+   "title": "Polymerization shrinkage and stress of highly filled flowable resin composites used to perform definitive restorations",
+   "year": 2026,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1038/s41467-023-39440-2",
+   "doi": "10.1038/s41467-023-39440-2",
+   "openalex_id": "W4381431553",
+   "scopus_eid": null,
+   "title": "Upconversion particle-assisted NIR polymerization enables microdomain gradient photopolymerization at inter-particulate length scale",
+   "year": 2023,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1016/j.jdent.2026.106662",
+   "doi": "10.1016/j.jdent.2026.106662",
+   "openalex_id": "W7141511423",
+   "scopus_eid": null,
+   "title": "Development of low-shrinkage epoxy-methacrylate hybrid dental composite materials using a dual-curing system",
+   "year": 2026,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1016/j.dental.2026.02.003",
+   "doi": "10.1016/j.dental.2026.02.003",
+   "openalex_id": "W7129038217",
+   "scopus_eid": null,
+   "title": "Effect of delayed modulus formation on shrinkage stress development in dental resin composites: A theoretical treatment",
+   "year": 2026,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1002/pc.29332",
+   "doi": "10.1002/pc.29332",
+   "openalex_id": "W4404857218",
+   "scopus_eid": null,
+   "title": "Physicomechanical properties and polymerization shrinkage of the newly developed radiopaque flowable composite derived from rice husk",
+   "year": 2024,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.2139/ssrn.4918808",
+   "doi": "10.2139/ssrn.4918808",
+   "openalex_id": "W4401422516",
+   "scopus_eid": null,
+   "title": "Physicomechanical Properties and Polymerization Shrinkage of the Newly Developed Radiopaque Flowable Composite Derived from Rice Husk",
+   "year": 2024,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1117/12.854793",
+   "doi": "10.1117/12.854793",
+   "openalex_id": "W2039619486",
+   "scopus_eid": null,
+   "title": "Low polymerization-shrinkage nanoparticle-polymer composite films based on thiol-ene photopolymerization for holographic data storage",
+   "year": 2010,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1016/j.dental.2012.06.012",
+   "doi": "10.1016/j.dental.2012.06.012",
+   "openalex_id": "W2127319543",
+   "scopus_eid": null,
+   "title": "Novel dental restorative materials having low polymerization shrinkage stress via stress relaxation by addition-fragmentation chain transfer",
+   "year": 2012,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1002/(sici)1099-0518(20000201)38:3<389::aid-pola1>3.0.co;2-g",
+   "doi": "10.1002/(sici)1099-0518(20000201)38:3<389::aid-pola1>3.0.co;2-g",
+   "openalex_id": "W1968290702",
+   "scopus_eid": null,
+   "title": "Photoinitiated cationic polymerization of epoxy alcohol monomers",
+   "year": 2000,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1021/mz3002325",
+   "doi": "10.1021/mz3002325",
+   "openalex_id": "W2335209009",
+   "scopus_eid": null,
+   "title": "N-Vinylcarbazole: An Additive for Free Radical Promoted Cationic Polymerization upon Visible Light",
+   "year": 2012,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.5114/jos.2024.139944",
+   "doi": "10.5114/jos.2024.139944",
+   "openalex_id": "W4399222967",
+   "scopus_eid": null,
+   "title": "Micro-computed tomographic assessment of the influence of light-curing modes on internal void formation in bulk-fill composites",
+   "year": 2024,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1016/j.dental.2005.04.001",
+   "doi": "10.1016/j.dental.2005.04.001",
+   "openalex_id": "W2138270017",
+   "scopus_eid": null,
+   "title": "Investigations of step-growth thiol-ene polymerizations for novel dental restoratives",
+   "year": 2005,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.34726/3441",
+   "doi": "10.34726/3441",
+   "openalex_id": "W7134951091",
+   "scopus_eid": null,
+   "title": "Regulated acrylate networks as tough photocurable materials for additive manufacturing",
+   "year": 2022,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.5005/jp-journals-10047-0106",
+   "doi": "10.5005/jp-journals-10047-0106",
+   "openalex_id": "W3215662041",
+   "scopus_eid": null,
+   "title": "Role of Composition on Polymerization Shrinkage and Shrinkage Stress in Dental Composites",
+   "year": 2021,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1039/d3py00261f",
+   "doi": "10.1039/d3py00261f",
+   "openalex_id": "W4367336810",
+   "scopus_eid": null,
+   "title": "Photopolymerization shrinkage: strategies for reduction, measurement methods and future insights",
+   "year": 2023,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1002/anie.202414938",
+   "doi": "10.1002/anie.202414938",
+   "openalex_id": "W4402401990",
+   "scopus_eid": null,
+   "title": "Cyclic Acetals as Expanding Monomers to Reduce Shrinkage",
+   "year": 2024,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.3390/ma18245613",
+   "doi": "10.3390/ma18245613",
+   "openalex_id": "W4417333585",
+   "scopus_eid": null,
+   "title": "New Universal Bulk-Fill Composites with Translucency Shift: Impact of Rapid Curing and Ageing on Polymerisation and Mechanical Properties",
+   "year": 2025,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1016/j.jdent.2020.103448",
+   "doi": "10.1016/j.jdent.2020.103448",
+   "openalex_id": "W3048276138",
+   "scopus_eid": null,
+   "title": "Effect of rapid high-intensity light-curing on polymerization shrinkage properties of conventional and bulk-fill composites",
+   "year": 2020,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1002/pi.6364",
+   "doi": "10.1002/pi.6364",
+   "openalex_id": "W4205354421",
+   "scopus_eid": null,
+   "title": "Regulated acrylate networks as tough photocurable materials for additive manufacturing",
+   "year": 2022,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1155/2012/803439",
+   "doi": "10.1155/2012/803439",
+   "openalex_id": "W2158396880",
+   "scopus_eid": null,
+   "title": "A Review of the Optimisation of Photopolymer Materials for Holographic Data Storage",
+   "year": 2012,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.7302/7474",
+   "doi": "10.7302/7474",
+   "openalex_id": "W4378345774",
+   "scopus_eid": null,
+   "title": "Generation and Rearrangement of Thioethers for Self-Reinforcing Thermosets and Semi-crystalline Thermoplastic Photopolymers",
+   "year": 2023,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1038/s41467-019-11522-0",
+   "doi": "10.1038/s41467-019-11522-0",
+   "openalex_id": "W2966226355",
+   "scopus_eid": null,
+   "title": "Highly efficient dandelion-like near-infrared light photoinitiator for free radical and thiol-ene photopolymerizations",
+   "year": 2019,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1039/d5lp00010f",
+   "doi": "10.1039/d5lp00010f",
+   "openalex_id": "W4408330450",
+   "scopus_eid": null,
+   "title": "Advances in vat photopolymerization: early-career researchers shine light on a path forward",
+   "year": 2025,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.34726/hss.2016.35287",
+   "doi": "10.34726/hss.2016.35287",
+   "openalex_id": "W3123510402",
+   "scopus_eid": null,
+   "title": "Mechanistic investigation of chain transfer reagents",
+   "year": 2016,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1016/j.dental.2020.07.008",
+   "doi": "10.1016/j.dental.2020.07.008",
+   "openalex_id": "W3043949972",
+   "scopus_eid": null,
+   "title": "Conversion kinetics of rapid photo-polymerized resin composites",
+   "year": 2020,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1016/j.dental.2024.08.008",
+   "doi": "10.1016/j.dental.2024.08.008",
+   "openalex_id": "W4402133767",
+   "scopus_eid": null,
+   "title": "Diversity of short-term DC outcomes in bulk-fill RBCs subjected to a 3 s high-irradiance protocol",
+   "year": 2024,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1039/c39850000380",
+   "doi": "10.1039/c39850000380",
+   "openalex_id": "W2032117515",
+   "scopus_eid": null,
+   "title": "The kinetics of ring-opening of 1,1-dimethylaziridinium ion with sodium methoxide in methanol. The anomalous S N2 reactivity of small rings",
+   "year": 1985,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1088/2040-8986/abb3a4",
+   "doi": "10.1088/2040-8986/abb3a4",
+   "openalex_id": "W3081900187",
+   "scopus_eid": null,
+   "title": "Roadmap on holography",
+   "year": 2020,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1021/acsapm.8b00165",
+   "doi": "10.1021/acsapm.8b00165",
+   "openalex_id": "W2915400200",
+   "scopus_eid": null,
+   "title": "Photopolymerization in 3D Printing",
+   "year": 2019,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  },
+  {
+   "paper_id": "doi:10.1039/c5nr01354b",
+   "doi": "10.1039/c5nr01354b",
+   "openalex_id": "W1860611477",
+   "scopus_eid": null,
+   "title": "Improving the fracture toughness and the strength of epoxy using nanomaterials – a review of the current status",
+   "year": 2015,
+   "source": "v1.0 KB seed corpus (pre-S8, materialized from knowledge_records)"
+  }
+ ]
+}

@@ -17,18 +17,37 @@
 输出：
   data/exports/terminology/s7_reward_analysis.json
 """
+import argparse
 import datetime
 import json
 import os
+import sys
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
+from search_engine.topic_config import (  # noqa: E402
+    DEFAULT_TOPIC, resolve_input, resolve_output,
+)
+
 T = os.path.join(BASE, "data", "exports", "terminology")
 MEM = os.path.join(T, "s7_relation_memory.json")
 OUT = os.path.join(T, "s7_reward_analysis.json")
 
 
 def main():
-    mem = json.load(open(MEM, encoding="utf-8"))
+    ap = argparse.ArgumentParser(description="S7 execute reward 实证校准")
+    ap.add_argument("--topic", default=None,
+                    help="topic_id（默认 v1.0 legacy 主题；输入/输出随 topic 路由）")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="只分析不写盘（reward_analysis.json 在 v1.0 manifest 锚定内，防误覆盖）")
+    args = ap.parse_args()
+    topic = args.topic or DEFAULT_TOPIC
+    mem_path = resolve_input(topic, MEM, "relation_memory.json")
+    out_path = resolve_output(topic, OUT, "reward_analysis.json")
+    print(f"[topic] {topic} | mem={os.path.relpath(mem_path, BASE)} | "
+          f"out={os.path.relpath(out_path, BASE)}")
+
+    mem = json.load(open(mem_path, encoding="utf-8"))
     exs = [r for r in mem["relations"]
            if r.get("source") == "s7_execute"
            and r["outcome"].get("new") is not None]
@@ -94,7 +113,10 @@ def main():
         "rows": rows,
         "rankings": ranked,
     }
-    with open(OUT, "w", encoding="utf-8") as f:
+    if args.dry_run:
+        print("[dry-run] 未写盘；分析结果打印见上。")
+        return
+    with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=1)
     print("=" * 100)
     print("S7 execute reward 实证校准（三组候选权重排序对比）")
@@ -113,8 +135,8 @@ def main():
         rk = ranked[pname]
         print(f"  {pname:<18} " + " > ".join(x["id"] for x in rk[:6])
               + (" ..." if len(rk) > 6 else ""))
-    print("\n实证发现与权重说明见 s7_reward_analysis.json")
-    print(f"[OK] {OUT}")
+    print("\n实证发现与权重说明见 reward_analysis.json")
+    print(f"[OK] {out_path}")
 
 
 if __name__ == "__main__":
