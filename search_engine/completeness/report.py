@@ -18,6 +18,14 @@ def _fmt_pct(x: float) -> str:
     return f"{x * 100:.1f}%"
 
 
+def _get(obj, key, default=None):
+    """dict 或 dataclass 双兼容取值（2026-08-29：diag['capture'] 是
+    CaptureRecaptureDiagnostic dataclass，异常 fallback 路径是 dict）。"""
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+
 def _pct_recall(d: dict) -> str:
     return f"{d.get('found', 0)} / {d.get('total', 0)} = {_fmt_pct(d.get('recall', 0))}"
 
@@ -100,13 +108,13 @@ def build_report(audit, diagnostics: dict | None = None) -> str:
     lines.append("")
     lines.append("Capture-recapture")
     lines.append("-" * 40)
-    lines.append(f"  status: {cap.get('status', 'N/A')}")
-    if cap.get("N_hat") is not None:
-        lines.append(f"  N_hat: {cap['N_hat']}  (diagnostic only)")
-    if cap.get("assumption_warning"):
-        lines.append(f"  warning: {cap['assumption_warning']}")
-    if cap.get("reason"):
-        lines.append(f"  reason: {cap['reason']}")
+    lines.append(f"  status: {_get(cap, 'status', 'N/A')}")
+    if _get(cap, "N_hat") is not None:
+        lines.append(f"  N_hat: {_get(cap, 'N_hat')}  (diagnostic only)")
+    if _get(cap, "assumption_warning"):
+        lines.append(f"  warning: {_get(cap, 'assumption_warning')}")
+    if _get(cap, "reason"):
+        lines.append(f"  reason: {_get(cap, 'reason')}")
     lines.append("  NOTE: capture-recapture 是辅助诊断，不参与停止判定")
 
     # ── B. Independent Statistical Audit（唯一裁判）──
@@ -142,13 +150,29 @@ def build_report(audit, diagnostics: dict | None = None) -> str:
             lines.append(f"  (status={audit.status}——label 未完整，不输出正式 Recall_LCB)")
             lines.append("  宁可不出数，也不要默认当 irrelevant")
         else:
-            lines.append(f"  missed relevant m:  {audit.m}")
+            lines.append(f"  missed relevant m:  {audit.m}"
+                         f"（RELEVANT ∧ agent_seen=FALSE，高置信 miss）")
+            if audit.n_agent_seen is not None:
+                lines.append(f"  agent_seen TRUE:    {audit.n_agent_seen}"
+                             f"（已在检索结果，未确认入库）")
+                lines.append(f"  agent_seen UNKNOWN: {audit.n_agent_unknown}"
+                             f"（identity 未解析，走 repair，不计 miss）")
+            if audit.uncertain_count:
+                lines.append(f"  UNCERTAIN:          {audit.uncertain_count}"
+                             f"（单独报告/adjudication，未混入 m/negative）")
             lines.append(f"  M_upper:            {audit.M_upper}")
             lines.append(f"  p_upper:            {_fmt_pct(audit.p_upper)}")
             lines.append(f"  confidence:         {_fmt_pct(audit.confidence_level)}")
             lines.append("")
-            lines.append(f"  Recall_LCB:   {_fmt_pct(audit.recall_lcb)}")
+            lines.append(f"  Recall_LCB:   {_fmt_pct(audit.recall_lcb)}"
+                         f"  [PROVISIONAL]")
             lines.append(f"  Target:       {_fmt_pct(audit.target_recall)}")
+            lines.append("")
+            lines.append("  NOTE(2026-08-29 用户定稿): F={} 是 KB-confirmed 口径，".format(audit.F))
+            lines.append("  m 是 Search 口径——当前 Recall_LCB 为 Metric-Semantics Mismatch")
+            lines.append("  （PROVISIONAL，不作正式 Search Completeness）；正式 Search")
+            lines.append("  Recall_LCB 需 F_search=|RELEVANT∧agent_seen| 确定 + UNCERTAIN")
+            lines.append("  全裁决。KB Completeness（口径一致）：F=25, m_KB=235 → 3.1%。")
             lines.append("")
             lines.append(f"  STATISTICAL_STOP:  "
                          f"{'YES' if audit.statistical_stop else 'NO'}")

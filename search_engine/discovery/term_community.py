@@ -119,12 +119,17 @@ def token_jaccard(a: set[str], b: set[str]) -> float:
     return len(a & b) / len(a | b)
 
 
-def load_input_papers() -> list[dict]:
-    """220 篇 bridge>=2 candidates + enriched 元数据 + bridge class。"""
-    bridge = json.load(open(BRIDGE_PATH, encoding="utf-8"))
+def load_input_papers(bridge_path: str = BRIDGE_PATH,
+                      enriched_path: str = ENRICHED_PATH) -> list[dict]:
+    """bridge>=2 candidates + enriched 元数据 + bridge class。
+
+    bridge_path/enriched_path 可参数化（v1 = citation_bridge_v1.json + 850
+    enriched；hop2 = citation_bridge_hop2.json + 818 enriched）。
+    """
+    bridge = json.load(open(bridge_path, encoding="utf-8"))
     enriched = {}
-    if os.path.exists(ENRICHED_PATH):
-        enriched = json.load(open(ENRICHED_PATH, encoding="utf-8"))
+    if os.path.exists(enriched_path):
+        enriched = json.load(open(enriched_path, encoding="utf-8"))
     papers = []
     for c in bridge["candidates"]:
         if c["bridge_count"] < 2:
@@ -139,7 +144,7 @@ def load_input_papers() -> list[dict]:
             "abstract": abstract,
             "text_source": "TITLE_ABSTRACT" if abstract else "TITLE_ONLY",
             "bridge_count": c["bridge_count"],
-            "citing_seeds": c["citing_seed_ids"],
+            "citing_seeds": c.get("citing_seed_ids") or c.get("parent_papers") or [],
             "bridge_class": c.get("class", "NEW_NEIGHBOR"),  # ALREADY_RELEVANT/RETRIEVED/NEW
         })
     return papers
@@ -165,8 +170,14 @@ def load_registry_families() -> list[dict]:
 
 
 class TermCommunity:
-    def __init__(self, npmi_min: float = NPMI_MIN):
+    def __init__(self, npmi_min: float = NPMI_MIN,
+                 bridge_path: str = BRIDGE_PATH,
+                 enriched_path: str = ENRICHED_PATH,
+                 out_path: str = OUT_PATH):
         self.npmi_min = npmi_min
+        self.bridge_path = bridge_path
+        self.enriched_path = enriched_path
+        self.out_path = out_path
         self.papers: list[dict] = []
         self.phrases: list[str] = []
         self.df: dict[str, int] = {}
@@ -336,7 +347,7 @@ class TermCommunity:
 
     # ── 主流程 ──
     def run(self) -> dict:
-        self.papers = load_input_papers()
+        self.papers = load_input_papers(self.bridge_path, self.enriched_path)
         self.extract()
         self.build_graph()
         comms = self.detect()
@@ -394,10 +405,17 @@ def main():
                     help=f"建边最小 NPMI（默认 {NPMI_MIN}）")
     ap.add_argument("--sweep", action="store_true",
                     help="NPMI_MIN = 0.0/0.1/0.2 sensitivity table（其他参数 frozen）")
+    ap.add_argument("--bridge", default=BRIDGE_PATH,
+                    help="bridge JSON（默认 citation_bridge_v1.json；hop2 传 citation_bridge_hop2.json）")
+    ap.add_argument("--enriched", default=ENRICHED_PATH,
+                    help="enrichment 缓存（默认 openalex_neighbors_enriched.json）")
+    ap.add_argument("--out", default=OUT_PATH,
+                    help="输出 JSON（默认 term_communities_v2.json）")
     args = ap.parse_args()
 
     if args.sweep:
-        tc = TermCommunity()
+        tc = TermCommunity(bridge_path=args.bridge, enriched_path=args.enriched,
+                           out_path=args.out)
         rows = tc.sweep()
         print("=" * 96)
         print("NPMI_MIN sensitivity（max_df_ratio=0.55, min_df=2, cooccur>=2 frozen）")
@@ -414,11 +432,13 @@ def main():
         print("\nLCR = LargestCommunityRatio（最大社区 terms / graph nodes），期望 0.1 后明显下降")
         return
 
-    tc = TermCommunity(npmi_min=args.npmi)
+    tc = TermCommunity(npmi_min=args.npmi, bridge_path=args.bridge,
+                       enriched_path=args.enriched, out_path=args.out)
     result = tc.run()
     s = result["stats"]
     print("=" * 70)
-    print(f"Term Community v1.1（NPMI_MIN={args.npmi}, max_df=0.55, novelty top-{NOVELTY_N}）")
+    print(f"Term Community v1.2（NPMI_MIN={args.npmi}, max_df=0.55, novelty top-{NOVELTY_N}）")
+    print(f"  输入: {os.path.basename(args.bridge)} + {os.path.basename(args.enriched)}")
     print("=" * 70)
     print(f"input_papers={s['input_papers']} | abstract={s['papers_with_abstract']} "
           f"({s['papers_with_abstract']/max(s['input_papers'],1)*100:.0f}%)")
@@ -440,9 +460,9 @@ def main():
               f"sim={c['novelty']['closest_similarity']}) "
               f"abs_cov={c['abstract_coverage']}")
         print(f"    top: {', '.join(c['top_terms_used'][:8])}")
-    with open(OUT_PATH, "w", encoding="utf-8") as f:
+    with open(args.out, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=1)
-    print(f"\n✓ 已写: {OUT_PATH}")
+    print(f"\n✓ 已写: {args.out}")
 
 
 if __name__ == "__main__":

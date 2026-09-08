@@ -250,10 +250,32 @@
    "note": "scopus_cache paper_id 是 scopus:{DOI} 格式——abstract 匹配必须 DOI 桥，eid 匹配会 0 命中（踩坑）"
   },
   {
-   "phase": "v2.1",
-   "name": "Cross-Community Discovery",
-   "status": "NEXT",
-   "scope": "社区级发现（dental/holography/coating 等动态扩展）",
+  "phase": "v2.1",
+  "name": "Cross-Community Discovery",
+  "status": "FROZEN / VALIDATED",
+  "frozen_at": "2026-08-29",
+  "git_tag": "v2.1-cross-community-validated",
+  "final_results": {
+    "RR_usable": "79.0% (83/105) -> 81.0% (85/105) -> 84.8% (89/105)",
+    "round3": {
+      "queries": 16,
+      "qgs_blind": true,
+      "raw_rows": 1141,
+      "canonical_unique_retrieved": 797,
+      "canonical_new": 280,
+      "usable_new": 277,
+      "pre_2006_usable_new": 175
+    },
+    "G2R": "0/8 -> 4/8 = 50%",
+    "G2R_community": "2/6 = 33.3% (bridge>=2)",
+    "new_qgs_r3": 4,
+    "note": "G2R=4/8 与 NewQGS_R3=4 不是同一批 4 篇：G2R 是 round-specific 对 graph-visible 目标的转换率；NewQGS_R3 是相对 pre-Round3 candidate union 的首次恢复（含非 graph-visible 的 1989 composite resins；2001 dilatometer 因 Round1 已入库不计首次）"
+  },
+  "key_mechanism_case": {
+    "dilatometer": "pooled Disc #824 -> per-community Disc+df_dedup #32 -> anchored-queryable -> pilot 34 hits/22 new/64.7% -> depth500 34 results -> QGS 找回 4 篇 (1993 rank24 / 1981 rank12 / 2001 rank13 / 2004 rank33)",
+    "note": "非 QGS 标题人工加入；citation/community evidence 经 QGS-blind pipeline 自动浮出"
+  },
+  "scope": "社区级发现（dental/holography/coating 等动态扩展）",
    "goal": "不硬编码 41 篇 (leakage)——设计机制让 Agent 从已触达文献社区自主发现邻接但术语不同的社区 (holography/UV-NIL/historical dental)，生成新 query family，从 61.9% 往 80%/90%+ 走",
    "development_signals": [
     {
@@ -389,14 +411,142 @@
     ],
     "validation": "lexical 单独会误判（TC_001 0.93 / TC_005 0.94 / TC_003 0.96 全高），RetrievalNovelty 正确区分：TC_005 retNov=0.2 拒绝、TC_009 retNov=1.0 晋升——指标价值验证成功",
     "next_step": "PROMOTED → Concept Slot（P/M/R/C）→ 新 Query Family → Scopus 搜索（用户设计 STEP 9）——待用户确认候选"
+   },
+   "round1_results": {
+    "setup": "TC_006 + TC_015（TC_017 holdout），旧 retrieval 重评估（未重跑 Scopus），usable 口径",
+    "TC_006": {
+     "retrieved": 521,
+     "new": 89,
+     "retrieved_usable": 423,
+     "MCG_usable": 50,
+     "usable_retrieval_novelty": 0.118,
+     "qgs1_usable_hit": 25,
+     "newly_recovered": 2
+    },
+    "TC_015": {
+     "retrieved": 221,
+     "new": 45,
+     "retrieved_usable": 200,
+     "MCG_usable": 37,
+     "usable_retrieval_novelty": 0.185,
+     "qgs1_usable_hit": 8,
+     "newly_recovered": 1
+    },
+    "UNION": {
+     "retrieved": 713,
+     "new": 126,
+     "retrieved_usable": 600,
+     "MCG_usable": 80,
+     "usable_retrieval_novelty": 0.133,
+     "qgs1_usable_hit": 31,
+     "newly_recovered": 2
+    },
+    "verdict": {
+     "partially_effective": "MCG_usable=80 新可研究论文入库（universe 6572→6698 eid）——绝对扩展有效",
+     "low_novelty_explained": "UsableRetrievalNovelty 13.3% 低符合预期——1-hop 邻居从 dental 边界长出与旧空间重叠",
+     "qgs_recovery_weak": "missing usable QGS 22 篇只找回 2（1999 flowable / 2001 dilatometer）——1-hop 摸不到 holography/UV-NIL 核心缺口（仍缺 20 篇）",
+     "success_threshold": "50% 不作为硬阈值（用户定）——四维一起看：MCG_usable / UsableRetrievalNovelty / QGS newly recovered / Union expansion"
+    },
+    "next_options": [
+     "第二跳 citation expansion（从 Round1 新论文出发，往 holography）——推荐",
+     "TC_017 holdout（dimethacrylate 近核心，预计重叠更多）",
+     "fulltext enrichment（29 篇 unusable 的钥匙，非 20 篇 usable missing 的钥匙）"
+    ],
+    "recommendation": "第二跳 citation expansion：20 篇仍缺 usable QGS 含 holography 簇，第二跳可能自然触达；TC_017 等第二跳后；fulltext 优先级不变"
+   },
+   "hop2": {
+    "status": "FROZEN（正式，full-seed）",
+    "frozen_at": "2026-08-28",
+    "preliminary_downgraded": "826 neighbors/90.4%/93.5% 标 HOP2_PRELIMINARY（partial identity + unscreened seeds），不冻结",
+    "seed_gate": {
+     "Seed_hop2": "New ∩ Usable ∩ Relevant ∩ Resolved",
+     "SeedRelevanceGate": "三态 80 篇：RELEVANT 64 / UNCERTAIN 3（保留不进 seed）/ IRRELEVANT 13（不用领域黑名单——语义判定）",
+     "SeedPurity": 0.8,
+     "identity_resolution": "CACHE_WID 35 + OPENALEX_DOI_EXACT 29 = 64/64，IdentityCoverage 1.0（联网 metadata enrichment，缓存复用；title 匹配不做 fuzzy 防 F6）",
+     "tools": ["data/exports/round1_seed_relevance.json", "data/exports/round1_seed_identities.json"]
+    },
+    "final_numbers": {
+     "seeds": "64（with refs 34，53%——30 篇 refs 不在 openalex_cache）",
+     "neighbors": 818,
+     "bridge_ge2": 133,
+     "bridge_ge3": 46,
+     "cross_boundary_nodes": 160,
+     "seen_hop0": 0,
+     "seen_hop1": 73,
+     "HopNovelty_2": 0.903,
+     "DBNovelty_2": 0.933
+    },
+    "graph_recall_qgs": {
+     "definition": "missing usable QGS appearing in discovery graph / missing usable QGS",
+     "value": "8/22 = 36.4%",
+     "vs_candidate_retrieval": "Candidate Retrieval 仍 2/22（Round1）——引用图已摸到 8 篇，query 未转译——瓶颈从方向发现转向 evidence→query 转译",
+     "note": "GraphRecall ≠ QGS recovered；recovered 必须新 Query Family 从 Scopus 正式检索回来才算"
+    },
+    "robustness": "36 seeds（preliminary）vs 64 seeds（正式）几乎同构（818 vs 826 neighbors，指标差异 <0.2pp）——hop2 结构对 seed 选择稳健；with_refs 53% 是数据瓶颈",
+    "enrichment": {
+     "tool": "tools/enrich_openalex_works.py（泛化 --input/--output，hop1/hop2/hop3 复用；缓存优先 CACHE_HIT→API_ENRICHED→NOT_FOUND→API_FAILED，失败不删 neighbor）",
+     "result": "818 neighbors：CACHE_HIT 156 + API_ENRICHED 558 + NOT_FOUND 104 + FAILED 0",
+     "MetadataCoverage": "714/818 = 87.3%",
+     "AbstractCoverage": "349/818 = 42.7%",
+     "citation_data_gap": "CITATION_DATA_COVERAGE_GAP：30/64 seed refs 不在 openalex_cache（with_refs 53%）——记录不阻塞，term-community 后决定是否补"
+    },
+    "term_community_hop2": {
+     "params": "与 v1.2 完全相同（phrase filter/min_df/max_df 0.55/NPMI 0/greedy modularity/top-15 novelty/role rules）",
+     "input": "123 篇（bridge≥2 且 enriched title；abstract 58 = 47%）",
+     "stats": "368 phrases / 1476 edges / 88 社区（CANDIDATE 15 + BOUNDARY 6）",
+     "key_observations": {
+      "max_community_still_dental": "TC_001 78 terms/67 papers = dental core（CORE_COMMUNITY）",
+      "historical_measurement_formed": "TC_002 CORE_COMMUNITY 54 papers 聚合 5 篇 graph-visible QGS（True linear shrinkage 1993/flowable 1999/methacrylate esters 1987/dilatometer 1981/microfilled laser 1997）——historical shrinkage measurement 社区雏形",
+      "novel_candidates": "15 CANDIDATE（TC_011 thermal expansion novelty=1.0、TC_020 FTIR novelty=1.0 等测量方法簇）",
+      "slot_gap": "promoter 判 2 个 SLOT_SCHEMA_GAP(method)：TC_004 plasma arc curing(23 篇)、TC_012"
+     },
+     "graph_visible_qgs_in_communities": {
+      "value": "8/8 graph-visible QGS 全部出现在 hop2 term community supporting papers",
+      "TC_002_CORE_5": "W2008527789/W1968790752/W2075818050/W2008672090/W1985310578",
+      "TC_008_BOUNDARY_2": "W2008672090/W2150442057（MAPPABLE PROMOTION_CANDIDATE，retNov=0.9）",
+      "tension": "聚合最多 QGS 的 TC_002 是 CORE_COMMUNITY 被 promoter 拒（设计使然）——'含 QGS 的核心社区'与'可晋升的边界社区'分裂"
+     },
+     "promoter_hop2": "10 PROMOTION_CANDIDATE（8 MAPPABLE + 2 SCHEMA_GAP）；TC_008（10 篇，含 2 QGS，retNov 0.9，MAPPABLE）是 STEP7 query 转译首选"
+    },
+    "next": "STEP7 evidence→query：TC_008（含 QGS + MAPPABLE + retNov 0.9）→ Concept Slot → Query Family → Scopus → 看 8 篇 graph-visible QGS 最终几个进 Candidate DB"
+   },
+   "tc015_precision_failure": {
+    "id": "COMMUNITY_QUERY_PRECISION",
+    "severity": "FAILURE（记录，不修）",
+    "evidence": "TC_015 generic terms filler/particle size/shrinkage 跨域检索：80 new usable 里 11 OFF-TOPIC（土壤/陶瓷/电池/银浆，全 TC_015）+ 2-3 other 可疑；SeedPurity=0.8",
+    "policy": "不回头修 query（破坏 Round1→hop2 实验链）；不加 AND (dental OR resin OR composite) 强 anchor（重造 v1 锁死问题）——结构上 broad retrieval → relevance screening，relevant 才成 discovery seeds"
    }
   },
   {
-   "phase": "v2.2",
-   "name": "Historical Terminology Expansion",
-   "status": "BLOCKED",
-   "scope": "contraction/setting stress/hardening stress 等历史术语体系"
+  "phase": "v3.0",
+  "name": "Completeness Audit MVP（Search-Audit-Miss-Repair 主动学习闭环）",
+  "status": "NEXT",
+  "priority_note": "2026-08-29 用户重排：v3.0 优先于 v2.2——自动猜词没有停止依据，不承担'证明搜全'的职责；随机/概率审计承担'发现还漏多少'，v2.1 discovery 模块承担'修复为什么漏'",
+  "principle": "主搜索系统 A 找到论文；独立审计系统 B（外部 frame：citation neighborhood / review references / OpenAlex 相邻主题 / venue×year strata / 未覆盖池）随机抽样寻找 A 漏掉的 relevant——不能让 A 自己证明 A 没漏",
+  "estimation": "从独立 frame 不放回抽 n，得 m 篇 relevant 且主搜索未找到 -> p_hat=m/n + 单侧置信区间 -> '在这个明确定义的检索宇宙中，以 95% 置信度估计尚未发现的 relevant 比例不超过 X%'（复用 Phase 3 completeness/recall_bound.py 超几何反演）",
+  "components": {
+    "Audit Frame Builder": "复用 Phase 3 build_audit_universe.py（EXTERNAL 外部 universe 冻结）",
+    "Probability Sampler": "复用 completeness/sampler.py（srs 不放回，种子可复现）",
+    "Relevance Judge": "复用 audit.py labels 流程（人工/独立 LLM，AWAITING_LABELS -> INCOMPLETE_LABELS -> COMPLETED）",
+    "Miss Analyzer": "新增：对审计发现的 missed relevant 自动分析（前向/后向引用、title/abstract 特征词、venue/community、历史同义词、与已找到论文的术语差异、为什么原 query 没命中）",
+    "Failure Classifier": "新增：MISS 分类（terminology gap / community gap / historical vocabulary gap / citation bridge gap / query formulation gap / execution-rank gap）",
+    "Search Repair": "调用现有模块映射：terminology gap -> term extraction/historical synonym；community gap -> citation/community expansion；query gap -> evidence-to-query（v2.1.3-2.1.5 全套）；rank gap -> depth adjustment"
   },
+  "loop": "Search -> Audit -> Miss -> Diagnose -> Repair -> Search；每轮记录 MissRate_t（如 8/100 -> 3/100 -> 1/100 -> 0/150）= 搜索趋于完备的量化过程",
+  "mvp_scope": "先打通 Audit->Miss->Diagnose 检测闭环（Miss Analyzer + Failure Classifier 输出 Repair Plan dry-run）；Search Repair 执行在 MVP 之后",
+  "phase_b_status": "DONE (2026-08-29)：主链 = Audit miss -> Miss Expansion Agent -> Repair Search(DRY_RUN)；search_engine/audit/{miss_analyzer, miss_expansion, failure_classifier(辅助解释层), repair_planner}.py + tools/analyze_audit_misses.py（--mode gold/audit/demo）；gold 联调 16 篇：term 16/16、historical 9、query 候选 146 条 DRY_RUN；产物 data/exports/audit_miss_diagnostics.json + audit_repair_plan.json",
+  "phase_a_status": "AUDIT_R01 已创建（2026-08-29）：pc_001::20260829043656，universe_hash=8ffaff83211cfb54，F=25/N_remaining=1547，sample=500（seed=42 SRS 不放回），AWAITING_LABELS；模板 500/500 title（abstract 338、doi 434）；标注三态 RELEVANT/UNCERTAIN/IRRELEVANT（2026-08-29 用户更新：UNCERTAIN 单独报告不混 negative，废止 Phase 3 二值规则）；待独立 Auditor 标注",
+  "phase_c_status": "PENDING：Repair 执行 -> re-search -> 新独立 Audit Round（p_hat_miss + CI_upper 双下降才是趋于完备；miss 用后即开发数据，须新独立样本验证）",
+  "data_gap": "backward/forward citation 覆盖不足（gold 联调 backward 0/16）——已写通用接口 tools/enrich_citation_graph.py（OpenAlex referenced_works/cited_by + 缓存，默认 DRY_RUN）；等真实 audit misses 验证 citation 是否实际瓶颈后再批量投入（backlog，不让 gold 16 篇决定参数）"
+  },
+  {
+  "phase": "v2.2",
+  "name": "Historical Terminology Expansion + v2.1 Postmortem",
+  "status": "BLOCKED",
+  "deferred_note": "2026-08-29 降级：v2.2 不再作为独立优先阶段，而是 v3.0 Search Repair 中 terminology/historical vocabulary gap 的具体修复策略（postmortem 已给出统计依据：E2Q2 主导 = rare terminology 的 evidence support 瓶颈）",
+  "scope": "contraction/setting stress/hardening stress 等历史术语体系；4 篇 NOT_RETRIEVED QGS 归因（1999 flowable / 1987 methacrylate esters / 1998 shrink toward light / 1997 laser speckle）——E2Q1-6 分类，NO PARAMETER CHANGES TO v2.1 / NO RETROACTIVE QUERY MODIFICATION / QGS-GUIDED DIAGNOSTIC ONLY",
+  "postmortem_input": "v2.1-postmortem：4 篇均 bridge>=2 已入 term community，剩余损失在 community->query 语言覆盖（GQ/E2Q 归因待做）"
+ },
   {
    "phase": "v2.3",
    "name": "Review-Reference Community Seeding",

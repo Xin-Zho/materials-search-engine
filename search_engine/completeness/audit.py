@@ -47,7 +47,9 @@ AWAITING_LABELS = "AWAITING_LABELS"
 INCOMPLETE_LABELS = "INCOMPLETE_LABELS"
 COMPLETED = "COMPLETED"
 
-VALID_LABELS = {"RELEVANT", "IRRELEVANT"}   # 统计审计只用二值；UNCERTAIN 不进审计
+VALID_LABELS = {"RELEVANT", "IRRELEVANT", "UNCERTAIN"}
+# 2026-08-29 用户更新（三态）：UNCERTAIN 合法，单独报告/adjudication，
+# 不偷偷算 negative；统计 m（missed relevant）只计 RELEVANT。Phase 3 二值规则废止。
 
 
 def _now() -> str:
@@ -75,10 +77,17 @@ class AuditRecord:
 
     status: str = AWAITING_LABELS
     sampled_paper_ids: list[str] = field(default_factory=list)
+    # R02+ exclusion（用户定 2026-08-29）：R02_sample ∩ R01_sample = ∅——
+    # 参与过 S1 开发的论文不得再进 test set；excluded_papers 记录从抽样池排除的集合
+    excluded_papers: list[str] = field(default_factory=list)
 
-    # 独立 Auditor 标签：{paper_id: "RELEVANT"|"IRRELEVANT"}（全部来自 labels 文件）
+    # 独立 Auditor 标签：{paper_id: "RELEVANT"|"IRRELEVANT"|"UNCERTAIN"}（全部来自 labels 文件）
     labels: dict = field(default_factory=dict)
     m: int | None = None            # 样本中 missed relevant（COMPLETED 后才有）
+    n_relevant: int | None = None   # 样本 RELEVANT 总数（含 agent_seen=true）
+    n_agent_seen: int | None = None # 样本 RELEVANT 中 Search A 已找到（agent_seen=TRUE）
+    n_agent_unknown: int | None = None  # RELEVANT 中 identity 未解析（agent_seen=UNKNOWN，走 identity repair）
+    uncertain_count: int | None = None   # UNCERTAIN 数（单独报告/adjudication，不混 negative）
 
     # 统计结果（只有 COMPLETED 才计算）
     M_upper: int | None = None
@@ -137,7 +146,8 @@ def create_audit(topic_id: str, universe_builder, sample_size: int = 500,
                  seed: int = 42, audits_path: str | None = None,
                  labels_dir: str | None = None,
                  snapshots_path: str | None = None,
-                 manifests_path: str | None = None) -> AuditRecord:
+                 manifests_path: str | None = None,
+                 exclude_papers: set[str] | None = None) -> AuditRecord:
     """创建审计：freeze universe → draw sample → AWAITING_LABELS。
 
     universe_builder() -> dict{paper_ids, found_relevant, kb_version, search_run_ids,
@@ -145,8 +155,12 @@ def create_audit(topic_id: str, universe_builder, sample_size: int = 500,
     （由 AuditUniverseDefinition 的外部宽检索构造）；AGENT_SEEN_POOL → raise
     InvalidAuditUniverse（用户 P1.5 硬要求：Agent 接触过的论文不能自证没漏）。
 
+    exclude_papers（用户定 2026-08-29，R02 硬约束）：抽样前从 remaining pool 排除
+    这些 paper_ids（如 R01 sample——参与过 S1 开发的论文不得再进 R02 test set）。
+    universe 本身不变（外部 frame 全量），只是抽样池排除；N_remaining 记录排除后池大小。
+
     F = len(found_relevant)（已 canonical 去重，由 builder 保证）；
-    N_remaining = |Universe − FoundRelevant|（universe.remaining_pool_size()）。
+    N_remaining = |Universe − FoundRelevant − exclude_papers|（排除后抽样池）。
     """
     uni = universe_builder()
     src_type = uni.get("source_type", EXTERNAL_AUDIT_UNIVERSE)
@@ -165,7 +179,13 @@ def create_audit(topic_id: str, universe_builder, sample_size: int = 500,
     save_snapshot(snap, snapshots_path)
 
     audit_id = f"{topic_id}::{_now()}"
-    manifest = draw_sample(snap.remaining_pool(), sample_size, seed=seed,
+    pool = snap.remaining_pool()
+    if exclude_papers:
+        ex = set(exclude_papers)
+        pool = [p for p in pool if p not in ex]
+    else:
+        ex = set()
+    manifest = draw_sample(pool, sample_size, seed=seed,
                            audit_id=audit_id, universe_id=snap.universe_id,
                            confidence_level=confidence_level)
     save_manifest(manifest, manifests_path)
@@ -174,10 +194,11 @@ def create_audit(topic_id: str, universe_builder, sample_size: int = 500,
         audit_id=audit_id, topic_id=topic_id,
         universe_id=snap.universe_id, universe_hash=snap.universe_hash,
         kb_version=snap.kb_version,
-        F=snap.found_relevant_count(), N_remaining=snap.remaining_pool_size(),
+        F=snap.found_relevant_count(), N_remaining=manifest.remaining_population_size,
         sample_size=manifest.sample_size, seed=manifest.random_seed,
         confidence_level=confidence_level, target_recall=target_recall,
-        status=AWAITING_LABELS, sampled_paper_ids=manifest.sampled_paper_ids)
+        status=AWAITING_LABELS, sampled_paper_ids=manifest.sampled_paper_ids,
+        excluded_papers=sorted(ex))
     save_audit(audit, audits_path)
 
     # 导出标签模板（独立 Auditor 待审）
@@ -190,18 +211,35 @@ def _safe_name(s: str) -> str:
     return s.replace("::", "__").replace(":", "-")
 
 
-def export_labels_template(audit: AuditRecord, labels_dir: str | None = None) -> str:
-    """导出待审样本（独立 Auditor 用）。每篇 {paper_id, label: UNRESOLVED, reviewer, reason}。"""
+def export_labels_template(audit: AuditRecord, labels_dir: str | None = None,
+                           metadata: dict | None = None) -> str:
+    """导出待审样本（独立 Auditor 用）。每篇 {paper_id, title, year, doi,
+    abstract, label: UNRESOLVED, reviewer, reason}。
+
+    metadata（可选）：{paper_id: {title, year, doi, abstract}}——CLI 从
+    openalex_cache 构建，帮助 Auditor 判断；缺失的字段为 None。
+    """
     labels_dir = labels_dir or LABELS_DIR
     os.makedirs(labels_dir, exist_ok=True)
     path = os.path.join(labels_dir, f"{_safe_name(audit.audit_id)}.json")
     payload = {
         "audit_id": audit.audit_id,
         "universe_id": audit.universe_id,
-        "labels": [{"paper_id": pid, "label": "UNRESOLVED",
-                    "reviewer": "", "reason": ""}
-                   for pid in audit.sampled_paper_ids],
+        "label_scheme": "RELEVANT | UNCERTAIN | IRRELEVANT（UNCERTAIN 单独报告/adjudication，不混 negative）",
+        "labels": [],
     }
+    for pid in audit.sampled_paper_ids:
+        meta = (metadata or {}).get(pid, {})
+        payload["labels"].append({
+            "paper_id": pid,
+            "title": meta.get("title") or None,
+            "year": meta.get("year"),
+            "doi": meta.get("doi") or None,
+            "abstract": meta.get("abstract") or None,
+            "label": "UNRESOLVED",
+            "reviewer": "",
+            "reason": "",
+        })
     with open(path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=1)
     return path
@@ -210,9 +248,12 @@ def export_labels_template(audit: AuditRecord, labels_dir: str | None = None) ->
 # ── Step B：加载独立 Auditor 标签 ──
 
 def load_labels(audit: AuditRecord, labels_data: dict,
-                audits_path: str | None = None) -> AuditRecord:
+                audits_path: str | None = None,
+                agent_seen=None) -> AuditRecord:
     """加载 Auditor 标签 → 校验完整性 → COMPLETED / INCOMPLETE_LABELS。
 
+    agent_seen: 可调用对象 pid -> bool（Search A 是否已找到该论文）。传入时
+    m = RELEVANT ∧ ¬agent_seen（v3.0 miss 口径）；None 时 m = RELEVANT 数。
     规则（用户定）：
     - 标签数 < sample_size，或任一 UNRESOLVED / 非法值 → INCOMPLETE_LABELS，
       不计算正式 Recall_LCB（宁可不出数，不要默认当 irrelevant）
@@ -224,11 +265,13 @@ def load_labels(audit: AuditRecord, labels_data: dict,
 
     sampled = set(audit.sampled_paper_ids)
     invalid = [pid for pid, lab in labels.items()
-               if lab not in VALID_LABELS]
+               if lab not in VALID_LABELS and lab != "UNRESOLVED"]
     unresolved = [pid for pid in sampled if labels.get(pid) in (None, "UNRESOLVED")]
     missing = [pid for pid in sampled if pid not in labels]
 
     audit.labels = {pid: labels[pid] for pid in sampled if pid in labels}
+    audit.uncertain_count = sum(1 for lab in audit.labels.values()
+                                if lab == "UNCERTAIN")
 
     if missing or unresolved or invalid:
         audit.status = INCOMPLETE_LABELS
@@ -247,7 +290,36 @@ def load_labels(audit: AuditRecord, labels_data: dict,
         return audit
 
     audit.status = COMPLETED
-    audit.m = sum(1 for lab in audit.labels.values() if lab == "RELEVANT")
+    # m = 样本中 miss 的 relevant（2026-08-29 用户 v3.0 口径修正）：
+    #   miss = RELEVANT ∧ agent_seen=false（Search A 未找到）
+    #   默认（agent_seen=None）保持 Phase 3 原口径：m = RELEVANT 数
+    #   （向后兼容；正式 CLI 传 agent_seen predicate——样本来自 remaining pool，
+    #     只排除了 KB-confirmed，检索过但未确认入库的论文必须从 m 中扣减）
+    n_rel = sum(1 for lab in audit.labels.values() if lab == "RELEVANT")
+    audit.m = n_rel
+    audit.n_relevant = n_rel
+    if agent_seen is not None:
+        # v3.0 三态（2026-08-29 用户定稿）：
+        #   TRUE   = Search A 检索结果已见（DOI 主判，归一化 title 兜底）
+        #   FALSE  = identity 已解析且未检索到 → 高置信 miss（计入 m）
+        #   UNKNOWN= identity 未解析（无 DOI 且 title 不匹配）→ 单独报，不计 miss
+        # 兼容 bool（Phase 3 旧用法：True->TRUE, False->FALSE）
+        n_true = n_false = n_unknown = 0
+        for pid, lab in audit.labels.items():
+            if lab != "RELEVANT":
+                continue
+            v = agent_seen(pid)
+            if v is True or v == "TRUE":
+                n_true += 1
+            elif v is False or v == "FALSE":
+                n_false += 1
+            else:
+                n_unknown += 1
+        audit.n_agent_seen = n_true
+        audit.n_agent_unknown = n_unknown
+        audit.m = n_false
+    # UNCERTAIN 单独报告（用户 2026-08-29）：不阻塞 COMPLETED，不混入 m/negative
+    audit.diagnostic_warnings = []     # COMPLETED 清残留（曾遗留 INCOMPLETE 的 warning）
     _compute_statistics(audit)
     save_audit(audit, audits_path)
     return audit

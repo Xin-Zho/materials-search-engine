@@ -5,9 +5,16 @@ ROUND 1：TC_006 + TC_015（TC_017 = HOLDOUT）。
 执行：每 community 独立，逐 query Scopus search+export（直接路径，参考 run_query_families）
 输出：data/exports/community_round1_retrieval.json（每 query records + 每 community 汇总）
 
+v2.1.5 扩展（2026-08-29）：支持 Round3 depth=500 manifest 格式
+  {round, status, selection_mode, anchor, depth, queries:[{query_id, source_community,
+   expansion_term, query, ...}]} —— 冻结 query 集 + 执行参数一体留痕；
+  depth 优先读 JSON 的 depth 字段，--depth 命令行可覆盖。
+
 用法：
   python tools/run_community_round1.py                 # 全部（depth 默认 500）
   python tools/run_community_round1.py --community TC_006 --depth 1000
+  python tools/run_community_round1.py --queries data/exports/round3_queries_depth500.json \
+      --out data/exports/round3_depth500_retrieval.json
 """
 import argparse
 import asyncio
@@ -47,7 +54,8 @@ async def run_community(engine, community_id: str, queries: list[dict],
                 poll_retries=90)
             if csv_text.strip():
                 break
-            print(f"    ⚠️ {community_id} Q{qi} 导出超时/空（{attempt + 1}/3），5s 后重试...")
+            print(f"    [WARN] {community_id} {q.get('query_id', 'Q' + str(qi))} "
+                  f"导出超时/空（{attempt + 1}/3），5s 后重试...")
             await asyncio.sleep(5)
         records = []
         if csv_text.strip():
@@ -60,10 +68,14 @@ async def run_community(engine, community_id: str, queries: list[dict],
                                     "year": (row.get("Year") or row.get("年份") or "").strip(),
                                     "venue": (row.get("Source title")
                                               or row.get("来源出版物名称") or "").strip()})
-        results.append({"query_id": q["query_id"], "family_id": q["family_id"],
+        results.append({"query_id": q.get("query_id", f"Q{qi}"),
+                        "family_id": q.get("family_id"),
+                        "source_community": q.get("source_community", community_id),
+                        "expansion_term": q.get("expansion_term"),
                         "query": query, "exported_count": len(records),
                         "records": records})
-        print(f"  ✓ [{qi}/{len(queries)}] {query[:62]} → {len(records)} 条")
+        print(f"  [OK] [{qi}/{len(queries)}] {q.get('query_id', 'Q' + str(qi))} "
+              f"{query[:58]} -> {len(records)} 条")
         await asyncio.sleep(1)
     # 每 community 汇总（独立，不合并）
     uniq: dict[str, dict] = {}
@@ -78,27 +90,72 @@ async def run_community(engine, community_id: str, queries: list[dict],
 async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--community", default=None, help="只跑指定 community（默认全部）")
-    ap.add_argument("--depth", type=int, default=500, help="导出深度（默认 500）")
+    ap.add_argument("--depth", type=int, default=None,
+                    help="导出深度（默认 500；None 时读 query JSON 的 depth 字段）")
+    ap.add_argument("--queries", default=QUERIES_PATH,
+                    help="query JSON（兼容三种格式：round1 {communities:{...}}、"
+                         "hop2 round2 {community, queries:[...]}、"
+                         "Round3 manifest {depth, queries:[{query_id, source_community, query}]}）")
+    ap.add_argument("--out", default=OUT_PATH,
+                    help="输出 JSON（默认 community_round1_retrieval.json）")
     args = ap.parse_args()
 
-    data = json.load(open(QUERIES_PATH, encoding="utf-8"))
+    data = json.load(open(args.queries, encoding="utf-8"))
+    depth = args.depth if args.depth is not None else data.get("depth", 500)
     from search_engine.engine import ScopusSearchEngine
     engine = ScopusSearchEngine()
     await engine.start()
-    out = {"version": "round1", "created_at": "2026-08-28", "depth": args.depth,
-           "communities": {}}
     try:
-        for cid, spec in data["communities"].items():
+        if "communities" in data:
+            # round1 格式：{communities: {cid: {community_name, queries}}}
+            out = {"version": "round1", "created_at": "2026-08-28",
+                   "depth": depth, "communities": {}}
+            for cid, spec in data["communities"].items():
+                if args.community and cid != args.community:
+                    continue
+                print(f"\n=== {cid} {spec['community_name']}（depth={depth}）===")
+                result = await run_community(engine, cid, spec["queries"], depth)
+                out["communities"][cid] = result
+                with open(args.out, "w", encoding="utf-8") as f:
+                    json.dump(out, f, ensure_ascii=False, indent=1)
+        elif "queries" in data and data["queries"] and all(
+                isinstance(q, dict) and "query_id" in q for q in data["queries"]):
+            # v2.1.5 Round3 manifest 格式（2026-08-29 冻结留痕）：
+            # {round, status, selection_mode, anchor, depth, queries:[...]}
+            by_comm: dict[str, list[dict]] = {}
+            for q in data["queries"]:
+                by_comm.setdefault(q.get("source_community", "UNKNOWN"), []).append(q)
+            out = {"version": "round3_depth500", "created_at": "2026-08-29",
+                   "round": data.get("round"), "status": data.get("status"),
+                   "selection_mode": data.get("selection_mode"),
+                   "anchor": data.get("anchor"), "depth": depth,
+                   "invariant": data.get("invariant"),
+                   "identity_rule": data.get("identity_rule"),
+                   "selection_rule": data.get("selection_rule"),
+                   "communities": {}}
+            for cid, qs in by_comm.items():
+                if args.community and cid != args.community:
+                    continue
+                print(f"\n=== {cid}（Round3 depth={depth}，{len(qs)} queries）===")
+                result = await run_community(engine, cid, qs, depth)
+                out["communities"][cid] = result
+                with open(args.out, "w", encoding="utf-8") as f:
+                    json.dump(out, f, ensure_ascii=False, indent=1)
+        else:
+            # hop2 round2 格式：{community, queries: [...]}
+            cid = data.get("community", "TC_008")
             if args.community and cid != args.community:
-                continue
-            print(f"\n=== {cid} {spec['community_name']}（depth={args.depth}）===")
-            result = await run_community(engine, cid, spec["queries"], args.depth)
-            out["communities"][cid] = result
-            with open(OUT_PATH, "w", encoding="utf-8") as f:
+                return
+            print(f"\n=== {cid}（hop2 round2, depth={depth}）===")
+            result = await run_community(engine, cid, data["queries"], depth)
+            out = {"version": "hop2_round2", "created_at": "2026-08-28",
+                   "depth": depth, "selection": data.get("selection"),
+                   "communities": {cid: result}}
+            with open(args.out, "w", encoding="utf-8") as f:
                 json.dump(out, f, ensure_ascii=False, indent=1)
     finally:
         await engine.close()
-    print(f"\n✓ 已写: {OUT_PATH}")
+    print(f"\n[OK] 已写: {args.out}")
 
 
 if __name__ == "__main__":

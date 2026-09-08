@@ -128,12 +128,17 @@ class ScopusSearchEngine:
         sort_by: str = "relevance",
         skip_cache: bool = False,
         offset: int = 0,
+        write_cache: bool = True,
     ) -> SearchResult:
         """执行 Scopus 高级搜索，通过 CSV 导出获取结果。
 
         offset：导出起始位置（resultSet.offset）。Phase 3 概率抽样用——Scopus
         export-service 支持 offset，但深 offset（>5000）受 Scopus 结果上限约束，
         需 probe 实验验证（tools/probe_scopus_sampling.py）。
+
+        write_cache：默认 True。检索 depth 实验（B 语义：new-N 翻页）传 False——
+        深 offset 页与 top-N 页共用 query 缓存 key，写缓存会覆盖正确结果并污染
+        后续 pilot QA 的缓存读取（2026-09-01 加）。
         """
         full_query = query
         if year_range:
@@ -190,7 +195,7 @@ class ScopusSearchEngine:
             time_taken=elapsed,
         )
 
-        if result.papers:  # 不缓存空结果
+        if result.papers and write_cache:  # 不缓存空结果；B 语义翻页实验不写缓存（防覆盖 top-N）
             self.cache.set_cached_result(full_query, result)
             self.cache.store_papers(papers[:limit])
         self.cache.log_search(

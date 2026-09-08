@@ -125,11 +125,18 @@ class CitationBridge:
         self.known_wids = known
         print(f"系统已知 W id（candidate/接触过）= {len(known)}")
 
-    # ── 核心：backward 1-hop + bridge 计数 ──
-    def build(self) -> dict:
+    # ── 核心：backward bridge + 计数（v1 与 hop2 通用）──
+    def discover(self, seed_ids: list[str],
+                 parent_map: dict[str, list[str]] | None = None) -> dict:
+        """通用 backward citation bridge：seed_ids 引用过的邻居 + 计数。
+
+        seed_ids      : 任意种子 W-id 列表（v1=40 RELEVANT，hop2=Round1 new usable）
+        parent_map    : {seed_wid: [community_id,...]}——邻居的 parent_communities
+                        维度（同篇被多个 promoted community 指向 = 跨边界结构节点）
+        """
         seed_with_refs = 0
-        neighbor: dict[str, dict] = {}   # neighbor_wid -> {count, citing_seeds}
-        for s in self.seeds:
+        neighbor: dict[str, dict] = {}
+        for s in seed_ids:
             rec = self.works.get(s)
             if not rec or not rec["refs"]:
                 continue
@@ -138,19 +145,33 @@ class CitationBridge:
                 nb = neighbor.setdefault(n, {"count": 0, "citing_seeds": []})
                 nb["count"] += 1
                 nb["citing_seeds"].append(s)
-        # 分类 + 元数据
-        for n, nb in neighbor.items():
+        if parent_map:
+            for n, nb in neighbor.items():
+                pcs = set()
+                for s in nb["citing_seeds"]:
+                    pcs.update(parent_map.get(s, []))
+                nb["parent_communities"] = sorted(pcs)
+        return {"seed_with_refs": seed_with_refs, "neighbors": neighbor}
+
+    def classify_neighbors(self, neighbors: dict, seeds: set[str]) -> None:
+        """给邻居打 class（NEW_NEIGHBOR / ALREADY_RETRIEVED / ALREADY_RELEVANT）。"""
+        for n, nb in neighbors.items():
             w = self.works.get(n, {})
-            nb["title"] = (w.get("title") or "")[:120]
-            nb["year"] = w.get("year")
-            nb["doi"] = w.get("doi") or ""
-            if n in set(self.seeds):
+            nb.setdefault("title", (w.get("title") or "")[:120])
+            nb.setdefault("year", w.get("year"))
+            nb.setdefault("doi", w.get("doi") or "")
+            if n in seeds:
                 nb["class"] = "ALREADY_RELEVANT"
             elif n in self.known_wids:
                 nb["class"] = "ALREADY_RETRIEVED"
             else:
                 nb["class"] = "NEW_NEIGHBOR"
-        return {"seed_with_refs": seed_with_refs, "neighbors": neighbor}
+
+    def build(self) -> dict:
+        """v1 路径：40 RELEVANT seeds → 1-hop backward + 分类。"""
+        result = self.discover(self.seeds)
+        self.classify_neighbors(result["neighbors"], set(self.seeds))
+        return result
 
     # ── 报告 ──
     def report(self, result: dict, top_n: int = 30) -> None:

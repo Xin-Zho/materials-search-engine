@@ -96,6 +96,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--communities", default=COMMUNITIES_PATH)
     ap.add_argument("--show-all", action="store_true", help="打印全部（默认只看非 NOISE）")
+    ap.add_argument("--out", default=OUT_PATH,
+                    help="输出 JSON（默认 community_promotions_v1.json）")
     args = ap.parse_args()
 
     data = json.load(open(args.communities, encoding="utf-8"))
@@ -174,9 +176,9 @@ def main():
                     "promotion_candidates": len(cands)},
         "communities": results,
     }
-    with open(OUT_PATH, "w", encoding="utf-8") as f:
+    with open(args.out, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=1)
-    print(f"\n✓ 已写: {OUT_PATH}")
+    print(f"\n✓ 已写: {args.out}")
 
 
 if __name__ == "__main__":

@@ -126,7 +126,9 @@ def main():
     out = {"version": "round1_usable", "created_at": "2026-08-28",
            "note": "QGS1 为 REGRESSION ONLY，不证明泛化；usable 规则见 audit_research_usability.py",
            "communities": {}}
-    for cid, c in data.get("communities", {}).items():
+
+    def community_stats(cid, c) -> dict:
+        """单 community 指标（含 usable + QGS 首次找回）。"""
         uniq: dict[str, dict] = {}
         venues: Counter = Counter()
         years: list[int] = []
@@ -144,36 +146,81 @@ def main():
         new = rc - old
         mcg = len(new)
         ret_novelty = mcg / len(rc) if rc else 0.0
-        # usable 口径（用户定：真正可研究的新增）
         usable_rc = {e for e in rc if usable_of(uniq[e], meta)}
         usable_new = {e for e in new if usable_of(uniq[e], meta)}
         mcg_usable = len(usable_new)
-        usable_ret_novelty = (mcg_usable / len(usable_rc)
-                              if usable_rc else 0.0)
-        qgs_new = len(rc & bench_eids)                # 本轮命中 QGS（regression）
-        qgs_usable_new = len(rc & qgs_usable)         # 命中且 research-usable 的 QGS
+        usable_ret_novelty = (mcg_usable / len(usable_rc) if usable_rc else 0.0)
+        qgs_hit = len(rc & bench_eids)                # 本轮命中 QGS
+        qgs_usable_hit = len(rc & qgs_usable)         # 命中且 usable 的 QGS
+        # 首次找回：本轮 new（不在 depth run old 里）且 usable 的 QGS
+        qgs_usable_newly = len(new & qgs_usable)
         new_venues = {v for v in venues if v}
         yr_eras = Counter(era_of(y) for y in years)
-        print(f"\n{cid}: retrieved_unique={len(rc)} | new-to-Candidate={mcg} "
-              f"| RetrievalNovelty={ret_novelty*100:.1f}%")
-        print(f"  usable: retrieved={len(usable_rc)} | new_usable(MCG_usable)={mcg_usable} "
-              f"| UsableRetrievalNovelty={usable_ret_novelty*100:.1f}%")
-        print(f"  new venues={len(new_venues)}（top: {', '.join(list(new_venues)[:3]) or '-'}）")
-        print(f"  year eras={dict(yr_eras)} | QGS1 命中={qgs_new} "
-              f"（usable {qgs_usable_new}）（REGRESSION ONLY）")
-        out["communities"][cid] = {
+        stats = {
             "retrieved_unique": len(rc),
             "new_to_candidate_MCG": mcg,
             "retrieval_novelty": round(ret_novelty, 4),
             "retrieved_usable": len(usable_rc),
             "new_usable_MCG": mcg_usable,
             "usable_retrieval_novelty": round(usable_ret_novelty, 4),
+            "qgs1_hit": qgs_hit,
+            "qgs1_usable_hit": qgs_usable_hit,
+            "qgs1_usable_newly_recovered": qgs_usable_newly,
             "new_venues": sorted(new_venues),
             "year_eras": dict(yr_eras),
-            "qgs1_hit": qgs_new,
-            "qgs1_usable_hit": qgs_usable_new,
             "new_paper_eids": sorted(new),
         }
+        return uniq, stats, new, usable_new, qgs_usable_newly
+
+    union_uniq: dict[str, dict] = {}
+    for cid, c in data.get("communities", {}).items():
+        uniq, st, new, usable_new, newly = community_stats(cid, c)
+        union_uniq.update(uniq)   # 合并去重（eid 唯一）
+        print(f"\n{cid}: retrieved_unique={st['retrieved_unique']} "
+              f"| new-to-Candidate={st['new_to_candidate_MCG']} "
+              f"| RetrievalNovelty={st['retrieval_novelty']*100:.1f}%")
+        print(f"  usable: retrieved={st['retrieved_usable']} "
+              f"| new_usable(MCG_usable)={st['new_usable_MCG']} "
+              f"| UsableRetrievalNovelty={st['usable_retrieval_novelty']*100:.1f}%")
+        print(f"  QGS1 hit={st['qgs1_hit']}（usable {st['qgs1_usable_hit']}）"
+              f"| 其中首次找回 usable={newly}（REGRESSION ONLY）")
+        if st["new_venues"]:
+            print(f"  new venues={len(st['new_venues'])}"
+                  f"（top: {', '.join(st['new_venues'][:3])}）")
+        else:
+            print("  new venues=N/A（本轮 retrieval 未含 venue 字段，旧 run 导出限制）")
+        print(f"  year eras={st['year_eras']}")
+        out["communities"][cid] = st
+
+    # ── UNION 视图（用户定：合并后数据库实际扩大多少）──
+    if union_uniq:
+        urc = set(union_uniq.keys())
+        unew = urc - old
+        u_usable_rc = {e for e in urc if usable_of(union_uniq[e], meta)}
+        u_usable_new = {e for e in unew if usable_of(union_uniq[e], meta)}
+        u_newly = len(unew & qgs_usable)
+        u = {
+            "retrieved_unique": len(urc),
+            "new_to_candidate_MCG": len(unew),
+            "retrieval_novelty": round(len(unew) / len(urc), 4) if urc else 0,
+            "retrieved_usable": len(u_usable_rc),
+            "new_usable_MCG": len(u_usable_new),
+            "usable_retrieval_novelty": round(
+                len(u_usable_new) / len(u_usable_rc), 4) if u_usable_rc else 0,
+            "qgs1_usable_hit": len(urc & qgs_usable),
+            "qgs1_usable_newly_recovered": u_newly,
+        }
+        out["union"] = u
+        print(f"\n{'='*80}\nUNION（TC_006 ∪ TC_015）")
+        print(f"  retrieved_unique={u['retrieved_unique']} "
+              f"| new-to-Candidate={u['new_to_candidate_MCG']} "
+              f"| RetrievalNovelty={u['retrieval_novelty']*100:.1f}%")
+        print(f"  usable: retrieved={u['retrieved_usable']} "
+              f"| new_usable(MCG_usable)={u['new_usable_MCG']} "
+              f"| UsableRetrievalNovelty={u['usable_retrieval_novelty']*100:.1f}%")
+        print(f"  QGS usable hit={u['qgs1_usable_hit']} | "
+              f"首次找回 usable={u['qgs1_usable_newly_recovered']}（REGRESSION ONLY）")
+
     with open(OUT_PATH, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=1)
     print(f"\n✓ 已写: {OUT_PATH}")
