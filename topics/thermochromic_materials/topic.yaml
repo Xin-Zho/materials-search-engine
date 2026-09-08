@@ -44,6 +44,11 @@ identity:
 # audit: 本主题暂无 frame（R0x 独立审计 frame 须分主题重建，禁复用 pc_001 FRAME_V2）。
 #   P1-B 产出 candidate/KB 后按 Roadmap v2 #2 流程构建 thermo frame 再审计。
 
+bridge:                        # P1-A2: S6 semantic-bridge 生成配置
+  mode: synthesize            # thermo: 无人工冻结 specs——从 termbank roles 自动合成 candidates
+  cap_obs_per_mech: 4         # 每机制词 observable 组合上限（合成器参数）
+  cap_obs_per_lex: 3
+
 assets:                       # 相对本目录的决策资产（代码经 topic_config 解析）
   rubric: rubric.md           # relevance rubric 全文（THERMOCHROMIC_RUBRIC_V1 frozen 09-08）
   termbank: termbank.json     # TermBank 候选词表（THERMOCHROMIC_TERMBANK_V1 frozen；VERIFIED 待 S6 词源三层）

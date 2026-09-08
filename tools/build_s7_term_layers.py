@@ -1,147 +1,172 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""tools/build_s7_term_layers.py — S7 relation generator v2 三层词源构建
-（2026-09-07 用户终裁：QA v2 schema 冻结；relation generator 转向 v2）。
+"""tools/build_s7_term_layers.py — S7 relation generator v2 三层词源构建（通用版，P1-A2）
 
-问题：S6 后 VERIFIED 40 词的 relation 组合空间与「S6 去重」后几乎耗尽，
-v1 生成的 20 条 → QA v2 判 novelty LOW 18（VALID≠RUN：已知关系、低探索价值）。
-v1 根因 = 输入只有 VERIFIED 词 + S6 已探索组合，LLM 只能在「已有论文关系回声」里打转。
+P1-A2 改造：输入 termbank 从 topic 资产读（schema 归一），gate diagnosis 按主题
+路由——pc001 有 s6_semantic_gate_diagnosis.json（16 词 gate 归因）走完整三层；
+新主题尚无 gate（SEMANTIC 词未过 QA）→ 生成 pending 层（全部词暂标
+R_discovery pending，待 S6 词源三层 + gate 后升级）。禁止主题特判。
 
-用户裁决（2026-09-07 词源边界）：
-  输入分三层，SEMANTIC 不再整体禁入，而是按归因分级 + 检索报告分层：
-  ┌──────────────────────────────────────────────────────────────────────┐
-  │ 层             │ 来源                        │ 归因门        │ recall │
-  │ MAIN           │ VERIFIED_EXACT 40           │ VERIFIED_EXACT│ R_main │
-  │ NORMALIZED     │ SEMANTIC 16 中 gate 归因 ∈  │ 词真实存在于  │ R_main │
-  │                │ {NORMALIZED_FALSE_NEGATIVE, │ corpus/审计宇宙│        │
-  │                │  SOURCE_MISMATCH}           │ (corpus_hit 或│        │
-  │                │  → 条件升级                 │  evidence)    │        │
-  │ DISCOVERY      │ SEMANTIC 16 中 gate 归因 ∈  │ 探索层，不进  │R_discov│
-  │                │ {SEMANTIC_ONLY, CORPUS_ABSENT} 正式 recall │  ery   │
-  └──────────────────────────────────────────────────────────────────────┘
-  门 = 检索/报告分层，不设在生成层：SEMANTIC 词可作 term_B 提议，
-      但 R_main 只算 VERIFIED+VERIFIED_NORMALIZED，R_discovery 单独报。
+三层词源契约（用户 2026-09-07 终裁，不变）：
+  MAIN 层      = VERIFIED_EXACT（正式 recall 词源 R_main）
+  NORMALIZED   = SEMANTIC 中 gate 归因 ∈ {NORMALIZED_FALSE_NEGATIVE, SOURCE_MISMATCH}
+                → 条件升级进 R_main（词真实存在于 corpus/审计宇宙）
+  DISCOVERY    = SEMANTIC 中 gate 归因 ∈ {SEMANTIC_ONLY, CORPUS_ABSENT}
+                → 探索层，R_discovery 单独报告（不污染 R_main）
 
-输入：
-  - s6_term_bank.json（VERIFIED 40 + SEMANTIC 16 原表）
-  - s6_semantic_gate_diagnosis.json（16 词 gate 归因；2026-09-07 归位并修复
-    cure shrinkage 误标 SOURCE_MISMATCH→CORPUS_ABSENT，逐词与 aggregate 一致 3/5/3/5）
-输出：
-  - s7_term_layers.json（三层词源；每词带 term/role/domain/source_status/recall_layer）
-  - 被升级的 8 词带 attribution + corpus_hit 佐证（证据纪律）
 用法：
-  python tools/build_s7_term_layers.py
+  .venv\\Scripts\\python.exe tools/build_s7_term_layers.py --topic <id> [--out PATH]
+输出：
+  legacy(pc001) → data/exports/terminology/s7_term_layers.json（原址，行为等价）
+  新主题        → topics/<id>/runs/term_layers.json
 """
+import argparse
 import json
 import os
+import sys
+from collections import Counter
 from datetime import datetime
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
 T = os.path.join(BASE, "data", "exports", "terminology")
-OUT = os.path.join(T, "s7_term_layers.json")
 
-# 条件升级门：词在 corpus/审计宇宙真实存在，仅 gate 匹配粒度/LLM 引用问题
+from search_engine.termbank import load_termbank  # noqa: E402
+from search_engine.topic_config import (  # noqa: E402
+    DEFAULT_TOPIC, resolve_input, resolve_output,
+)
+
+LEGACY_GATE = os.path.join(T, "s6_semantic_gate_diagnosis.json")
+LEGACY_OUT = os.path.join(T, "s7_term_layers.json")
+
+# 条件升级门 / 探索层（用户 2026-09-07 冻结）
 UPGRADE_ATTRIBUTIONS = {"NORMALIZED_FALSE_NEGATIVE", "SOURCE_MISMATCH"}
-# 探索层：corpus 缺席或纯语义归纳 —— 不进正式 recall，R_discovery 单独报
 DISCOVERY_ATTRIBUTIONS = {"SEMANTIC_ONLY", "CORPUS_ABSENT"}
 
 
-def load(name):
-    return json.load(open(os.path.join(T, name), encoding="utf-8"))
+def build(topic_id: str) -> dict:
+    tb = load_termbank(topic_id)
+    verified = [e for e in tb.entries if e.status == "VERIFIED"]
+    semantic = [e for e in tb.entries if e.status == "SEMANTIC_CANDIDATE"]
+    # 平铺 schema（CANDIDATE verdict）：termbank 尚未词源验证 → pending 层
+    flat_candidates = [e for e in tb.entries if e.status == "CANDIDATE"]
 
+    has_verified = bool(verified)
+    has_gate = False
+    gate_path = resolve_input(topic_id, LEGACY_GATE, "semantic_gate_diagnosis.json")
+    gate = {}
+    if os.path.exists(gate_path):
+        gd = json.load(open(gate_path, encoding="utf-8"))
+        gate = {t["term"]: t for t in gd.get("terms", [])}
+        has_gate = bool(gate)
 
-def build():
-    tb = load("s6_term_bank.json")
-    gd = load("s6_semantic_gate_diagnosis.json")
+    main_terms, norm_terms, disc_terms, pending_terms = [], [], [], []
 
-    verified = tb["terms_verified_exact"]
-    semantic = tb["terms_semantic_candidates"]
-    sem_by_term = {e["term"]: e for e in semantic}
-
-    # gate 诊断逐词归因（已归位修复，与 aggregate 一致）
-    gd_by_term = {t["term"]: t for t in gd["terms"]}
-    assert len(gd_by_term) == len(semantic) == 16, "gate 诊断与 term_bank SEMANTIC 数量不一致"
-
-    main_terms, norm_terms, disc_terms = [], [], []
     for e in verified:
         main_terms.append({
-            "term": e["term"], "role": e["semantic_role"], "domain": e["domain"],
+            "term": e.term, "role": e.role, "domain": e.domain,
             "source_status": "VERIFIED", "recall_layer": "R_main",
-            "evidence_paper_id": e.get("evidence_paper_id"),
+            "evidence_paper_id": e.evidence_paper_id,
         })
 
-    for e in semantic:
-        t = e["term"]
-        g = gd_by_term.get(t)
-        if not g:
-            raise SystemExit(f"[err] gate 诊断缺 {t}")
-        attr = g["attribution"]
-        base = {"term": t, "role": e["semantic_role"], "domain": e["domain"],
-                "evidence_paper_id": e.get("evidence_paper_id"),
-                "corpus_hit": g.get("corpus_hit"),
-                "attribution": attr,
-                "gate_note": g.get("note", "")}
-        if attr in UPGRADE_ATTRIBUTIONS:
-            # 条件升级 → 词真实存在于 corpus/审计宇宙，进 R_main
-            base.update({"source_status": "VERIFIED_NORMALIZED",
-                         "recall_layer": "R_main",
-                         "upgrade_reason": ("gate 归因∈升级门：" + attr +
-                                            "；词真实存在，仅匹配粒度/引用问题")})
-            norm_terms.append(base)
-        elif attr in DISCOVERY_ATTRIBUTIONS:
-            base.update({"source_status": "SEMANTIC_CANDIDATE",
-                         "recall_layer": "R_discovery",
-                         "discovery_note": ("gate 归因∈探索层：" + attr +
-                                            "；不进 R_main，R_discovery 单报")})
-            disc_terms.append(base)
-        else:
-            raise SystemExit(f"[err] 未知 attribution {attr} for {t}")
+    if has_gate:
+        # 完整三层：SEMANTIC × gate 归因（pc001 冻结语义）
+        for e in semantic:
+            g = gate.get(e.term)
+            if not g:
+                raise SystemExit(f"[err] gate 诊断缺 {e.term}（termbank SEMANTIC）")
+            attr = g["attribution"]
+            base = {"term": e.term, "role": e.role, "domain": e.domain,
+                    "evidence_paper_id": e.evidence_paper_id,
+                    "corpus_hit": g.get("corpus_hit"), "attribution": attr,
+                    "gate_note": g.get("note", "")}
+            if attr in UPGRADE_ATTRIBUTIONS:
+                base.update({"source_status": "VERIFIED_NORMALIZED",
+                             "recall_layer": "R_main",
+                             "upgrade_reason": ("gate 归因∈升级门：" + attr +
+                                                "；词真实存在，仅匹配粒度/引用问题")})
+                norm_terms.append(base)
+            elif attr in DISCOVERY_ATTRIBUTIONS:
+                base.update({"source_status": "SEMANTIC_CANDIDATE",
+                             "recall_layer": "R_discovery",
+                             "discovery_note": ("gate 归因∈探索层：" + attr +
+                                                "；不进 R_main，R_discovery 单报")})
+                disc_terms.append(base)
+            else:
+                raise SystemExit(f"[err] 未知 attribution {attr} for {e.term}")
+    elif semantic:
+        # 有 SEMANTIC 词但无 gate：pending（不臆断归因）
+        for e in semantic:
+            disc_terms.append({
+                "term": e.term, "role": e.role, "domain": e.domain,
+                "evidence_paper_id": e.evidence_paper_id,
+                "source_status": "SEMANTIC_CANDIDATE",
+                "recall_layer": "R_discovery",
+                "pending": "gate diagnosis 缺失——归因待 S6 gate QA 后重算",
+            })
 
-    # 分层统计（须与 gate aggregate 一致）
-    from collections import Counter
-    dist = Counter(gd_by_term[t]["attribution"] for t in gd_by_term)
+    # 平铺 CANDIDATE schema（thermo 现状：全词待词源三层验证）
+    for e in flat_candidates:
+        pending_terms.append({
+            "term": e.term, "role": e.role, "domain": e.domain,
+            "source_status": "CANDIDATE",
+            "recall_layer": "R_discovery",
+            "pending": "VERIFIED 词源三层验证未跑（S6）；暂不进入 R_main",
+        })
+
+    dist = Counter(g["attribution"] for g in gate.values()) if gate else Counter()
     counts = {
-        "verified": len(main_terms),          # 40
-        "normalized": len(norm_terms),        # 8 = NORMALIZED_FN 3 + SOURCE_MISMATCH 5
-        "discovery": len(disc_terms),         # 8 = SEMANTIC_ONLY 3 + CORPUS_ABSENT 5
-        "gate_distribution": dict(dist),      # {NORMALIZED_FN:3, SOURCE_MISMATCH:5, SEMANTIC_ONLY:3, CORPUS_ABSENT:5}
-        "r_main_vocab": len(main_terms) + len(norm_terms),   # 48（正式 recall 词源）
+        "verified": len(main_terms),
+        "normalized": len(norm_terms),
+        "discovery": len(disc_terms),
+        "gate_distribution": dict(dist),   # 旧 schema 兼容（无 gate 主题为空）
+        "pending_candidate": len(pending_terms),
+        "r_main_vocab": len(main_terms) + len(norm_terms),
+        "gate_present": has_gate,
+        "schema": tb.schema,
     }
-    assert counts["verified"] == 40 and counts["normalized"] == 8 and counts["discovery"] == 8
-    assert counts["gate_distribution"]["NORMALIZED_FALSE_NEGATIVE"] == 3
-    assert counts["gate_distribution"]["SOURCE_MISMATCH"] == 5
-    assert counts["gate_distribution"]["SEMANTIC_ONLY"] == 3
-    assert counts["gate_distribution"]["CORPUS_ABSENT"] == 5
+    if has_verified and has_gate:
+        # pc001 冻结契约（防静默漂移）
+        assert counts["verified"] == 40 and counts["normalized"] == 8 and counts["discovery"] == 8, counts
 
-    out = {
+    layers = {"R_main_verified": main_terms,
+              "R_main_normalized": norm_terms,
+              "R_discovery": disc_terms}
+    if pending_terms:
+        layers["R_pending_candidate"] = pending_terms
+
+    return {
         "version": "s7_term_layers_v1",
+        "topic_id": topic_id,
         "created_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-        "status": "FROZEN_INPUT_FOR_S7_V2",
+        "status": ("FROZEN_INPUT_FOR_S7_V2" if (has_verified and has_gate)
+                   else "PENDING_VERIFICATION"),
         "contract": (
-            "正式 recall（R_main）词源 = VERIFIED ∪ VERIFIED_NORMALIZED(48)；"
-            "Discovery（R_discovery）= SEMANTIC_CANDIDATE(8) 单独报告；"
-            "SEMANTIC 词不污染 R_main 统计"),
+            "正式 recall（R_main）词源 = VERIFIED ∪ VERIFIED_NORMALIZED；"
+            "Discovery（R_discovery）单独报告；CANDIDATE 待 S6 词源三层后升级"),
         "counts": counts,
-        "layers": {
-            "R_main_verified": main_terms,
-            "R_main_normalized": norm_terms,
-            "R_discovery": disc_terms,
-        },
+        "layers": layers,
     }
-    with open(OUT, "w", encoding="utf-8") as f:
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--topic", default=None)
+    ap.add_argument("--out", default=None)
+    args = ap.parse_args()
+    topic = args.topic or DEFAULT_TOPIC
+
+    out = build(topic)
+    out_path = args.out or resolve_output(topic, LEGACY_OUT, "term_layers.json")
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=1)
-    print(f"[ok] {OUT}")
-    print(f"  R_main: VERIFIED {counts['verified']} + NORMALIZED {counts['normalized']}"
-          f" = {counts['r_main_vocab']} 词")
-    print(f"  R_discovery: {counts['discovery']} 词（探索层单报）")
-    print("  升级 8 词（VERIFIED_NORMALIZED，进 R_main）:")
-    for t in norm_terms:
-        print(f"    {t['term']:32s} {t['role']:10s} {t['domain']:8s} "
-              f"{t['attribution']:26s} corpus_hit={t.get('corpus_hit')}")
-    print("  Discovery 8 词（SEMANTIC_CANDIDATE，R_discovery）:")
-    for t in disc_terms:
-        print(f"    {t['term']:32s} {t['role']:10s} {t['domain']:8s} {t['attribution']}")
+    c = out["counts"]
+    print(f"[ok] {out_path}")
+    print(f"  topic={topic} schema={c['schema']} gate={c['gate_present']} "
+          f"R_main(V+N)={c['r_main_vocab']} discovery={c['discovery']} "
+          f"pending={c['pending_candidate']}")
 
 
 if __name__ == "__main__":
-    build()
+    main()

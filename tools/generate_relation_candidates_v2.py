@@ -48,7 +48,12 @@ sys.path.insert(0, BASE)
 sys.path.insert(0, os.path.join(BASE, "tools"))
 sys.path.insert(0, os.path.join(BASE, "search_engine"))
 
-from build_s6_bridge_queries import ROLE_CORRECTION  # noqa: E402  role 修正（冻结）
+# P1-A2: 冻结常量改从 pc001 topic 决策资产读（完整 --topic 化列入 P1-B 前置）。
+import json as _json
+_BSPEC = _json.load(open(os.path.join(
+    BASE, "topics", "photopolymerization_shrinkage", "bridge_spec.json"),
+    encoding="utf-8"))
+ROLE_CORRECTION = _BSPEC.get("role_correction") or {}  # noqa: E402  role 修正（冻结）
 
 DEFAULT_OUT = os.path.join(T, "s7_relation_candidates_v2.json")
 

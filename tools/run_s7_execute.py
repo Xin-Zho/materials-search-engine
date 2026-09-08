@@ -53,22 +53,6 @@ DEFAULT_Q_REC = os.path.join(T, "s7_execute_query_records.json")
 DEFAULT_DELTA = os.path.join(T, "s7_execute_delta.json")
 DEFAULT_DEPTH = 1000
 
-# 冻结 query 常量（复制自 build_s6_bridge_queries.py——S6 freeze 已 sha256 锚定，
-# 此处 literal 复制防 import 循环；若 S6 变更须同步）
-PROCESS_CLAUSE = '(curing OR polymeriz* OR photocuring OR photopolymeriz*)'
-CTX = {
-    "dental": '(dental OR dentistry OR restorative)',
-    "optics": '(optical OR holograph* OR lithograph* OR photoresist OR "data storage")',
-    "3dp":    '("3d print*" OR "additive manufacturing" OR stereolithograph* OR sla)',
-    "sla":    '("3d print*" OR "additive manufacturing" OR stereolithograph* OR sla)',
-    "coatings": '(coating* OR "thin film" OR varnish)',
-    "packaging": '(encapsulant* OR "molding compound" OR packaging OR semiconductor)',
-    "composites": '(composite* OR resin-matrix OR fiber-reinforced)',
-    "general": None,
-}
-# process 词面（判定左锚是否 process 类；去星号比较——polymeriz* 匹配 polymeriz）
-PROCESS_WORDS = {"curing", "polymeriz", "photocuring", "photopolymeriz"}
-
 
 def q(s):
     return f'"{s}"'
@@ -78,10 +62,11 @@ def group_or(items):
     return "(" + " OR ".join(q(x) for x in items) + ")"
 
 
-def compile_query(dom, b_concept, a_concepts, need_process_bridge=False):
+def compile_query(dom, b_concept, a_concepts, need_process_bridge, *,
+                  dc, process_clause, process_words):
     """11 组 RUN → Scopus Boolean。
     left: A 锚 OR 组（process 词展开为冻结模板；其余词面加引号）。
-    规则：若 A 锚含任意 process 词 → left 用 PROCESS_CLAUSE（模板优先），其余
+    规则：若 A 锚含任意 process 词 → left 用 process_clause（模板优先），其余
     mechanism/observable 锚词面 OR 追加（防 process-only 漏 delayed gel point 等）。
     否则全部 A 锚词面 group_or。
     need_process_bridge=True（组内含 observable_transfer_with_process relation）→
@@ -89,18 +74,20 @@ def compile_query(dom, b_concept, a_concepts, need_process_bridge=False):
     迁移必须带 process 第三约束）。
     process 通配词（polymeriz*/photopolymeriz*）必须保留星号（Scopus 通配）——
     rstrip("*") 只用于配对比较，不用于 query 词面。
-    B 端词组（concept_B 多词）→ 加引号词面。domain CTX 存在则 AND。"""
-    # 归一：词尾通配归一，保留星号用于 query；去星号仅用于 process 判定
+    B 端词组（concept_B 多词）→ 加引号词面。domain CTX 存在则 AND。
+    P1-A2: dc/process_clause/process_words 来自 topic bridge 资产（s6_bridge），
+    模块内不再持有任何主题业务常量。"""
     def norm_a(x):
         x = x.strip().lower()
         return x  # 保留原样（含 *）
     a_norm = [norm_a(a) for a in a_concepts]
+    pw = {p.rstrip("*") for p in (process_words or [])}
     a_dewild = {a.rstrip("*") for a in a_norm}   # 仅判定用
-    has_process = bool(a_dewild & PROCESS_WORDS)
+    has_process = bool(a_dewild & pw)
     if has_process:
         # process 锚存在 → 冻结模板；其余机制/observable 锚（词面原文）OR 追加
-        others = [a for a in a_norm if a.rstrip("*") not in PROCESS_WORDS]
-        left = PROCESS_CLAUSE
+        others = [a for a in a_norm if a.rstrip("*") not in pw]
+        left = process_clause
         if others:
             left = "(" + left + " OR " + " OR ".join(q(x) for x in others) + ")"
     else:
@@ -108,9 +95,8 @@ def compile_query(dom, b_concept, a_concepts, need_process_bridge=False):
     parts = [left, q(b_concept)]
     if need_process_bridge and not has_process:
         # observable_transfer 第三约束：A/B 皆 observable，须 process 桥
-        # （不能只靠 A 锚——组内若全是 observable A 锚，无 process 则桥缺失）
-        parts.append(PROCESS_CLAUSE)
-    ctx = CTX.get(dom)
+        parts.append(process_clause)
+    ctx = dc.get(dom)
     if ctx:
         parts.append(ctx)
     return "TITLE-ABS-KEY(" + " AND ".join(parts) + ")"
@@ -123,7 +109,12 @@ def build_groups(memory_path: str):
     (domain,B) 组级——EX 执行后同 (domain,B) 的新 A 锚 RUN 不再聚合（重复扫零增益）。
     只取：decision==RUN ∧ 未 searched ∧ 非 ABANDONED ∧ (domain,B) 不在已执行 EX 组。
     group_id 从已执行 EX 最大编号续排（防与 EX-01~11 冲突）。"""
-    mem = json.load(open(memory_path, encoding="utf-8"))
+    try:
+        mem = json.load(open(memory_path, encoding="utf-8"))
+    except FileNotFoundError:
+        print(f"[empty] relation memory 不存在（{memory_path}）——"
+              f"该主题 S7 planner 输入尚未生成；无 RUN 可执行。")
+        return []
     # 已执行/处置的 (domain, B) 组合
     executed = set()
     ex_ids = []
@@ -206,6 +197,16 @@ def main():
     if not args.delta:
         args.delta = resolve_output(args.topic, DEFAULT_DELTA, "execute_delta.json")
 
+    # ── P1-A2: domain context / process 模板来自 topic bridge 资产（禁模块常量）──
+    # （无 process 锚主题：资产内 process_clause=None；compile 仅在组含 process
+    #   语义时才引用——thermo 无 process 词，dry-run 不触碰该分支）
+    from search_engine.s6_bridge import (  # noqa: E402
+        domain_context, process_clause as _pc, process_words as _pw,
+    )
+    dc = domain_context(args.topic)
+    pclause = _pc(args.topic)
+    pwords = _pw(args.topic)
+
     # ── --live 门禁（P0-2 默认 dry-run；真实 Scopus 检索须显式 --live）──
     if not args.plan_only and not args.live and not args.from_cache:
         raise SystemExit("[dry-run] 真实 Scopus 检索被禁止：传 --live 执行，"
@@ -227,7 +228,9 @@ def main():
     for g in groups:
         g["query_string"] = compile_query(g["domain"], g["concept_B"],
                                           g["a_anchors"],
-                                          g["need_process_bridge"])
+                                          g["need_process_bridge"],
+                                          dc=dc, process_clause=pclause,
+                                          process_words=pwords)
         g["type"] = "scopus_query"
         g["round"] = "S7_EXECUTE"
 

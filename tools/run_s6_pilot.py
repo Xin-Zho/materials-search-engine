@@ -63,9 +63,13 @@ def main():
     ap = argparse.ArgumentParser(description="S6 pilot retrieval（17 semantic bridge actions, development）")
     ap.add_argument("--topic", default=None,
                     help="topic_id（默认 v1.0 legacy 主题；输出自动路由 topics/<id>/runs/）")
-    ap.add_argument("--config", default=CONFIG)
-    ap.add_argument("--s5-seen", default=S5_SEEN)
-    ap.add_argument("--manifest", default=MANIFEST)
+    ap.add_argument("--config", default=None,
+                    help="bridge actions 文件。默认按 topic 路由：pc001 legacy → exports "
+                         "s6_bridge_queries.json；新主题 → runs/bridge_queries.json")
+    ap.add_argument("--s5-seen", default=None,
+                    help="前置 seen。默认路由：pc001 → exports s5_seen_set.json；新主题 → runs/seen_set.json")
+    ap.add_argument("--manifest", default=None,
+                    help="freeze manifest（仅 pc001 存在；新主题无 manifest 跳过 sha 校验）")
     ap.add_argument("--depth", type=int, default=DEFAULT_DEPTH)
     ap.add_argument("--query-records", default=None,
                     help="默认: pc001 legacy → data/exports/terminology/s6_pilot_query_records.json；"
@@ -90,6 +94,12 @@ def main():
     # ── P0-2: 主题命名空间（输出默认落点随 topic；pc001 legacy → v1.0 冻结原址）──
     if not args.topic:
         args.topic = DEFAULT_TOPIC
+    if not args.config:
+        args.config = resolve_input(args.topic, CONFIG, "bridge_queries.json")
+    if not args.s5_seen:
+        args.s5_seen = resolve_input(args.topic, S5_SEEN, "seen_set.json")
+    if not args.manifest:
+        args.manifest = resolve_input(args.topic, MANIFEST, "freeze_manifest.json")
     if not args.query_records:
         args.query_records = resolve_output(args.topic, DEFAULT_Q_REC,
                                             "pilot_query_records.json")
@@ -104,28 +114,46 @@ def main():
         raise SystemExit("[dry-run] 真实 Scopus 检索被禁止：传 --live 执行，"
                          "--plan-only 预览，或 --from-cache 缓存重放")
 
-    # ── 冻结校验 ──
+    # ── 冻结校验（P1-A2: manifest 存在才做 sha 校验；新主题按 config 动态断言）──
     cfg = json.load(open(args.config, encoding="utf-8"))
     q_acts = cfg["actions"]
-    assert len(q_acts) == Q_EXPECTED, f"actions != {Q_EXPECTED}"
-    assert cfg["family_counts"] == {"A": 8, "B": 2, "C": 5, "D": 2}, "family 分布漂移"
-    assert cfg["anchor_free_actions"] == 12, "anchor-free 数漂移"
-    # manifest 防篡改：本 config 文件 sha256 必须 == freeze manifest 记录
-    mf = json.load(open(args.manifest, encoding="utf-8"))
-    assert mf["manifest_version"] == MANIFEST_VERSION
-    rec = next(f for f in mf["files"] if f["path"].endswith("s6_bridge_queries.json"))
-    assert sha256_file(args.config) == rec["sha256"], \
-        f"[篡改] s6_bridge_queries.json hash 失配 freeze manifest（{rec['sha256'][:12]}...）"
+    if args.manifest and os.path.exists(args.manifest):
+        # pc001 legacy：严格冻结护栏（17/分布/sha）
+        assert len(q_acts) == Q_EXPECTED, f"actions != {Q_EXPECTED}"
+        assert cfg["family_counts"] == {"A": 8, "B": 2, "C": 5, "D": 2}, "family 分布漂移"
+        assert cfg["anchor_free_actions"] == 12, "anchor-free 数漂移"
+        mf = json.load(open(args.manifest, encoding="utf-8"))
+        assert mf["manifest_version"] == MANIFEST_VERSION
+        rec = next(f for f in mf["files"] if f["path"].endswith("s6_bridge_queries.json"))
+        assert sha256_file(args.config) == rec["sha256"], \
+            f"[篡改] s6_bridge_queries.json hash 失配 freeze manifest（{rec['sha256'][:12]}...）"
+    else:
+        # 新主题（无冻结 manifest）：config 自洽断言（不绑 pc001 数值）
+        assert len(q_acts) > 0, "bridge actions 为空"
+        print(f"[warn] 无 freeze manifest（新主题），跳过 sha 冻结校验")
     ch = sha256_file(args.config)
 
-    s5_keys = set(json.load(open(args.s5_seen, encoding="utf-8"))["keys"])
-    assert len(s5_keys) == S5_EXPECTED, \
-        f"S5 seen != {S5_EXPECTED}（实测 {len(s5_keys)}——必须 canonical 20417）"
+    if os.path.exists(args.s5_seen):
+        s5_keys = set(json.load(open(args.s5_seen, encoding="utf-8"))["keys"])
+        if args.manifest and os.path.exists(args.manifest):
+            assert len(s5_keys) == S5_EXPECTED, \
+                f"S5 seen != {S5_EXPECTED}（实测 {len(s5_keys)}——必须 canonical 20417）"
+        else:
+            print(f"[warn] 无 legacy manifest——seen {len(s5_keys)} 不绑 pc001 期望值")
+    elif args.plan_only:
+        s5_keys = set()
+        print(f"[warn] seen 缺失（{args.s5_seen}）——plan-only 以空 seen 预览；"
+              f"正式跑前需先生成该主题 seen（S1-S5 检索链）")
+    else:
+        raise SystemExit(f"[err] 前置 seen 缺失 {args.s5_seen}——"
+                         f"需先跑该主题 S1-S5 检索链生成 seen_set.json")
 
     print("=" * 78)
     print("S6 pilot retrieval（DEVELOPMENT，非正式 snapshot）")
     print("=" * 78)
-    print(f"S6 actions         = {len(q_acts)}（A8/B2/C5/D2；anchor_free {cfg['anchor_free_actions']}；"
+    fam = cfg.get("family_counts") or {}
+    fam_txt = "".join(f"{k}{v}" for k, v in sorted(fam.items())) or "?"
+    print(f"S6 actions         = {len(q_acts)}（{fam_txt}；anchor_free {cfg['anchor_free_actions']}；"
           f"exploratory {cfg['exploratory_actions']}）")
     print(f"pilot depth        = {args.depth}")
     print(f"base S5 seen       = {len(s5_keys)}（canonical）")

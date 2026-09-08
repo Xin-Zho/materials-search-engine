@@ -39,10 +39,15 @@ audit:                          # R06 冻结 frame（audit 分主题独立——
   output_prefix: pc_001                          # sample 文件名/audit_id 前缀
   label_scheme_note: R06 LABEL_SCHEME（REL/IRR/NONCURE/UNC）见 tools/build_r06_sample.py，主题决策资产
 
+bridge:                        # P1-A2: S6 semantic-bridge 生成配置（冻结 specs 资产化后唯一源）
+  mode: frozen_asset           # pc001: 人工冻结 specs 决策资产（S6_BRIDGE_SPEC_V1，17 actions 可复现）
+  asset: bridge_spec.json      # 编译器逐字段复现 data/exports/terminology/s6_bridge_queries.json
+
 assets:                       # 相对本目录的决策资产（代码经 topic_config 解析）
   rubric: rubric.md           # relevance rubric 全文
   termbank: termbank.json     # S6 TermBank 冻结 40 VERIFIED + 16 SEMANTIC（verbatim）
   seeds: seeds.json           # 63 篇 seed corpus（preS8 KB-only）
+  bridge_spec: bridge_spec.json  # S6 bridge 冻结 specs/常量（P1-A2 数据化）
   runs_dir: runs/
 
 legacy_v1:

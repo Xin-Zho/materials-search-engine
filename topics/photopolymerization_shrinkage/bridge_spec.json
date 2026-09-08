@@ -1,0 +1,284 @@
+{
+ "topic_id": "photopolymerization_shrinkage",
+ "version": "S6_BRIDGE_SPEC_V1",
+ "mode": "frozen",
+ "frozen_ref": "tools/build_s6_bridge_queries.py + tools/run_s7_execute.py 冻结常量与 specs verbatim 数据化（2026-09-04~09-07 用户拍板）",
+ "frozen_at": "2026-09-04",
+ "process_clause": "(curing OR polymeriz* OR photocuring OR photopolymeriz*)",
+ "process_words": [
+  "curing",
+  "polymeriz",
+  "photocuring",
+  "photopolymeriz"
+ ],
+ "shrink_lex_clause": "(\"polymerization shrinkage\" OR \"polymerization contraction\" OR \"volume contraction\" OR shrinkage)",
+ "domain_context": {
+  "dental": "(dental OR dentistry OR restorative)",
+  "optics": "(optical OR holograph* OR lithograph* OR photoresist OR \"data storage\")",
+  "3dp": "(\"3d print*\" OR \"additive manufacturing\" OR stereolithograph* OR sla)",
+  "sla": "(\"3d print*\" OR \"additive manufacturing\" OR stereolithograph* OR sla)",
+  "coatings": "(coating* OR \"thin film\" OR varnish)",
+  "packaging": "(encapsulant* OR \"molding compound\" OR packaging OR semiconductor)",
+  "composites": "(composite* OR resin-matrix OR fiber-reinforced)",
+  "general": null
+ },
+ "context_source": "S5_FROZEN_LAYER_RULES_APPLICATION",
+ "role_correction": {
+  "fabrication error": "observable",
+  "volume holographic recording": "context",
+  "holographic recording characteristics": "context",
+  "recording media": "context",
+  "data storage capacity": "context"
+ },
+ "query_form_map": {
+  "two-color photopolymerization chemistries": "two-color photopolymerization"
+ },
+ "observable_free": {
+  "cusp deflection": "dental",
+  "enamel crack propagation": "dental",
+  "marginal leakage": "dental",
+  "marginal discoloration": "dental",
+  "internal gap": "dental",
+  "void formation": "dental",
+  "fabrication error": "optics",
+  "structural deformation": "general",
+  "softening effect": "general",
+  "printability": "sla"
+ },
+ "mechanism_free": [
+  "stress relaxation",
+  "modulus development",
+  "curing kinetics",
+  "delayed gel point",
+  "addition-fragmentation chain transfer",
+  "spatial and temporal control"
+ ],
+ "observable_anchored": [
+  "low shrinkage stress",
+  "reduced shrinkage",
+  "film shrinkage"
+ ],
+ "specs": [
+  {
+   "family": "A",
+   "domain": "dental",
+   "strategy": "process_to_observable",
+   "left": "process",
+   "obs": [
+    "cusp deflection",
+    "enamel crack propagation"
+   ],
+   "ctx": "dental",
+   "note": "力学/形变后果，anchor-free",
+   "exploratory": false
+  },
+  {
+   "family": "A",
+   "domain": "dental",
+   "strategy": "process_to_observable",
+   "left": "process",
+   "obs": [
+    "marginal leakage",
+    "marginal discoloration"
+   ],
+   "ctx": "dental",
+   "note": "界面/临床后果，anchor-free",
+   "exploratory": false
+  },
+  {
+   "family": "A",
+   "domain": "dental",
+   "strategy": "process_to_observable",
+   "left": "process",
+   "obs": [
+    "internal gap"
+   ],
+   "ctx": "dental",
+   "note": "结构缝隙，anchor-free",
+   "exploratory": false
+  },
+  {
+   "family": "A",
+   "domain": "dental",
+   "strategy": "process_to_observable",
+   "left": "process",
+   "obs": [
+    "void formation"
+   ],
+   "ctx": "dental",
+   "note": "孔隙/缺陷，anchor-free",
+   "exploratory": false
+  },
+  {
+   "family": "A",
+   "domain": "optics",
+   "strategy": "process_to_observable",
+   "left": "process",
+   "obs": [
+    "fabrication error"
+   ],
+   "ctx": "optics",
+   "note": "强 bridge；光学制造误差（holography 语境），anchor-free",
+   "exploratory": false
+  },
+  {
+   "family": "A",
+   "domain": "general",
+   "strategy": "process_to_observable",
+   "left": "process",
+   "obs": [
+    "structural deformation"
+   ],
+   "ctx": null,
+   "note": "源自 dental 理论论文 observable，anchor-free",
+   "exploratory": false
+  },
+  {
+   "family": "A",
+   "domain": "general",
+   "strategy": "process_to_observable",
+   "left": "process",
+   "obs": [
+    "softening effect"
+   ],
+   "ctx": null,
+   "note": "低置信 exploratory（用户 22:58：与 printability 同列 exploratory 观察）",
+   "exploratory": true
+  },
+  {
+   "family": "A",
+   "domain": "sla",
+   "strategy": "process_to_observable",
+   "left": "process",
+   "obs": [
+    "printability"
+   ],
+   "ctx": null,
+   "note": "exploratory（用户点名）；可能太宽，yield 低不代表 A family 失败",
+   "exploratory": true
+  },
+  {
+   "family": "B",
+   "domain": "dental",
+   "strategy": "shrink_lex_to_observable",
+   "left": "shrink_lex",
+   "obs": [
+    "cusp deflection",
+    "marginal leakage",
+    "internal gap"
+   ],
+   "ctx": "dental",
+   "note": "对照 A_dental 1-3：右侧同族、左侧 shrinkage-anchor"
+  },
+  {
+   "family": "B",
+   "domain": "optics",
+   "strategy": "shrink_lex_to_observable",
+   "left": "shrink_lex",
+   "obs": [
+    "fabrication error"
+   ],
+   "ctx": "optics",
+   "note": "对照 A_optics：fabrication error 同右锚、左侧 shrinkage-anchor"
+  },
+  {
+   "family": "C",
+   "domain": "general",
+   "strategy": "mechanism_to_observable",
+   "mech": [
+    "stress relaxation"
+   ],
+   "obs": [
+    "structural deformation",
+    "cusp deflection"
+   ],
+   "add_process": true,
+   "note": "机制↔可观察（用户 C1 重写版，relaxation 单用已砍-过宽）"
+  },
+  {
+   "family": "C",
+   "domain": "general",
+   "strategy": "mechanism_to_outcome_shrink",
+   "mech": [
+    "modulus development",
+    "delayed gel point"
+   ],
+   "obs": [
+    "internal gap",
+    "low shrinkage stress",
+    "reduced shrinkage"
+   ],
+   "add_process": true,
+   "note": "模量发展/凝胶点延迟 与 收缩-应力理论后果（dental theory 论文语言）"
+  },
+  {
+   "family": "C",
+   "domain": "packaging",
+   "strategy": "mechanism_to_outcome_shrink",
+   "mech": [
+    "addition-fragmentation chain transfer"
+   ],
+   "obs": [
+    "low shrinkage stress"
+   ],
+   "add_process": false,
+   "note": "AFCT 应力松弛机制 → 低收缩应力（W2127319543 原文语境）"
+  },
+  {
+   "family": "C",
+   "domain": "dental",
+   "strategy": "mechanism_to_outcome_shrink",
+   "mech": [
+    "spatial and temporal control",
+    "two-color photopolymerization chemistries"
+   ],
+   "obs": [
+    "low shrinkage stress"
+   ],
+   "add_process": false,
+   "note": "双色/时空控制光化学 → 低收缩应力体系（W4289022570 thiol-ene）"
+  },
+  {
+   "family": "C",
+   "domain": "general",
+   "strategy": "mechanism_to_outcome_shrink",
+   "mech": [
+    "curing kinetics"
+   ],
+   "obs": [
+    "void formation"
+   ],
+   "add_process": false,
+   "note": "固化动力学 → 孔隙/缺陷 后果（低置信；curing kinetics 已含 curing 词根，不加 process 锚防冗余）"
+  },
+  {
+   "family": "D",
+   "domain": "optics_to_3dp",
+   "strategy": "observable_transfer",
+   "left": "ctx:3dp",
+   "obs": [
+    "fabrication error"
+   ],
+   "ctx": null,
+   "note": "optics 证据词 fabrication error → SLA/3DP 制造域（核心 transfer 假设）"
+  },
+  {
+   "family": "D",
+   "domain": "general_to_3dp",
+   "strategy": "observable_transfer",
+   "left": "ctx:3dp",
+   "obs": [
+    "structural deformation"
+   ],
+   "ctx": null,
+   "note": "general 词 → 制造域；low-confidence exploratory（用户 22:58 点名标 exploratory）",
+   "exploratory": true
+  }
+ ],
+ "source_labels": {
+  "process": "S6_PROCESS_TEMPLATE_2026-09-01",
+  "shrink_lex": "S5_FROZEN_SHRINK_LEX",
+  "context": "S5_FROZEN_LAYER_RULES_APPLICATION"
+ },
+ "term_source_label": "S6_TERM_BANK_VERIFIED_EXACT"
+}
