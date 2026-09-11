@@ -183,7 +183,8 @@ CREATE TABLE identity_conflicts (       -- 补充 3
 | 阶段 | 内容 | 风险 | 验收 |
 |---|---|---|---|
 | **P0-A** | 建 `paper_identifiers` + `identity_conflicts`；从 papers 三列**回填**；产出冲突诊断报告（25 W-only / 58 双身份 / 3 组重复 / 7 W-only 无 doi 明细） | **零**（纯新增表，不改现有读路径） | 回填后 uid↔product 映射 1:1；冲突清单人工可核；现有 pytest 全绿 |
-| **P0-B** | `screening_decisions` + `retrieval_events`；pilot/QA 写库（双写过渡，JSON 仍产出）；补 `topic_paper_states` 状态机（seen/rejected 可表达） | 低（新增写入者） | thermo R1 的 I 决策能落库；重复劳动可查 |
+| **P0-B1** | **统一身份写入入口**：`resolve_or_create_paper(metadata, source)` 唯一生产者；入口内识别标识真实类型（不信字段名）；禁止其他模块直写 `papers`；用 30 条真实错位建立回归测试 | 中（触及写入路径，但只约束**新增**写入，不动旧 331 uid） | 新写入 `UID_PREFIX_MISMATCH=0`；EID 不可能进入有效 DOI 列；同 DOI/W-ID/EID 不产生第二个 uid；W-only/EID-only 为一等实体；冲突只记录不覆盖；旧 331 uid 与其 `topic_papers` 引用逐行不变；重复导入幂等 |
+| **P0-B2** | `screening_decisions` + `retrieval_events`；pilot/QA 写库（双写过渡，JSON 仍产出）；补 `topic_paper_states` 状态机（seen/rejected 可表达） | 低（新增写入者） | thermo R1 的 I 决策能落库；重复劳动可查 |
 | **P0-C** | `audit_frames` / `audit_samples` / `audit_labels`（样本级） | 低 | R06 的 500 样本 + 外部盲评判定可完整重建 |
 | **P1** | 改造 knowledge_claims/records 引用 `paper_uid`；清理 270 个 JSON 中的代数增长版本（`_filled`/`_final`/`_seen`） | 中（触及冻结产物引用） | v1.0 产物只读引用不复制 |
 

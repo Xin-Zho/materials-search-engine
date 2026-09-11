@@ -1,0 +1,380 @@
+{
+  "role": "P0-B1 回归 fixture：30 条真实「EID 写进 DOI 列」错位模式（从真库抽取，冻结）",
+  "provenance": {
+    "extracted_from": "data/cache/knowledge_base.db :: papers",
+    "predicate": "doi LIKE '2-s2.0-%'",
+    "n": 30,
+    "extracted_at": "2026-09-11T17:08:52",
+    "writer_of_record": "tools/migrate_v2_schema.py",
+    "producer_of_bad_value": "tools/build_s8_finalkb_catalog.py",
+    "fixture_sha256": "f088088efc6c9a33fcd8c1807ce5dd0740940c29ac818419dadd5a9bba6c0754"
+  },
+  "pattern": {
+    "declared_field": "doi",
+    "actual_type": "SCOPUS_EID",
+    "resulting_bad_uid": "doi:<EID>",
+    "correct_uid_form": "scopus:<EID>"
+  },
+  "records": [
+    {
+      "existing_paper_uid": "doi:2-s2.0-0017491224",
+      "misplaced_doi_column_value": "2-s2.0-0017491224",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-0017491224",
+      "title": "Critical considerations on the development of composite filling materials; [Kritische Betrachtungen über die Entwicklung von kompositefüllungsmaterialien]",
+      "replay_metadata": {
+        "doi": "2-s2.0-0017491224",
+        "title": "Critical considerations on the development of composite filling materials; [Kritische Betrachtungen über die Entwicklung von kompositefüllungsmaterialien]"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-0024975068",
+      "misplaced_doi_column_value": "2-s2.0-0024975068",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-0024975068",
+      "title": "Evaluation of the effect of glass ionomer liner on microleakage of light-curing composite resin restoration",
+      "replay_metadata": {
+        "doi": "2-s2.0-0024975068",
+        "title": "Evaluation of the effect of glass ionomer liner on microleakage of light-curing composite resin restoration"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-0028382138",
+      "misplaced_doi_column_value": "2-s2.0-0028382138",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-0028382138",
+      "title": "Clinical and SEM study of Tetric resin composite in posterior teeth: 12-month results.",
+      "replay_metadata": {
+        "doi": "2-s2.0-0028382138",
+        "title": "Clinical and SEM study of Tetric resin composite in posterior teeth: 12-month results."
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-0030098962",
+      "misplaced_doi_column_value": "2-s2.0-0030098962",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-0030098962",
+      "title": "Laser and light cured composite resin restorations: In-vitro comparison of isotope and dye penetrations",
+      "replay_metadata": {
+        "doi": "2-s2.0-0030098962",
+        "title": "Laser and light cured composite resin restorations: In-vitro comparison of isotope and dye penetrations"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-0032015240",
+      "misplaced_doi_column_value": "2-s2.0-0032015240",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-0032015240",
+      "title": "Microleakage reduction from newer esthetic restorative materials in permanent molars",
+      "replay_metadata": {
+        "doi": "2-s2.0-0032015240",
+        "title": "Microleakage reduction from newer esthetic restorative materials in permanent molars"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-0032214246",
+      "misplaced_doi_column_value": "2-s2.0-0032214246",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-0032214246",
+      "title": "An in vitro study of the effect of restorative technique on marginal leakage in posterior composites",
+      "replay_metadata": {
+        "doi": "2-s2.0-0032214246",
+        "title": "An in vitro study of the effect of restorative technique on marginal leakage in posterior composites"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-0034232254",
+      "misplaced_doi_column_value": "2-s2.0-0034232254",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-0034232254",
+      "title": "Flow characteristics and sealing ability of fissure sealants.",
+      "replay_metadata": {
+        "doi": "2-s2.0-0034232254",
+        "title": "Flow characteristics and sealing ability of fissure sealants."
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-0035406103",
+      "misplaced_doi_column_value": "2-s2.0-0035406103",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-0035406103",
+      "title": "Effect of liners on cusp deflection and gap formation in composite restorations.",
+      "replay_metadata": {
+        "doi": "2-s2.0-0035406103",
+        "title": "Effect of liners on cusp deflection and gap formation in composite restorations."
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-0035717780",
+      "misplaced_doi_column_value": "2-s2.0-0035717780",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-0035717780",
+      "title": "Process optimization for reduction of composite patch repair residual stresses",
+      "replay_metadata": {
+        "doi": "2-s2.0-0035717780",
+        "title": "Process optimization for reduction of composite patch repair residual stresses"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-0036516894",
+      "misplaced_doi_column_value": "2-s2.0-0036516894",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-0036516894",
+      "title": "Laser and visible light cured pit and fissure sealants--comparison of microleakage at enamel-sealant interface: an in vitro study.",
+      "replay_metadata": {
+        "doi": "2-s2.0-0036516894",
+        "title": "Laser and visible light cured pit and fissure sealants--comparison of microleakage at enamel-sealant interface: an in vitro study."
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-0036633806",
+      "misplaced_doi_column_value": "2-s2.0-0036633806",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-0036633806",
+      "title": "Effect of thickness of flowable resins on marginal leakage in class II composite restorations",
+      "replay_metadata": {
+        "doi": "2-s2.0-0036633806",
+        "title": "Effect of thickness of flowable resins on marginal leakage in class II composite restorations"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-0036782324",
+      "misplaced_doi_column_value": "2-s2.0-0036782324",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-0036782324",
+      "title": "Light curing--an update.",
+      "replay_metadata": {
+        "doi": "2-s2.0-0036782324",
+        "title": "Light curing--an update."
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-0141958875",
+      "misplaced_doi_column_value": "2-s2.0-0141958875",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-0141958875",
+      "title": "Effect of different intensity light curing modes on microleakage of two resin composite restorations",
+      "replay_metadata": {
+        "doi": "2-s2.0-0141958875",
+        "title": "Effect of different intensity light curing modes on microleakage of two resin composite restorations"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-0642340990",
+      "misplaced_doi_column_value": "2-s2.0-0642340990",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-0642340990",
+      "title": "Relationship between composite contraction stress and leakage in Class V cavities",
+      "replay_metadata": {
+        "doi": "2-s2.0-0642340990",
+        "title": "Relationship between composite contraction stress and leakage in Class V cavities"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-19744363036",
+      "misplaced_doi_column_value": "2-s2.0-19744363036",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-19744363036",
+      "title": "Liner and light exposure: Effect on In-Vitro Class V Microleakage",
+      "replay_metadata": {
+        "doi": "2-s2.0-19744363036",
+        "title": "Liner and light exposure: Effect on In-Vitro Class V Microleakage"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-23944445785",
+      "misplaced_doi_column_value": "2-s2.0-23944445785",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-23944445785",
+      "title": "Experimental study to reduce residual stresses in co-cured bonded patch repair",
+      "replay_metadata": {
+        "doi": "2-s2.0-23944445785",
+        "title": "Experimental study to reduce residual stresses in co-cured bonded patch repair"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-30044437897",
+      "misplaced_doi_column_value": "2-s2.0-30044437897",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-30044437897",
+      "title": "The effects of soft-start vs continuous-light polymerization on microleakage in class II resin composite restorations",
+      "replay_metadata": {
+        "doi": "2-s2.0-30044437897",
+        "title": "The effects of soft-start vs continuous-light polymerization on microleakage in class II resin composite restorations"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-33845919897",
+      "misplaced_doi_column_value": "2-s2.0-33845919897",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-33845919897",
+      "title": "A clinical trial of Empress II porcelain inlays luted to vital teeth with a dual-curing adhesive system and a self-curing resin cement",
+      "replay_metadata": {
+        "doi": "2-s2.0-33845919897",
+        "title": "A clinical trial of Empress II porcelain inlays luted to vital teeth with a dual-curing adhesive system and a self-curing resin cement"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-4444333324",
+      "misplaced_doi_column_value": "2-s2.0-4444333324",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-4444333324",
+      "title": "Clinical evaluation of four Class 5 restorative materials: 3-year recall.",
+      "replay_metadata": {
+        "doi": "2-s2.0-4444333324",
+        "title": "Clinical evaluation of four Class 5 restorative materials: 3-year recall."
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-4544224629",
+      "misplaced_doi_column_value": "2-s2.0-4544224629",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-4544224629",
+      "title": "Clinical evaluation of a resin composite and bonding agent in Class I and II restorations: 2-Year results",
+      "replay_metadata": {
+        "doi": "2-s2.0-4544224629",
+        "title": "Clinical evaluation of a resin composite and bonding agent in Class I and II restorations: 2-Year results"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-58049207727",
+      "misplaced_doi_column_value": "2-s2.0-58049207727",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-58049207727",
+      "title": "Silorane - The solution of all restorative problems in the posterior teeth area?; [Silorane - Die Lösung aller Restaurativer Probleme im Seitenzahngebiet?]",
+      "replay_metadata": {
+        "doi": "2-s2.0-58049207727",
+        "title": "Silorane - The solution of all restorative problems in the posterior teeth area?; [Silorane - Die Lösung aller Restaurativer Probleme im Seitenzahngebiet?]"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-75349102366",
+      "misplaced_doi_column_value": "2-s2.0-75349102366",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-75349102366",
+      "title": "Bond strength and microleakage of a new self-etch sealant",
+      "replay_metadata": {
+        "doi": "2-s2.0-75349102366",
+        "title": "Bond strength and microleakage of a new self-etch sealant"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-78650403629",
+      "misplaced_doi_column_value": "2-s2.0-78650403629",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-78650403629",
+      "title": "A 24-month randomized clinical trial of a two- And three-step etch-and-rinse technique",
+      "replay_metadata": {
+        "doi": "2-s2.0-78650403629",
+        "title": "A 24-month randomized clinical trial of a two- And three-step etch-and-rinse technique"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-85052012449",
+      "misplaced_doi_column_value": "2-s2.0-85052012449",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-85052012449",
+      "title": "Evaluation of marginal leakage after mechanical fatigue cycling of composite inlays luted with different cements",
+      "replay_metadata": {
+        "doi": "2-s2.0-85052012449",
+        "title": "Evaluation of marginal leakage after mechanical fatigue cycling of composite inlays luted with different cements"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-85056983120",
+      "misplaced_doi_column_value": "2-s2.0-85056983120",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-85056983120",
+      "title": "Direct resin-based composite restorations—clinical challenges",
+      "replay_metadata": {
+        "doi": "2-s2.0-85056983120",
+        "title": "Direct resin-based composite restorations—clinical challenges"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-85084317557",
+      "misplaced_doi_column_value": "2-s2.0-85084317557",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-85084317557",
+      "title": "Reinforced photocurable materials for an Additive Manufacturing process based on Mask Image Projection",
+      "replay_metadata": {
+        "doi": "2-s2.0-85084317557",
+        "title": "Reinforced photocurable materials for an Additive Manufacturing process based on Mask Image Projection"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-85097278397",
+      "misplaced_doi_column_value": "2-s2.0-85097278397",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-85097278397",
+      "title": "Printability of highly viscous composite slurries via reactive extrusion additive manufacturing",
+      "replay_metadata": {
+        "doi": "2-s2.0-85097278397",
+        "title": "Printability of highly viscous composite slurries via reactive extrusion additive manufacturing"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-85165194606",
+      "misplaced_doi_column_value": "2-s2.0-85165194606",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-85165194606",
+      "title": "Effects of Single and Double Application of Immediate Dentin Sealing Techniques on Marginal Leakage and Microtensile Bond Strength of Resin Cement",
+      "replay_metadata": {
+        "doi": "2-s2.0-85165194606",
+        "title": "Effects of Single and Double Application of Immediate Dentin Sealing Techniques on Marginal Leakage and Microtensile Bond Strength of Resin Cement"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-85202796102",
+      "misplaced_doi_column_value": "2-s2.0-85202796102",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-85202796102",
+      "title": "PHOTOINHIBITION-AIDED VAT PHOTOPOLYMERIZATION ADDITIVE MANUFACTURING OF BIO-COMPOSITES",
+      "replay_metadata": {
+        "doi": "2-s2.0-85202796102",
+        "title": "PHOTOINHIBITION-AIDED VAT PHOTOPOLYMERIZATION ADDITIVE MANUFACTURING OF BIO-COMPOSITES"
+      },
+      "replay_source": "s8_catalog"
+    },
+    {
+      "existing_paper_uid": "doi:2-s2.0-85216755224",
+      "misplaced_doi_column_value": "2-s2.0-85216755224",
+      "true_identifier_type": "SCOPUS_EID",
+      "true_identifier_value": "2-s2.0-85216755224",
+      "title": "MANUFACTURING OF POLYMER/MAGNESIUM COMPOSITE SCAFFOLDS VIA STEREOLITHOGRAPHY",
+      "replay_metadata": {
+        "doi": "2-s2.0-85216755224",
+        "title": "MANUFACTURING OF POLYMER/MAGNESIUM COMPOSITE SCAFFOLDS VIA STEREOLITHOGRAPHY"
+      },
+      "replay_source": "s8_catalog"
+    }
+  ]
+}
