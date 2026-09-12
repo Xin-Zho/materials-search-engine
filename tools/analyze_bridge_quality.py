@@ -42,7 +42,8 @@ CANDIDATES = os.path.join(DATASET, "edge_new_link_candidates_v2.json")
 ANALYSIS = os.path.join(DATASET, "edge_candidate_analysis_v1.json")
 OUT_PATH = os.path.join(DATASET, "bridge_quality_effect_v1.json")
 
-LABEL_STRICT = 5          # eval_lex>=5（与 edge_event_spec 的 primary_tightness 一致）
+LABEL_STRICT = 5          # 主口径 eval_lex>=5（与 edge_event_spec 的 primary_tightness 一致）
+LABEL_TIGHTNESS = (1, 3, 5)   # 稳健性必须跨口径看：单一门槛上的差距可能只是阈值产物
 SEED = 13
 
 # 三档的"离可用有多远"顺序（**必须显式，且与打印顺序一致**）。
@@ -98,9 +99,42 @@ def load_rows():
             "uncertainty": a.get("uncertainty"),
             "groundedness": a.get("groundedness"),
             "n_evidence": len(an.get("payload_ref", {}).get("evidence_uids") or []),
+            "joint_fut": int(row.get("joint_fut") or 0),
             "formed": bool(row.get("joint_fut", 0) >= LABEL_STRICT),
         })
     return out, dec
+
+
+def apply_label(rows, tightness):
+    """换标签口径：`formed = 未来期共现次数 >= tightness`。
+
+    结论必须在多个口径下同向才允许当作稳 —— 单一门槛上的差距可能只是阈值产物。
+    """
+    return [dict(r, formed=bool(r.get("joint_fut", 0) >= tightness)) for r in rows]
+
+
+def cross_label(rows, tightnesses=LABEL_TIGHTNESS):
+    """跨标签口径的稳健性表：分档命中率 + AA 匹配差额。"""
+    out = {}
+    for t in tightnesses:
+        sub = apply_label(rows, t)
+        ut = utility(sub, k_list=())
+        m_weak = aa_matched(sub, "weak")
+        m_unclear = aa_matched(sub, "unclear")
+        out["eval_lex>=%d" % t] = {
+            "base_rate": ut["pool_base_rate"],
+            "hit_rate": {q: v["hit_rate"] for q, v in
+                         ut["hit_rate_by_bridge_quality"].items()},
+            "n": {q: v["n"] for q, v in ut["hit_rate_by_bridge_quality"].items()},
+            "weak_delta_pp_vs_pool": round(100 * (
+                (ut["hit_rate_by_bridge_quality"]["weak"]["hit_rate"] or 0)
+                - ut["pool_base_rate"]), 1),
+            "weak_aa_matched_delta_pp": m_weak.get("delta_pp"),
+            "weak_aa_matched_p": m_weak.get("p"),
+            "unclear_aa_matched_delta_pp": m_unclear.get("delta_pp"),
+            "unclear_aa_matched_p": m_unclear.get("p"),
+        }
+    return out
 
 
 def auc(pos, neg):
@@ -326,6 +360,20 @@ def main(argv=None):
           % (cf["_pool"]["cn_median"], cf["_pool"]["aa_median"]))
     print("      池内 AUC: common_neighbors %.3f｜adamic_adar %.3f"
           % (cf["_auc_in_pool"]["common_neighbors"], cf["_auc_in_pool"]["adamic_adar"]))
+    cl = cross_label(rows)
+    print("\n[C 跨标签口径稳健性]（结论必须在多个门槛下同向）")
+    print("      %-14s %8s %8s %8s %10s %13s %8s"
+          % ("标签", "基线", "strong", "weak", "weak-基线", "weak AA匹配Δ", "p"))
+    for name, v in cl.items():
+        print("      %-14s %7.1f%% %7.1f%% %7.1f%% %+9.1f pp %12s %8s"
+              % (name, 100 * v["base_rate"],
+                 100 * (v["hit_rate"]["strong"] or 0),
+                 100 * (v["hit_rate"]["weak"] or 0),
+                 v["weak_delta_pp_vs_pool"],
+                 ("%+.1f pp" % v["weak_aa_matched_delta_pp"])
+                 if v["weak_aa_matched_delta_pp"] is not None else "n/a",
+                 ("%.3f" % v["weak_aa_matched_p"])
+                 if v["weak_aa_matched_p"] is not None else "n/a"))
     ut = utility(rows)
     print("\n[B 效用] 池内基线 %.1f%%｜LLM 判为 weak/unclear 的 %d 条"
           % (100 * ut["pool_base_rate"], ut["n_bad_bridge"]))
@@ -377,7 +425,8 @@ def main(argv=None):
                "tool_sha256": _sha(__file__),
            },
            "n_analyzed": len(rows), "label": "eval_lex>=%d" % LABEL_STRICT,
-           "construct_validity": cv, "confound_check": cf, "utility": ut}
+           "construct_validity": cv, "confound_check": cf, "utility": ut,
+           "cross_label": cross_label(rows)}
     if args.json_out:
         json.dump(rep, open(args.json_out, "w", encoding="utf-8", newline="\n"),
                   ensure_ascii=False, indent=1)

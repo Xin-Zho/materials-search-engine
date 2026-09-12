@@ -249,4 +249,38 @@ def test_aa_matched_handles_missing_target():
     assert bq.aa_matched(rows, "weak")["n"] == 0
 
 
-# ══ 5. AA 匹配对照（weak 的 AA 本来就低，必须排除"只是结构差"）══════════
+# ══ 6. 跨标签口径（单一门槛上的差距可能只是阈值产物）════════════════════
+def test_apply_label_uses_joint_fut_threshold():
+    rows = [dict(_row("weak", True), joint_fut=n) for n in (0, 1, 3, 5)]
+    assert [r["formed"] for r in bq.apply_label(rows, 1)] == [False, True, True, True]
+    assert [r["formed"] for r in bq.apply_label(rows, 5)] == [False, False, False, True]
+
+
+def test_apply_label_does_not_mutate_input_rows():
+    rows = [dict(_row("weak", False), joint_fut=5)]
+    bq.apply_label(rows, 1)
+    assert rows[0]["formed"] is False, "换口径不得改动原记录"
+
+
+def test_cross_label_reports_every_tightness():
+    rows = ([dict(_row("weak", False), joint_fut=5) for _ in range(10)]
+            + [dict(_row("strong", True), joint_fut=5) for _ in range(10)])
+    cl = bq.cross_label(rows, tightnesses=(1, 3, 5))
+    assert set(cl) == {"eval_lex>=1", "eval_lex>=3", "eval_lex>=5"}
+    for v in cl.values():
+        assert "weak_aa_matched_delta_pp" in v and "weak_aa_matched_p" in v
+        assert "weak_delta_pp_vs_pool" in v
+
+
+def test_cross_label_survives_missing_weak_bucket():
+    rows = [_row("strong", True) for _ in range(4)]
+    cl = bq.cross_label(rows, tightnesses=(5,))
+    assert "eval_lex>=5" in cl
+
+
+def test_report_includes_cross_label_when_present():
+    if not os.path.exists(bq.OUT_PATH):
+        pytest.skip("尚未生成报告")
+    d = json.loads(open(bq.OUT_PATH, encoding="utf-8").read())
+    assert "cross_label" in d, "报告必须带跨口径表（否则稳健性无法被复核）"
+    assert any(k.startswith("eval_lex>=") for k in d["cross_label"])
