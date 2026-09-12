@@ -1,0 +1,92 @@
+# 边层事件型评估规范（edge_event_spec）
+#
+# 为什么要有这个文件：过滤链曾以脚本里的 if 形式存在，无法复现、无法评审。
+# 2026-09-12 一天内出现四次"自造度量缺陷"，因此凡是**影响结论的判定规则**
+# 都必须落成 committed 配置并记录 sha256。
+spec_version: edge_event_spec_v1
+created_at: '2026-09-13'
+
+target:
+  type: EVENT
+  sole_target: true            # 只有这一个目标参与候选排序
+  statement: 跨类型概念对在未来窗口首次形成连接（"会不会连上"）
+  naming_note: >
+    "Task L / Task S" 是探针期的临时命名（L = Link, S = Strengthen），不是项目既有术语。
+    正式口径只保留 L；S 记在下面的 diagnostic_only 里，不作为目标。
+  not_this:
+    - 概念份额上升（份额类量在干净口径下已证明零信息）
+    - 关联强度上升（"会不会变更强"）：实测 AUC 0.446-0.481，**全部 < 0.5 且 p<0.05**
+      —— 不是"测不出"，而是**显著反向**（已连上的对子里，AA 越高越不容易变更强）。
+      仅保留为诊断对照，**不参与候选排序**。
+
+windows:
+  # 三条硬规则：分母用该期总体量 / 各期各归一 / **特征与标签不共享窗口**
+  feature_until: 2015        # 特征只取 <= 2015 子图
+  label_history: [2016, 2020] # 标签基线窗口
+  label_future: [2021, 2025]  # 标签未来窗口
+
+candidates:
+  min_endpoint_support: 8    # 端点在其早期图上的最小支持度
+  require_no_prior_cooccurrence: true
+  require_shared_neighbor: true   # 图中距离 = 2，标准 link prediction 设定
+  cross_domain_only: true    # 两端主场主题（OpenAlex primary_topic）不同
+  known_limitation: >
+    候选面已限定"共享邻居"，这是标准 link prediction 任务，Adamic-Adar 是教科书级强基线，
+    所以"有效"本身不意外。基线率并不低（约 36%），Top-20 命中 80% 意味着仍有 4/20 未连上。
+
+filters:
+  # 两轮病理（实测提升未下降，故保留）：
+  #   ① 表征手段（FTIR/DMA/DSC）与谁都共现 → AA 天然巨大
+  #   ② 近义/嵌套概念（volume vs volumetric shrinkage）"将来一起出现"是语言必然
+  basic:
+    - method_like          # 复用 discoverer 的 NODE_METHOD_LIKE_RE（可评审正则）
+  strict:
+    - method_like
+    - substring_nested     # 一个是另一个的子串
+    - shared_token         # 共享 >=1 个显著 token（近义）
+    - same_type            # 要求两端 concept type 不同
+
+labels:
+  # 全部为词面判据（Tier 1）。缺口语义 Tier 1 无法检验，见 P4-3 limitations
+  tightness: [1, 3, 5]     # future 期 joint 出现次数门槛
+  primary_tightness: 5     # 报告口径：Top-K 提升以 L3（>=5 次）为准，基线最低最保守
+
+diagnostic_only:
+  # 明确排除在目标之外 —— 记录在此以免下次又被当成"待优化目标"
+  task_strengthen:
+    question: 已共现的概念对，未来关联强度会不会上升
+    label: rate_ratio > 1.0（future 期共现率 / history 期共现率）
+    n: 6502
+    verdict: REVERSED
+    result: 六个结构特征 AUC 0.446-0.481，全部 p<0.05
+    action: 保留为对照输出，不参与候选排序；出现变化必须在报告里显式说明
+
+features:                  # 全部只用 <= 2015 子图
+  - adamic_adar
+  - common_neighbors
+  - jaccard
+  - pref_attach
+  - deg_min
+  - deg_max
+
+reporting:
+  must_report:
+    - base_rate                      # 没有基线的命中率没有意义
+    - strata_auc_by_deg_min          # 规模匹配：排除"只是度数大"
+    - topk_lift                      # AUC 好不等于前排好用
+    - random_band                    # 同规模重抽的 95% 区间
+    - provenance                     # 输入文件 + concepts/spec sha256 + 端点数
+  verdict_rule: AUC > 0.55 且 p < 0.05 记为正向；AUC < 0.45 记为反向
+  provenance_rule: >
+    产物必须写明自己认证了哪些输入（concepts_file + sha256 + n_papers + spec sha256）。
+    并且 `--verify` 必须能拿产物反过来核对磁盘：任一 sha 不符即判定脱钩。
+    2026-09-12 实测过一次脱钩（报告认证了一份已不存在的候选文件），故列为硬要求。
+
+analysis_handoff:
+  # LLM 分析层：已声明、尚未实现（固化完成后再做）
+  status: PLANNED
+  scope: 解释 Top-N 候选新边的科学含义 + 给可证伪项；不预测、不改排序
+  constraints:
+    - 不得输出模型自己的预测，只解释给定证据
+    - 必须度量接地度（evidence 引用的概念必须来自给定的两端与邻居）
+    - 证据不足须显式调高 uncertainty，不得编造
