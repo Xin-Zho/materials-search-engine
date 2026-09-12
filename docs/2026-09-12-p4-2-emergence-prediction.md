@@ -1,5 +1,11 @@
 # P4-2：Emergence Score 排序（1000 篇 TRAIN 概念图）
 
+> ⚠️ **SUPERSEDED（2026-09-12，用户裁定）**：本文的预测对象是 **concept popularity**，
+> 且路线隐含「让 LLM 判断哪些方向有潜力」。已改为「候选由**算法**从知识树演化中产生，
+> LLM 只做解释」。见 `docs/2026-09-12-p4-2v2-knowledge-tree-evolution.md`。
+> 保留为历史：其中的反泄漏口径、期份额归一化、被证伪的 `dir_ratio` 启发式仍然有效，
+> 是新版的经验来源。
+
 日期：2026-09-12 ｜ 预测器 `p4_2_emergence_v1` ｜ **已冻结**
 工具：`tools/predict_emergence_p4_2.py` ｜ 测试：`tests/test_p4_2_emergence.py`（17 项）
 

@@ -14,3 +14,17 @@ extraction_audit.json
 *.summary.json
 emergence_scores_p4_2.json
 emergence_top50.csv
+emergence_candidates_v2.json
+emergence_candidates_v2.csv
+candidate_analysis_v1.json
+validation_report_v1.json
+validation_report_v1.csv
+analyst_spec.yaml
+analyst_cache/
+emergence_candidates_v2.json
+emergence_candidates_v2.csv
+candidate_analysis_v1.json
+validation_report_v1.json
+validation_report_v1.csv
+analyst_spec.yaml
+analyst_cache/
