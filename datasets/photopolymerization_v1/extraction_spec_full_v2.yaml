@@ -1,0 +1,35 @@
+spec_version: p4_1a_extraction_v1
+frozen_at: '2026-09-12T21:56:50'
+prompt_file: prompts/p4_1a_concept_extraction_v1.md
+prompt_sha256: 97f7a13e2b89451df4ecfed29433b9b6f271e8074061a4b1fe046b14e5a71908
+tool_file: tools/extract_concepts_p4_1a.py
+tool_sha256: 47f6dafb5172e98a2dc78bb66d9aa58af1b2b42beccc79d2d481131977e38454
+model: deepseek-chat
+temperature: 0.0
+max_tokens: 2000
+abstract_max_chars: 8000
+concept_types:
+- direction
+- material
+- mechanism
+- fabrication_method
+- application
+- challenge
+relation_vocabulary:
+- addresses
+- enables
+- requires
+- improves
+- causes
+- part_of
+- alternative_to
+- combines_with
+extra_relation_bucket: other
+sample_file: datasets/photopolymerization_v1/sample_full_v2.jsonl
+sample_sha256: 1fc69bd3b4b43161edf33c7bb5892d6cb9af5a3fc4867dd8d218cdcfe2d442a6
+policy:
+  eval_side_never_extracted: true
+  temperature_0_for_reproducibility: true
+  prompt_edit_requires_refreeze: true
+  normalization: 机械规范化（小写/压空白/去尾标点）；**不做同义合并**（合并属下游图任务，且不可逆）
+note: 改 prompt 或改模型参数后必须重跑 --freeze，否则 --live 会拒绝运行

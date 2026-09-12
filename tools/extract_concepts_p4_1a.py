@@ -231,7 +231,8 @@ def parse_json_content(content):
 
 
 # ══ 协议冻结 ═════════════════════════════════════════════════════════════
-def freeze_spec(model, temperature, max_tokens, abstract_max, sample_path):
+def freeze_spec(model, temperature, max_tokens, abstract_max, sample_path,
+                spec_path=None):
     import yaml
     sample_sha = _sha256(sample_path) if Path(sample_path).exists() else None
     spec = {
@@ -262,23 +263,40 @@ def freeze_spec(model, temperature, max_tokens, abstract_max, sample_path):
         "note": "改 prompt 或改模型参数后必须重跑 --freeze，否则 --live 会拒绝运行",
     }
     SPEC_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(SPEC_PATH, "w", encoding="utf-8", newline="\n") as f:
+    target = Path(spec_path) if spec_path else SPEC_PATH
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with open(target, "w", encoding="utf-8", newline="\n") as f:
         yaml.safe_dump(spec, f, allow_unicode=True, sort_keys=False, width=100)
     return spec
 
 
-def assert_spec_fresh():
-    """``--live`` 之前断言 prompt 与参数未被改动。"""
+def assert_spec_fresh(spec_path=None, sample_path=None):
+    """``--live`` 之前断言 prompt 与**样本**未被改动。
+
+    为什么必须同时校验样本：spec 里记了 ``sample_sha256``，但若没人断言它，
+    换一个 ``--sample`` 就能在"协议已冻结"的名义下抽取另一批论文 ——
+    产物与协议**静默脱钩**。扩样本是合法操作，但必须走 ``--freeze``（修订 ≠ 覆盖）。
+    """
     import yaml
-    if not SPEC_PATH.exists():
-        raise SystemExit(f"[refused] 未冻结协议。先跑 --freeze（{_rel(SPEC_PATH)}）")
-    spec = yaml.safe_load(SPEC_PATH.read_text(encoding="utf-8"))
+    spec_path = Path(spec_path) if spec_path else SPEC_PATH
+    if not spec_path.exists():
+        raise SystemExit(f"[refused] 未冻结协议。先跑 --freeze（{_rel(spec_path)}）")
+    spec = yaml.safe_load(spec_path.read_text(encoding="utf-8"))
     cur = _sha256(PROMPT_PATH)
     if spec.get("prompt_sha256") != cur:
         raise SystemExit(
             "[refused] prompt 已变更但未重新冻结：\n"
             f"  冻结 {spec.get('prompt_sha256')[:16]}… != 当前 {cur[:16]}…\n"
             "  改了 prompt 必须重跑 --freeze（否则产物与协议脱钩）")
+    if sample_path:
+        cur_s = _sha256(Path(sample_path))
+        frozen_s = str(spec.get("sample_sha256") or "")
+        if frozen_s and frozen_s != cur_s:
+            raise SystemExit(
+                "[refused] 样本与冻结协议不一致：\n"
+                f"  冻结 {frozen_s[:16]}… != 当前 {cur_s[:16]}…（{_rel(Path(sample_path))}）\n"
+                "  扩样本/换样本必须重跑 --freeze 写入新的 spec（建议 --spec 指向新文件，"
+                "把旧 spec 留作历史证据）")
     return spec
 
 
@@ -482,6 +500,8 @@ def print_summary(s):
 def main(argv=None):
     ap = argparse.ArgumentParser(description="P4-1A concept+relation 抽取")
     ap.add_argument("--sample", default=str(DEFAULT_SAMPLE))
+    ap.add_argument("--spec", default=str(SPEC_PATH),
+                    help="协议文件（扩样本请指向新的 spec，保留旧 spec 作历史证据）")
     ap.add_argument("--out", default=str(DEFAULT_OUT))
     ap.add_argument("--cache-dir", default=str(DEFAULT_CACHE))
     ap.add_argument("--limit", type=int, default=0, help="只抽前 N 篇（0=全部）")
@@ -499,8 +519,8 @@ def main(argv=None):
 
     if args.freeze:
         spec = freeze_spec(args.model, args.temperature, args.max_tokens,
-                           args.abstract_max_chars, args.sample)
-        print(f"[frozen] {_rel(SPEC_PATH)}  prompt_sha256={spec['prompt_sha256'][:16]}…")
+                           args.abstract_max_chars, args.sample, args.spec)
+        print(f"[frozen] {_rel(Path(args.spec))}  prompt_sha256={spec['prompt_sha256'][:16]}…")
         print(f"[frozen] sample_sha256={str(spec['sample_sha256'])[:16]}…")
         return 0
 
@@ -512,7 +532,7 @@ def main(argv=None):
     if args.limit:
         records = records[:args.limit]
 
-    spec = assert_spec_fresh()
+    spec = assert_spec_fresh(args.spec, args.sample)
     print(f"[p4.1a] 样本 {_rel(args.sample)} -> {len(records)} 篇 | "
           f"层 {dict(collections.Counter(r['sample_layer'] for r in records))}")
     print(f"[p4.1a] 冻结协议 {spec['spec_version']} "

@@ -1,0 +1,210 @@
+{
+  "sample_version": "p4_1a_sample_v1",
+  "created_at": "2026-09-12T21:56:49",
+  "source_db": "datasets/photopolymerization_v1/paper_meta.db",
+  "source_view": "v_photopolymerization",
+  "source_db_sha256": "5662a77da99b7392d8b977890e437a02e91ecf04ae342fa8f2cdc4401734c9ae",
+  "sample_jsonl": "sample_full_v2.jsonl",
+  "sample_sha256": "1fc69bd3b4b43161edf33c7bb5892d6cb9af5a3fc4867dd8d218cdcfe2d442a6",
+  "n": 4387,
+  "builder": "tools/build_p4_1a_sample.py",
+  "report": {
+    "pool": {
+      "view_train": 5520,
+      "extractable": 4509,
+      "abstract_min_chars": 200,
+      "p25_citations_asof": 1
+    },
+    "growth_basis": {
+      "early": [
+        2011,
+        2015
+      ],
+      "late": [
+        2016,
+        2020
+      ],
+      "min_base": 3
+    },
+    "layers": {
+      "A": {
+        "target": 2000,
+        "taken": 2000,
+        "topic_cap": 2000,
+        "blocked_by_cap": 0,
+        "candidates": 3853,
+        "rank_by": "citations_asof_cutoff desc（禁快照）"
+      },
+      "B": {
+        "target": 3000,
+        "taken": 2169,
+        "topic_cap": 3000,
+        "blocked_by_cap": 0,
+        "candidates": 4007,
+        "rank_by": "primary_topic 增速 desc -> 主题内 2016-2020 优先 -> asof 引用",
+        "eligible_growth_topics": 36
+      },
+      "C": {
+        "target": 1500,
+        "taken": 218,
+        "topic_cap": 1500,
+        "blocked_by_cap": 0,
+        "candidates": 218,
+        "rank_by": "citations_asof <= p25 内固定种子 seed=13 打乱",
+        "seed": 13
+      }
+    },
+    "total_sampled": 4387,
+    "disjoint": true,
+    "topic_concentration": {
+      "distinct_topics": 219,
+      "top10": [
+        {
+          "topic": "Dental materials and restorations",
+          "n": 1276,
+          "share": 0.2909
+        },
+        {
+          "topic": "Photopolymerization techniques and applications",
+          "n": 981,
+          "share": 0.2236
+        },
+        {
+          "topic": "Additive Manufacturing and 3D Printing Technologies",
+          "n": 323,
+          "share": 0.0736
+        },
+        {
+          "topic": "Photorefractive and Nonlinear Optics",
+          "n": 231,
+          "share": 0.0527
+        },
+        {
+          "topic": "Epoxy Resin Curing Processes",
+          "n": 227,
+          "share": 0.0517
+        },
+        {
+          "topic": "Synthetic Organic Chemistry Methods",
+          "n": 211,
+          "share": 0.0481
+        },
+        {
+          "topic": "Nanofabrication and Lithography Techniques",
+          "n": 87,
+          "share": 0.0198
+        },
+        {
+          "topic": "Advanced Polymer Synthesis and Characterization",
+          "n": 66,
+          "share": 0.015
+        },
+        {
+          "topic": "3D Printing in Biomedical Research",
+          "n": 56,
+          "share": 0.0128
+        },
+        {
+          "topic": "Silicone and Siloxane Chemistry",
+          "n": 53,
+          "share": 0.0121
+        }
+      ],
+      "max_share": 0.2909
+    },
+    "year_distribution": {
+      "<=2010": 1832,
+      "2011-2015": 1001,
+      "2016-2020": 1554
+    },
+    "layer_year_distribution": {
+      "A": {
+        "<=2010": 1004,
+        "2011-2015": 584,
+        "2016-2020": 412
+      },
+      "B": {
+        "2016-2020": 1042,
+        "<=2010": 741,
+        "2011-2015": 386
+      },
+      "C": {
+        "<=2010": 87,
+        "2016-2020": 100,
+        "2011-2015": 31
+      }
+    },
+    "top_growth_topics": [
+      {
+        "topic": "Additive Manufacturing and 3D Printing Technologies",
+        "growth": 4.8824,
+        "n_early": 51,
+        "n_late": 249,
+        "papers_in_sample": 323
+      },
+      {
+        "topic": "Polymer composites and self-healing",
+        "growth": 3.5,
+        "n_early": 10,
+        "n_late": 35,
+        "papers_in_sample": 45
+      },
+      {
+        "topic": "3D Printing in Biomedical Research",
+        "growth": 3.1176,
+        "n_early": 17,
+        "n_late": 53,
+        "papers_in_sample": 56
+      },
+      {
+        "topic": "Photochromic and Fluorescence Chemistry",
+        "growth": 3.0,
+        "n_early": 3,
+        "n_late": 9,
+        "papers_in_sample": 16
+      },
+      {
+        "topic": "Liquid Crystal Research Advancements",
+        "growth": 2.8333,
+        "n_early": 6,
+        "n_late": 17,
+        "papers_in_sample": 50
+      },
+      {
+        "topic": "Hydrogels: synthesis, properties, applications",
+        "growth": 2.5,
+        "n_early": 4,
+        "n_late": 10,
+        "papers_in_sample": 17
+      },
+      {
+        "topic": "Advanced Materials and Mechanics",
+        "growth": 2.1429,
+        "n_early": 7,
+        "n_late": 15,
+        "papers_in_sample": 24
+      },
+      {
+        "topic": "Bone Tissue Engineering Materials",
+        "growth": 1.875,
+        "n_early": 8,
+        "n_late": 15,
+        "papers_in_sample": 22
+      },
+      {
+        "topic": "Photonic and Optical Devices",
+        "growth": 1.75,
+        "n_early": 4,
+        "n_late": 7,
+        "papers_in_sample": 17
+      },
+      {
+        "topic": "biodegradable polymer synthesis and properties",
+        "growth": 1.7,
+        "n_early": 10,
+        "n_late": 17,
+        "papers_in_sample": 42
+      }
+    ]
+  }
+}

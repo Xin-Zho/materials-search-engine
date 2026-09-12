@@ -391,3 +391,57 @@ def test_extraction_spec_is_frozen_and_matches_prompt():
     spec = yaml.safe_load(open(spec_path, encoding="utf-8"))
     cur = hashlib.sha256(open(prompt_path, "rb").read()).hexdigest()
     assert spec["prompt_sha256"] == cur, "prompt 变了但未重新冻结"
+
+
+# ══ 6. 样本漂移守卫（扩样本必须重新冻结）════════════════════════════════
+def _frozen_env(tmp_path, monkeypatch, sample_text='{"paper_uid":"x"}\n'):
+    prompt = tmp_path / "p.md"
+    prompt.write_text("## SYSTEM\nS\n## USER\n```\n{title}{year}{abstract}\n```",
+                      encoding="utf-8")
+    sample = tmp_path / "s.jsonl"
+    sample.write_text(sample_text, encoding="utf-8")
+    monkeypatch.setattr(ext, "PROMPT_PATH", prompt)
+    monkeypatch.setattr(ext, "SPEC_PATH", tmp_path / "spec.yaml")
+    ext.freeze_spec("m", 0.0, 100, 100, sample)
+    return sample
+
+
+def test_assert_spec_fresh_refuses_when_sample_changed(tmp_path, monkeypatch):
+    """换样本若不重新冻结，必须在 --live 之前被拒。
+
+    原先只校验 prompt：spec 里虽记了 sample_sha256，却没人断言它 ->
+    换一个 --sample 就能在"协议已冻结"的名义下抽另一批论文，产物与协议**静默脱钩**。
+    """
+    sample = _frozen_env(tmp_path, monkeypatch)
+    assert ext.assert_spec_fresh(sample_path=sample)["model"] == "m"
+    sample.write_text('{"paper_uid":"x"}\n{"paper_uid":"y"}\n', encoding="utf-8")
+    with pytest.raises(SystemExit) as e:
+        ext.assert_spec_fresh(sample_path=sample)
+    msg = str(e.value)
+    assert "样本与冻结协议不一致" in msg
+    assert "--freeze" in msg
+
+
+def test_assert_spec_fresh_skips_sample_check_when_not_given(tmp_path, monkeypatch):
+    """不给 sample_path 时保持旧行为（只校验 prompt），不破坏既有调用。"""
+    sample = _frozen_env(tmp_path, monkeypatch)
+    sample.write_text("变了\n", encoding="utf-8")
+    assert ext.assert_spec_fresh()["model"] == "m"
+
+
+def test_freeze_spec_can_write_to_a_separate_file(tmp_path, monkeypatch):
+    """扩样本走新 spec 文件，旧 spec 留作历史证据（修订 ≠ 覆盖）。"""
+    prompt = tmp_path / "p.md"
+    prompt.write_text("## SYSTEM\nS\n## USER\n```\n{title}{year}{abstract}\n```",
+                      encoding="utf-8")
+    sample = tmp_path / "s.jsonl"
+    sample.write_text('{"paper_uid":"x"}\n', encoding="utf-8")
+    legacy = tmp_path / "spec_legacy.yaml"
+    legacy.write_text("keep-me", encoding="utf-8")
+    monkeypatch.setattr(ext, "PROMPT_PATH", prompt)
+    monkeypatch.setattr(ext, "SPEC_PATH", legacy, raising=False)
+    new_spec = tmp_path / "spec_v2.yaml"
+    ext.freeze_spec("m", 0.0, 100, 100, sample, new_spec)
+    assert new_spec.exists()
+    assert legacy.read_text(encoding="utf-8") == "keep-me"
+    assert ext.assert_spec_fresh(new_spec, sample)["sample_sha256"]
