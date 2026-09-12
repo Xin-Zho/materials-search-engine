@@ -1,0 +1,20 @@
+spec_version: p4_2_edge_analyst_v1
+frozen_at: '2026-09-13T02:34:26'
+prompt_file: prompts\p4_2v2_edge_analysis_v1.md
+prompt_sha256: 1e05d3c5f08cc2948e34b2945d9a7d66fbdb7cd220419a6a636a3b285f3d6e75
+tool_file: tools\analyze_edge_candidates_llm.py
+tool_sha256: 48e1d515a039cfbea633d22bb14c3a6a8b76966035a64b23d4cf84b8457dd351
+candidates_file: datasets\photopolymerization_v1\edge_new_link_candidates_v2.json
+candidates_sha256: 1fb805696957960351fb530f710f90a87651121027aa7e339ce2f8365270cb19
+model: deepseek-chat
+temperature: 0.0
+max_tokens: 1600
+evidence_window:
+- 2011
+- 2015
+policy:
+  no_future_labels_in_payload: true
+  evidence_year_asserted: true
+  analyst_not_predictor: true
+  prompt_edit_requires_refreeze: true
+note: 改 prompt / 改工具 / 换候选文件后必须重跑 --freeze，否则 --live 拒绝运行

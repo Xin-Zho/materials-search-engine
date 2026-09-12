@@ -39,5 +39,9 @@ prediction_effect_clean_v1.json
 candidate_topk_eval_v1.json
 edge_new_link_candidates_v*.json
 
+# ── 边层解释层（LLM）派生物；冻结协议 edge_analyst_spec.yaml 入 git ──
+edge_candidate_analysis_v1.json
+edge_analyst_cache/
+
 # 留档的历史证据（脱钩报告等）：本地保留，核对靠文档里记的 sha256
 legacy/
