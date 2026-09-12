@@ -219,27 +219,6 @@ def test_all_bucket_iterations_follow_the_declared_order():
     assert src.count("sorted(QUALITY_ORDER") >= 3, "遍历未统一走 QUALITY_ORDER"
 
 
-def test_quality_order_convention_is_explicit_and_used():
-    """三档的先后是**约定**不是物理量 —— 必须显式定义、写进产物、并与打印顺序一致。
-
-    （实测踩到：函数里写的是 weak=1/unclear=2，而打印与分档表按 unclear 在前 →
-    同一个数字在两处含义相反。）
-    """
-    assert bq.QUALITY_ORDER == {"strong": 0, "unclear": 1, "weak": 2}
-    rows = [_row("strong", True), _row("unclear", True), _row("weak", True)]
-    cv = bq.construct_validity(rows)
-    assert cv["quality_order_convention"] == bq.QUALITY_ORDER
-
-
-def test_all_bucket_iterations_follow_the_declared_order():
-    """遍历顺序必须由 QUALITY_ORDER 决定，不能各写一份字面量。"""
-    import inspect
-    src = inspect.getsource(bq)
-    assert '"strong", "unclear", "weak"' not in src, "还有硬编码的桶顺序"
-    assert src.count("sorted(QUALITY_ORDER") >= 3, "遍历未统一走 QUALITY_ORDER"
-
-
-# ══ 5. AA 匹配对照（weak 的 AA 本来就低，必须排除"只是结构差"）══════════
 def test_aa_matched_pairs_on_comparable_adamic_adar():
     rows = ([_row("weak", False, aa=5.0) for _ in range(6)]
             + [_row("strong", True, aa=5.0) for _ in range(6)])
@@ -271,31 +250,3 @@ def test_aa_matched_handles_missing_target():
 
 
 # ══ 5. AA 匹配对照（weak 的 AA 本来就低，必须排除"只是结构差"）══════════
-def test_aa_matched_pairs_on_comparable_adamic_adar():
-    rows = ([_row("weak", False, aa=5.0) for _ in range(6)]
-            + [_row("strong", True, aa=5.0) for _ in range(6)])
-    m = bq.aa_matched(rows, "weak")
-    assert m["target_hit"] == 0.0
-    assert m["matched_control_hit"] == 1.0
-    assert m["delta_pp"] == -100.0
-
-
-def test_aa_matched_excludes_far_aa_controls():
-    """AA 差得远的候选不该被算作对照（否则等于没匹配）。"""
-    rows = ([_row("weak", True, aa=1.0) for _ in range(4)]
-            + [_row("strong", True, aa=100.0) for _ in range(4)])
-    m = bq.aa_matched(rows, "weak", window=0.15)
-    assert m["matched_control_n"] == 0
-    assert m["matched_control_hit"] is None
-
-
-def test_aa_matched_reports_significance():
-    rows = ([_row("weak", False) for _ in range(30)]
-            + [_row("strong", True) for _ in range(30)])
-    m = bq.aa_matched(rows, "weak")
-    assert m["p"] is not None and m["p"] < 0.001
-
-
-def test_aa_matched_handles_missing_target():
-    rows = [_row("strong", True) for _ in range(4)]
-    assert bq.aa_matched(rows, "weak")["n"] == 0

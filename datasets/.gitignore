@@ -43,7 +43,6 @@ edge_new_link_candidates_v*.json
 edge_candidate_analysis_v1.json
 edge_analyst_cache/
 bridge_quality_effect_v1.json
-bridge_quality_effect_v1.json
 
 # 留档的历史证据（脱钩报告等）：本地保留，核对靠文档里记的 sha256
 legacy/
