@@ -314,3 +314,107 @@ def test_limitations_document_the_gap_blind_spot():
     src = open(VAL_PATH, encoding="utf-8").read()
     assert "无法检验 PAIR_GAP" in src
     assert "993" in src
+
+
+# ══ 溯源：报告必须为自己认证的文件把关（2026-09-12 实测脱钩后新增）══════
+def test_verifier_records_predictor_tool_hash():
+    """光记"验证器自己"不够 —— 必须同时记**预测器**，否则"候选文件被重新生成过"
+    这件事在报告里完全没有痕迹（实测：报告记录 2887914f… / 磁盘 d6ad3470…）。
+    """
+    assert hasattr(val, "PREDICTOR_PATH")
+    assert val.PREDICTOR_PATH.name == "discover_emergence_candidates.py"
+    assert val.PREDICTOR_PATH.exists()
+
+
+def test_report_records_top_k():
+    """top_k 决定评估宇宙大小（默认 20 只验 20 条，与 n=424 不可比）——
+    不记进报告，事后就无法判断"这组数字能不能跟上次比"。
+    """
+    import inspect
+    src = inspect.getsource(val.run)
+    assert '"top_k": args.top_k' in src, "design 块必须记录 top_k"
+
+
+def test_assert_inputs_unchanged_passes_when_consistent(tmp_path):
+    f = tmp_path / "a.json"
+    f.write_bytes(b"x\n")
+    assert val.assert_inputs_unchanged(
+        {"a_sha256": val._sha256(str(f))}, [("a_sha256", str(f))])
+
+
+def test_assert_inputs_unchanged_raises_on_drift(tmp_path):
+    """输入被改动 -> 必须拒绝，而不是安静地交出一份认证了旧状态的报告。"""
+    f = tmp_path / "a.json"
+    f.write_bytes(b"x\n")
+    rec = val._sha256(str(f))
+    f.write_bytes(b"y\n")
+    with pytest.raises(SystemExit) as e:
+        val.assert_inputs_unchanged({"a_sha256": rec}, [("a_sha256", str(f))])
+    assert "证据链已裂" in str(e.value)
+
+
+def test_assert_inputs_unchanged_raises_on_missing_file(tmp_path):
+    f = tmp_path / "gone.json"
+    f.write_bytes(b"x\n")
+    rec = val._sha256(str(f))
+    f.unlink()
+    with pytest.raises(SystemExit) as e:
+        val.assert_inputs_unchanged({"a_sha256": rec}, [("a_sha256", str(f))])
+    assert "缺失" in str(e.value)
+
+
+def test_assert_inputs_unchanged_ignores_unrecorded_fields(tmp_path):
+    """报告没记的字段不该被"补造"成失败（老报告不升级也要能读）。"""
+    assert val.assert_inputs_unchanged({}, [("a_sha256", str(tmp_path / "nope") )])
+
+
+# ══ 溯源：报告必须为自己认证的文件把关（2026-09-12 实测脱钩后新增）══════
+def test_verifier_records_predictor_tool_hash():
+    """光记"验证器自己"不够 —— 必须同时记**预测器**，否则"候选文件被重新生成过"
+    这件事在报告里完全没有痕迹（实测：报告记录 2887914f… / 磁盘 d6ad3470…）。
+    """
+    assert hasattr(val, "PREDICTOR_PATH")
+    assert val.PREDICTOR_PATH.name == "discover_emergence_candidates.py"
+    assert val.PREDICTOR_PATH.exists()
+
+
+def test_report_records_top_k():
+    """top_k 决定评估宇宙大小（默认 20 只验 20 条，与 n=424 不可比）——
+    不记进报告，事后就无法判断"这组数字能不能跟上次比"。
+    """
+    import inspect
+    src = inspect.getsource(val.run)
+    assert '"top_k": args.top_k' in src, "design 块必须记录 top_k"
+
+
+def test_assert_inputs_unchanged_passes_when_consistent(tmp_path):
+    f = tmp_path / "a.json"
+    f.write_bytes(b"x\n")
+    assert val.assert_inputs_unchanged(
+        {"a_sha256": val._sha256(str(f))}, [("a_sha256", str(f))])
+
+
+def test_assert_inputs_unchanged_raises_on_drift(tmp_path):
+    """输入被改动 -> 必须拒绝，而不是安静地交出一份认证了旧状态的报告。"""
+    f = tmp_path / "a.json"
+    f.write_bytes(b"x\n")
+    rec = val._sha256(str(f))
+    f.write_bytes(b"y\n")
+    with pytest.raises(SystemExit) as e:
+        val.assert_inputs_unchanged({"a_sha256": rec}, [("a_sha256", str(f))])
+    assert "证据链已裂" in str(e.value)
+
+
+def test_assert_inputs_unchanged_raises_on_missing_file(tmp_path):
+    f = tmp_path / "gone.json"
+    f.write_bytes(b"x\n")
+    rec = val._sha256(str(f))
+    f.unlink()
+    with pytest.raises(SystemExit) as e:
+        val.assert_inputs_unchanged({"a_sha256": rec}, [("a_sha256", str(f))])
+    assert "缺失" in str(e.value)
+
+
+def test_assert_inputs_unchanged_ignores_unrecorded_fields(tmp_path):
+    """报告没记的字段不该被"补造"成失败（老报告不升级也要能读）。"""
+    assert val.assert_inputs_unchanged({}, [("a_sha256", str(tmp_path / "nope") )])

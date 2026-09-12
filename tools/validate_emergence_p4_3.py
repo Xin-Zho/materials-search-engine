@@ -56,6 +56,7 @@ sys.path.insert(0, os.path.join(BASE, "tools"))
 
 DATASET_DIR = Path(BASE) / "datasets" / "photopolymerization_v1"
 CANDIDATES_PATH = DATASET_DIR / "emergence_candidates_v2.json"
+PREDICTOR_PATH = Path(BASE) / "tools" / "discover_emergence_candidates.py"
 DB_PATH = DATASET_DIR / "paper_meta.db"
 OUT_PATH = DATASET_DIR / "validation_report_v1.json"
 OUT_CSV = DATASET_DIR / "validation_report_v1.csv"
@@ -648,12 +649,21 @@ def run(args):
         "inputs": {
             "candidates_file": _rel(args.candidates),
             "candidates_sha256": _sha256(args.candidates),
+            "db_file": _rel(str(DB_PATH)),
             "db_sha256": _sha256(str(DB_PATH)),
             "predictor_version": cand.get("predictor_version"),
             "frozen_at": cand.get("frozen_at"),
+            # 每个 sha 都必须配一个 `*_file`，否则核对器只能猜（猜错比不猜更糟）
+            "tool_file": _rel(str(Path(__file__))),
             "tool_sha256": _sha256(Path(__file__)),
+            # 2026-09-12 实测脱钩后补：光记"验证器自己"不够，必须同时记**预测器**，
+            # 否则「候选文件被重新生成过」这件事在报告里完全没有痕迹。
+            "predictor_tool_file": _rel(str(PREDICTOR_PATH)),
+            "predictor_tool_sha256": _sha256(PREDICTOR_PATH),
         },
         "design": {
+            # 必须记：top_k 决定评估宇宙大小（--top-k 20 只验 20 条，与 n=424 不可比）
+            "top_k": args.top_k,
             "cutoff_year": CUTOFF_YEAR, "future_window": list(FUTURE),
             "train_period": list(train_period),
             "train_papers": idx.n_docs(train_period),
@@ -880,6 +890,24 @@ def write_csv(path, rep):
     Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def assert_inputs_unchanged(inputs, pairs):
+    """写盘后自检：报告认证的每个输入都还必须与磁盘一致。
+
+    2026-09-12 实测脱钩：本报告曾记录 `candidates_sha256=2887914f…`，而磁盘上是
+    `d6ad3470…` —— 预测器在验证结束后 32 秒又写了一次盘，报告因此**认证了一份
+    已不存在的文件**。只守"运行过程中未被改动"是守不住的；必须能反过来核对磁盘。
+    """
+    drift = [f for f, p in pairs
+             if inputs.get(f) and os.path.exists(p) and _sha256(p) != inputs[f]]
+    missing = [f for f, p in pairs if inputs.get(f) and not os.path.exists(p)]
+    if drift or missing:
+        raise SystemExit(
+            "[refused] 报告写完后输入已变：%s%s —— 证据链已裂。"
+            "旧报告先留档再重跑（脱钩本身就是证据）"
+            % (", ".join(drift), ("（缺失：%s）" % ", ".join(missing)) if missing else ""))
+    return True
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -908,6 +936,15 @@ def main(argv=None):
                               encoding="utf-8")
     write_csv(args.csv, rep)
     print(f"\n[ok] 报告 -> {_rel(args.out)}\n[ok] 表 -> {_rel(args.csv)}")
+
+    # 写盘后立刻自检：报告认证的每个输入都还必须一致。
+    # 只守"运行过程中未改动"不够 —— 生产者工具在验证之后再跑一次，
+    # 就能留下「认证了已不存在文件」的报告（2026-09-12 实测，时间差 32 秒）。
+    assert_inputs_unchanged(rep["inputs"], [
+        ("candidates_sha256", args.candidates),
+        ("db_sha256", str(DB_PATH)),
+        ("tool_sha256", str(Path(__file__))),
+        ("predictor_tool_sha256", str(PREDICTOR_PATH))])
     return 0
 
 

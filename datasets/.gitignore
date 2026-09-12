@@ -38,3 +38,6 @@ in_tree_eval_after_expansion.json
 prediction_effect_clean_v1.json
 candidate_topk_eval_v1.json
 edge_new_link_candidates_v*.json
+
+# 留档的历史证据（脱钩报告等）：本地保留，核对靠文档里记的 sha256
+legacy/
