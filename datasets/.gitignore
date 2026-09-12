@@ -12,3 +12,5 @@ sample_v1.jsonl
 sample_v1_manifest.json
 extraction_audit.json
 *.summary.json
+emergence_scores_p4_2.json
+emergence_top50.csv
