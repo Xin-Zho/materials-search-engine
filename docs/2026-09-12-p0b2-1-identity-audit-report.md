@@ -207,10 +207,15 @@ declared_type=OPENALEX  ->  best_available=DOI   ×18
 
 **库状态：结构性完好，无数据损坏**（五项不变式全 PASS）。
 
-**待用户裁定两项**：
+**待用户裁定两项** —— ✅ **已于同日裁定**（详见 `2026-09-12-p0b2-2-type-a-migration.md` §1）：
 
-1. **Type B 的 18 条** —— 保留 W 为主 vs 统一 DOI 优先
-2. **Type C 的 3 组** —— 逐组人工判定（其中 1 组已可确定为 preprint，按既有裁定不合并）
+1. **Type B 的 18 条** → **保留，不迁移 UID**。性质 = `identity_policy_drift`（非 corruption）：
+   `entity_id` 必须稳定（像 git commit hash），「最优引用标识」可变（像 branch pointer），
+   两者不可混进 UID。resolver 返回 `{entity_id, preferred_identifier}` 即可。
+2. **Type C 的 3 组** → **全部保留为候选**。SI 进人工 merge queue；
+   preprint 保持不合并（未来建 `published_as` 关系）；机构库建 `possible_duplicate`。
+
+裁定已固化进审计器的 `USER_RULINGS` 常量并写入报告，避免下次重新讨论。
 
 ---
 

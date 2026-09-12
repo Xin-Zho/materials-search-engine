@@ -61,6 +61,19 @@ DEFAULT_DB = os.path.join(BASE, "data/cache/knowledge_base.db")
 DEFAULT_OUT = os.path.join(BASE, "data/exports/schema/identity_audit_report.json")
 DETAIL_DIR = os.path.join(BASE, "data/exports/schema")
 
+def _rel(path):
+    """展示用相对路径。
+
+    ⚠️ Windows 上 ``os.path.relpath`` **跨盘符会抛 ValueError**（副本可能在 C:、
+    仓库在 D:）。所有接受 --db/--out 的工具都必须能对**任意路径的副本**运行，
+    否则「先在副本上验证」这个安全惯例就无法执行。
+    """
+    try:
+        return os.path.relpath(path, BASE).replace("\\", "/")
+    except ValueError:
+        return str(path).replace("\\", "/")
+
+
 AUDIT_VERSION = "p0b2_1_v1"
 
 COLUMNS = (("doi", "DOI"), ("openalex_id", "OPENALEX"), ("scopus_eid", "SCOPUS_EID"))
@@ -86,6 +99,41 @@ TYPE_META = {
           "悬空引用 / 孤立实体 / is_primary 唯一性"),
     "E": ("knowledge_records contamination",
           "v1 事实层的身份字段形态与跨世代可映射率"),
+}
+
+# ── 用户 2026-09-12 裁定（写进报告，避免下次重新讨论同一件事）────────────
+USER_RULINGS = {
+    "A": {
+        "decision": "修复（真错误）",
+        "executed_by": "tools/migrate_p0b2_2_type_a.py",
+        "note": "列与 uid 必须**同时**处理，只修一边会留下不一致",
+    },
+    "B": {
+        "decision": "保留现状，**不迁移 UID**",
+        "nature": "identity_policy_drift",
+        "not": "identity_corruption",
+        "rationale": (
+            "entity_id 与 preferred_identifier 是两个概念：paper_uid 应像 git commit "
+            "hash（永不变），「最优引用标识」像 branch pointer（可变）。"
+            "把两者混进 UID 会把稳定标识变成可变量。"
+            "以后 resolver 返回 {entity_id, preferred_identifier} 即可，"
+            "不改写 entity_id"),
+    },
+    "C": {
+        "decision": "全部保留为 duplicate candidate，**不自动合并**",
+        "status": "identified / not resolved",
+        "by_pattern_ruling": {
+            "SUPPORTING_INFORMATION":
+                "进入人工 merge queue（可能是 SI / supplementary article / "
+                "data article）。未来可保留 parent paper <- supporting document "
+                "关系，不要直接 merge",
+            "PREPRINT_VS_PUBLISHED":
+                "保持不合并（两个科研实体）。未来建 preprint "
+                "--published_as--> journal paper 关系，用于科研趋势分析",
+            "MULTI_REGISTRANT":
+                "不自动合并，建立 possible_duplicate 标记即可",
+        },
+    },
 }
 
 
@@ -517,7 +565,7 @@ def main():
     e = scan_e_knowledge_records(con, ident_idx, v1_index)
     inv = check_invariants(con, papers)
 
-    print(f"[audit] {AUDIT_VERSION}  db={os.path.relpath(args.db, BASE)}  "
+    print(f"[audit] {AUDIT_VERSION}  db={_rel(args.db)}  "
           f"sha256={before[:16]}…")
     print(f"\n  papers={len(papers)}  paper_identifiers="
           f"{con.execute('SELECT COUNT(*) FROM paper_identifiers').fetchone()[0]}  "
@@ -553,7 +601,7 @@ def main():
                 w = csv.DictWriter(f, fieldnames=list(recs[0].keys()))
                 w.writeheader()
                 w.writerows(recs)
-            print(f"\n  [details] Type {k} -> {os.path.relpath(path, BASE)}")
+            print(f"\n  [details] Type {k} -> {_rel(path)}")
         if c["groups"]:
             path = os.path.join(DETAIL_DIR, "identity_anomalies_C.csv")
             with open(path, "w", encoding="utf-8-sig", newline="") as f:
@@ -564,13 +612,13 @@ def main():
                     w.writerow([g["normalized_title"], g["title_sample"],
                                 len(g["members"]),
                                 "|".join(m["paper_uid"] for m in g["members"])])
-            print(f"  [details] Type C -> {os.path.relpath(path, BASE)}")
+            print(f"  [details] Type C -> {_rel(path)}")
 
     after = _sha256(args.db)
     report = {
         "audit_version": AUDIT_VERSION,
         "built_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "source_db": {"path": os.path.relpath(args.db, BASE).replace("\\", "/"),
+        "source_db": {"path": _rel(args.db),
                       "sha256": before, "unchanged": before == after},
         "scale": {
             "papers": len(papers),
@@ -594,6 +642,7 @@ def main():
             "E": {"name": TYPE_META["E"][0], "definition": TYPE_META["E"][1], **e},
         },
         "invariants": inv,
+        "user_rulings": USER_RULINGS,
         "cross_reference": {
             "A_uid_projection_equals_A": a["uid_projection_count"] == a["count"],
             "B_excludes_prefix_mismatch": b["cross_check_prefix_mismatch_n"] == a["count"],
@@ -628,7 +677,7 @@ def main():
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
-    print(f"\n[ok] 报告 -> {os.path.relpath(args.out, BASE)}")
+    print(f"\n[ok] 报告 -> {_rel(args.out)}")
     print(f"[ok] 源库未被修改: {before == after}")
 
     fail_on = [x.strip().upper() for x in args.fail_on.split(",") if x.strip()]

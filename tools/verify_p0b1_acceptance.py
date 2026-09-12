@@ -47,6 +47,19 @@ DEFAULT_DB = os.path.join(BASE, "data/cache/knowledge_base.db")
 FIXTURE = os.path.join(BASE, "tests/fixtures/p0b1_misplaced_30.json")
 DEFAULT_REPORT = os.path.join(BASE, "data/exports/schema/p0b1_acceptance_report.json")
 
+def _rel(path):
+    """展示用相对路径。
+
+    ⚠️ Windows 上 ``os.path.relpath`` **跨盘符会抛 ValueError**（副本可能在 C:、
+    仓库在 D:）。所有接受 --db/--out 的工具都必须能对**任意路径的副本**运行，
+    否则「先在副本上验证」这个安全惯例就无法执行。
+    """
+    try:
+        return os.path.relpath(path, BASE).replace("\\", "/")
+    except ValueError:
+        return str(path).replace("\\", "/")
+
+
 RESULTS = []
 
 
@@ -72,11 +85,17 @@ def load_fixture():
 
 
 def load_30_rows(con, fixture):
-    """按 fixture 定位真库中的 30 条错位行（用 uid 匹配，避免依赖列值）。"""
-    uids = [r["existing_paper_uid"] for r in fixture["records"]]
-    q = f"SELECT paper_id FROM papers WHERE paper_id IN ({','.join('?' * len(uids))})"
-    got = {r[0] for r in con.execute(q, uids)}
-    return got
+    """按 fixture 定位真库中这 30 条论文 —— 用 **EID 值**匹配，跨 uid 变更稳定。
+
+    P0-B2.2 之前用 ``existing_paper_uid`` 匹配（uid = ``doi:2-s2.0-*``）。
+    迁移把 uid 修正为 ``scopus:2-s2.0-*`` 之后，按 uid 匹配得到**空集** ——
+    而空集会让后续所有检查在"零行"上通过（**假绿**）。
+    因此改用 fixture 里冻结的 ``true_identifier_value``（EID，迁移不变）。
+    """
+    eids = [r["true_identifier_value"] for r in fixture["records"]]
+    q = (f"SELECT paper_uid FROM paper_identifiers WHERE id_type = 'SCOPUS_EID' "
+         f"AND normalized_value IN ({','.join('?' * len(eids))})")
+    return {r[0] for r in con.execute(q, eids)}
 
 
 def main() -> int:
@@ -87,7 +106,7 @@ def main() -> int:
 
     src_sha = hashlib.sha256(open(args.db, "rb").read()).hexdigest()
     fixture = load_fixture()
-    print(f"[p0b1] 源库 {os.path.relpath(args.db, BASE)} sha256={src_sha[:16]}…")
+    print(f"[p0b1] 源库 {_rel(args.db)} sha256={src_sha[:16]}…")
     print(f"[p0b1] fixture n={fixture['provenance']['n']} "
           f"sha256={fixture['provenance'].get('fixture_sha256', '')[:16]}…")
 
@@ -115,6 +134,14 @@ def main() -> int:
           f"identifiers={before['n_ids']} conflicts={before['n_cf']} "
           f"| fixture 命中 {len(present30)}/30")
     print()
+
+    # ── 防"空集假绿"（P0-B2.2 实测教训）────────────────────
+    # 本验收器的多数检查是「对 present30 这批行做 X」。一旦定位函数返回空集，
+    # 所有检查都会在零行上"通过" —— P0-B2.2 把 uid 从 doi:2-s2.0-* 修正为
+    # scopus:2-s2.0-* 之后，按 uid 匹配曾让这里静默变成 0/30 却报 16/16 PASS。
+    # 所以把「命中数」本身升为一条断言。
+    check(0, "fixture 命中 30/30（防空集假绿）", len(present30) == 30,
+          f"命中 {len(present30)}/30；若为 0 则其后各检查均无意义")
 
     # ══ A1 唯一生产者 ═══════════════════════════════════
     # P0-B1b：扫描改用 **AST** 而非文本匹配。理由不是洁癖 ——
@@ -155,7 +182,7 @@ def main() -> int:
                 for node in ast.walk(tree):
                     if (isinstance(node, ast.Constant) and isinstance(node.value, str)
                             and id(node) not in doc_ids and pat.search(node.value)):
-                        hits.add(os.path.relpath(p, BASE).replace("\\", "/"))
+                        hits.add(_rel(p))
                         break
         return hits
 
@@ -287,9 +314,9 @@ def main() -> int:
     report = {
         "role": "P0-B1 统一身份写入入口验收报告",
         "verifier_version": pw.RESOLVER_VERSION,
-        "db": os.path.relpath(args.db, BASE),
+        "db": _rel(args.db),
         "db_sha256": src_sha,
-        "fixture": os.path.relpath(FIXTURE, BASE),
+        "fixture": _rel(FIXTURE),
         "fixture_sha256": fixture["provenance"].get("fixture_sha256"),
         "baseline": {k: v for k, v in before.items() if k != "uids"},
         "summary": {"passed": passed, "total": total, "all_passed": passed == total},
@@ -298,7 +325,7 @@ def main() -> int:
     os.makedirs(os.path.dirname(args.report), exist_ok=True)
     with open(args.report, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
-    print(f"[p0b1] 报告 -> {os.path.relpath(args.report, BASE)}")
+    print(f"[p0b1] 报告 -> {_rel(args.report)}")
 
     e.close()
     con.close()

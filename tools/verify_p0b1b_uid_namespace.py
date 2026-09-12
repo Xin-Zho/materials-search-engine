@@ -48,10 +48,27 @@ from search_engine.identity import uid_id_type  # noqa: E402
 KB = os.path.join(BASE, "data/cache/knowledge_base.db")
 OUT = os.path.join(BASE, "data/exports/schema/p0b1b_uid_namespace_report.json")
 
+def _rel(path):
+    """展示用相对路径。
+
+    ⚠️ Windows 上 ``os.path.relpath`` **跨盘符会抛 ValueError**（副本可能在 C:、
+    仓库在 D:）。所有接受 --db/--out 的工具都必须能对**任意路径的副本**运行，
+    否则「先在副本上验证」这个安全惯例就无法执行。
+    """
+    try:
+        return os.path.relpath(path, BASE).replace("\\", "/")
+    except ValueError:
+        return str(path).replace("\\", "/")
+
+
 VERIFIER_VERSION = "p0b1b_uid_ns_v1"
 
 # 已知冻结量（P0-A / P0-B1 已记录）；差异必须**恰好等于**它们，多一条少一条都算失败。
-EXPECTED_DELTA_A = 30
+# DELTA-A 的期望值**不写死**：它恒等于「当前库里 Type A 的数量」。
+#   * P0-B2.2 之前：库里有 30 条列错位 -> 重放会纠正 30 条（差异 30）
+#   * P0-B2.2 之后：库里 Type A = 0     -> 重放无差异（差异 0）
+# 写死 30 会让本验收器在缺陷修好后变成"必须失败"，从而失去长期价值。
+EXPECTED_DELTA_A_LEGACY = 30   # 仅作为历史锚：P0-B2.2 前的冻结量
 EXPECTED_DELTA_B = 18
 
 
@@ -69,6 +86,20 @@ def _load_tool(name):
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+def _current_type_a_count():
+    """当前库的 Type A 数量（经 audit_identity_report，唯一判定口径）。
+
+    DELTA-A 的期望值由它派生：DELTA-A 恒等于「重放会纠正的条数」，
+    而重放只纠正 Type A —— 所以两者必须相等，且随库状态自适应。
+    """
+    import audit_identity_report as audit
+    con = sqlite3.connect(f"file:{KB}?mode=ro", uri=True)
+    con.row_factory = sqlite3.Row
+    n = audit.scan_a_column_mismatch(con, audit._load_papers(con))["count"]
+    con.close()
+    return n
 
 
 def delta_a_from_w1():
@@ -160,6 +191,10 @@ def main():
     before = _sha256(KB)
     print(f"[verify] {VERIFIER_VERSION}  (真库只读, sha256={before[:16]}…)")
 
+    expected_a = _current_type_a_count()
+    print(f"[verify] 当前库 Type A = {expected_a}（DELTA-A 的期望值由它派生，"
+          f"不写死）")
+
     a = delta_a_from_w1()
     print(f"\n[DELTA-A] W1 重放  plan={a['plan_n']}  db={a['db_n']}"
           f"  shared={a['shared_n']}")
@@ -174,13 +209,14 @@ def main():
         print(f"          {d['key']:<14} {d['in_db']}  ->  {d['plan']}")
 
     checks = {
-        "A_delta_eq_known_30": a["delta_n"] == EXPECTED_DELTA_A,
+        "A_delta_eq_current_type_a": a["delta_n"] == expected_a,
         "A_same_identifier_set": a["same_identifier_set_two_forms"] is True,
-        "A_bad_side_all_doi_prefix": a["bad_prefix_side"].get("doi") == EXPECTED_DELTA_A,
+        "A_bad_side_all_doi_prefix":
+            a["bad_prefix_side"].get("doi", 0) == expected_a,
         "A_good_side_all_scopus_prefix":
-            a["good_prefix_side"].get("scopus") == EXPECTED_DELTA_A,
+            a["good_prefix_side"].get("scopus", 0) == expected_a,
         "A_no_collateral_change":
-            a["shared_n"] == a["plan_n"] - EXPECTED_DELTA_A,
+            a["shared_n"] == a["plan_n"] - expected_a,
         "B_delta_eq_known_18": b["delta_n"] == EXPECTED_DELTA_B,
         "B_all_are_doi_upgrades":
             all(uid_id_type(d["plan"]) == "DOI"
@@ -198,11 +234,12 @@ def main():
     report = {
         "verifier_version": VERIFIER_VERSION,
         "verified_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "source_db": {"path": os.path.relpath(KB, BASE).replace("\\", "/"),
+        "source_db": {"path": _rel(KB),
                       "sha256": before, "unchanged": before == after},
         "delta_a_uid_prefix_mismatch": a,
         "delta_b_primary_choice_inconsistent": b,
-        "expected": {"delta_a": EXPECTED_DELTA_A, "delta_b": EXPECTED_DELTA_B},
+        "expected": {"delta_a": expected_a, "delta_b": EXPECTED_DELTA_B,
+                     "delta_a_legacy_anchor": EXPECTED_DELTA_A_LEGACY},
         "checks": checks,
         "passed": all(checks.values()),
         "notes": [
@@ -219,7 +256,7 @@ def main():
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
     print(f"\n[{'OK' if report['passed'] else 'FAIL'}] -> "
-          f"{os.path.relpath(OUT, BASE)}")
+          f"{_rel(OUT)}")
     return 0 if report["passed"] else 1
 
 
