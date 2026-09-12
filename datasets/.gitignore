@@ -1,17 +1,23 @@
-# 数据集二进制与派生产物 —— 可由 tools/build_p4_0_dataset.py 从 data/ 缓存重建
-# 入 git 的只有冻结的实验协议 benchmark.yaml
+# 数据集二进制与派生产物 —— 可由 tools/ 下的构建器从 data/ 缓存重建
+#
+# 入 git 的只有两类：
+#   ① 冻结的实验协议与可评审资产：benchmark.yaml / extraction_spec*.yaml /
+#      scope_allowlist.yaml / edge_event_spec.yaml
+#   ② 记录"协议里的样本是从哪来的"的溯源清单：sample_*_manifest.json（几 KB，无正文）
+# 其余一律不入 git；复现靠 tools/ 重跑，核对靠各产物的 --verify。
 *.db
 *.jsonl
 build_report.json
 extraction_cache/
 
-# ── C 阶段（P4-1）派生物：可由 tools/ 下的构建器重建，不入 git ──
-# 入 git 的只有冻结协议与可评审资产：benchmark.yaml / extraction_spec.yaml / scope_allowlist.yaml
+# ── C 阶段（P4-1）派生物 ──
 concepts_v1.jsonl*
 sample_v1.jsonl
 sample_v1_manifest.json
 extraction_audit.json
 *.summary.json
+
+# ── P4-2 / P4-3 派生物 ──
 emergence_scores_p4_2.json
 emergence_top50.csv
 emergence_candidates_v2.json
@@ -21,10 +27,14 @@ validation_report_v1.json
 validation_report_v1.csv
 analyst_spec.yaml
 analyst_cache/
-emergence_candidates_v2.json
-emergence_candidates_v2.csv
-candidate_analysis_v1.json
-validation_report_v1.json
-validation_report_v1.csv
-analyst_spec.yaml
-analyst_cache/
+
+# ── 扩树（v2 抽取，4,387 篇）派生物 ──
+concepts_full_v2.jsonl*
+sample_full_v2.jsonl
+
+# ── 评估与诊断报告（可由 tools/ 重跑复现；产物自带输入 sha256，用 --verify 核对）──
+internal_gate_before_expansion.json
+in_tree_eval_after_expansion.json
+prediction_effect_clean_v1.json
+candidate_topk_eval_v1.json
+edge_new_link_candidates_v*.json
