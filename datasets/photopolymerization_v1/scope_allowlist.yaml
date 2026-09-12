@@ -1,0 +1,113 @@
+# P4-0 范围白名单（scope allowlist）
+#
+# 为什么需要它 —— P4-1A pilot 暴露的实测事实：
+#   纯词面范围门**在每一层都会漏**。第一版用 STRONG 家族词，pilot 抽出的 30 篇
+#   里有 ~17 篇离题（DNA 甲基化 / 石墨烯 / 有机光伏 / 热重分析 / T 细胞免疫 /
+#   剂量换算 / 蛋白序列比对 / MOF）。逐个收紧词表后仍有 8 篇漏网，因为
+#   `epoxy`、`thiol`、`conversion`、`polymer` 在别的材料学科里同样高频。
+#
+#   → 改用一个**语义级**信号：OpenAlex 自己的 `primary_topic` 分类。
+#     主题名是短句、可评审、粒度正好；而论文文本的词面匹配做不到。
+#
+# 判定规则（build_p4_0_dataset.scope_of）：
+#     in_scope = (primary_topic ∈ include) OR (STRICT 词面命中)
+#   · 主题门负责**精度**（挡掉石墨烯/混凝土/摩擦学/电池…）
+#   · 严格词面门负责**召回救援**（主题被 OpenAlex 误分类、但文本明确是光固化的论文）
+#
+# 维护约定：
+#   · 本文件是**已冻结资产**，改动需写明 reason 并重跑 build + 采样
+#   · `basis=kb_seed` 表示 KB 已人工审核的相关论文落在该主题（强证据）
+#   · `basis=name_review` 表示按主题名人工判断
+#   · `pending_review` 里的主题**暂不纳入**，等用户裁定；纳入后移到 include
+
+version: p4_0_scope_allowlist_v1
+updated_at: "2026-09-12"
+
+include:
+  # ── KB 正例种子（KB∩池 126 篇中的归属，强证据）─────────────────────
+  - topic: "Photopolymerization techniques and applications"
+    basis: kb_seed
+    kb_positive: 33
+    note: 主题本体
+  - topic: "Dental materials and restorations"
+    basis: kb_seed
+    kb_positive: 40
+    note: 光固化牙科复合树脂是 polymerization shrinkage 的主战场
+  - topic: "Additive Manufacturing and 3D Printing Technologies"
+    basis: kb_seed
+    kb_positive: 22
+    note: vat photopolymerization / DLP / SLA 的主要应用面
+  - topic: "Photorefractive and Nonlinear Optics"
+    basis: kb_seed
+    kb_positive: 4
+    note: 全息记录用光致聚合物（KB 内含「光致聚合物全息记录材料体积收缩率」）
+  - topic: "Synthetic Organic Chemistry Methods"
+    basis: kb_seed
+    kb_positive: 5
+    note: Ring-opening / 单体合成方法学
+
+  # ── 按主题名人工判断（直接相邻技术）──────────────────────────────────
+  - topic: "3D Printing in Biomedical Research"
+    basis: name_review
+    note: 生物打印 / 光固化水凝胶支架
+  - topic: "Epoxy Resin Curing Processes"
+    basis: name_review
+    note: 阳离子光聚合环氧是核心体系之一
+  - topic: "Nanofabrication and Lithography Techniques"
+    basis: name_review
+    note: 光刻胶 / 双光子聚合微纳加工
+  - topic: "Click Chemistry and Applications"
+    basis: name_review
+    note: thiol-ene 属 click chemistry，是低收缩体系主线
+  - topic: "Cyclopropane Reaction Mechanisms"
+    basis: name_review
+    note: vinylcyclopropane 开环聚合用于降低聚合收缩
+  - topic: "Radical Photochemical Reactions"
+    basis: name_review
+    note: 自由基光聚合机理
+
+pending_review:
+  # 这些主题与光固化**相关但非本体**，纳入与否会明显改变语料分布。
+  # 默认**不纳入**（宁缺勿滥），等用户裁定。
+  - topic: "Polymer composites and self-healing"
+    n_in_pool: 348
+    kb_positive: 3
+    question: 复合材料/自修复通常不是光固化体系，但部分用光固化成型
+  - topic: "Hydrogels: synthesis, properties, applications"
+    n_in_pool: 70
+    kb_positive: 0
+    question: 光交联水凝胶是光固化子领域，但主题粒度过粗（含大量非光交联工作）
+  - topic: "Silicone and Siloxane Chemistry"
+    n_in_pool: 111
+    kb_positive: 1
+    question: 硅氧烷用于牙科/3D 打印，但主题本身不是光固化
+  - topic: "Synthesis and properties of polymers"
+    n_in_pool: 79
+    kb_positive: 0
+    question: 通用高分子合成
+  - topic: "Advanced Polymer Synthesis and Characterization"
+    n_in_pool: 230
+    kb_positive: 1
+    question: 通用高分子合成
+  - topic: "Polymer Nanocomposites and Properties"
+    n_in_pool: 129
+    kb_positive: 1
+    question: 通用复合材料
+  - topic: "biodegradable polymer synthesis and properties"
+    n_in_pool: 126
+    kb_positive: 0
+    question: 可降解高分子，与光固化只有部分交集
+  - topic: "Liquid Crystal Research Advancements"
+    n_in_pool: 83
+    kb_positive: 0
+    question: 液晶；注意另一条 topic line 是 thermochromic，不要混淆
+  - topic: "Photochromic and Fluorescence Chemistry"
+    n_in_pool: 50
+    kb_positive: 0
+    question: 光致变色，属另一条主题线（thermochromic/photochromic），非光固化
+
+exclude_note: >
+  其余 ~450 个主题（Graphene / Carbon Nanotubes / Concrete / Tribology /
+  Battery / CO2 catalysis / Endodontics / Wound Healing / Soldering /
+  Injection Molding / Aerogels / Photocatalysis …）一律判为范围外。
+  它们正是靠 `conversion`、`polymer`、`epoxy`、`thiol` 这类通用词混进纯词面门的。

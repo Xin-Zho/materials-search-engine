@@ -1,6 +1,6 @@
 dataset: photopolymerization_v1
-build_version: p4_0_v1
-built_at: '2026-09-12T17:52:37'
+build_version: p4_0_v2
+built_at: '2026-09-12T18:16:10'
 role: Temporal Scientific Forecasting Benchmark (P4-0)
 statement: 本数据集的目的不是「建立完整光固化数据库」，而是验证一个闭环：历史文献结构 -> 知识表示 -> 方向预测 -> 未来验证。因此它的第一属性是**时间隔离**，不是覆盖度。
 corpus:
@@ -66,8 +66,9 @@ scope:
     万引)、Folin 酚试剂蛋白定量(31.9 万引) 等与光固化无关的论文
   consequence: P4-1 的分层采样 Layer 1（高影响基础论文）会被这些论文占满，concept graph 会长在 R 语言与 PCR 方法学上
   gate:
-    tier_CORE: 标题+摘要命中 STRONG（光固化家族词）-> in_scope
-    tier_ADJACENT: 仅命中 ADJACENT（广义材料/高分子词）-> in_scope
+    tier_TOPIC_ALLOW: primary_topic ∈ scope_allowlist.yaml -> in_scope（**主信号**，语义级，精度来源）
+    tier_CORE_TEXT: STRICT_RE 严格词面命中 -> in_scope（召回救援：主题被 OpenAlex 误分类但文本明确）
+    tier_ADJACENT_ONLY: 仅 >=2 个广义词族 -> **不**在范围内（只记录；pilot 证明这一档含石墨烯/光伏/免疫学）
     tier_CHANNEL_ONLY: 无词面证据但来自定向通道（title_search / cites_expansion / single_work）-> **不**在范围内，仅记录，可作扩张旋钮
     tier_OFF_TOPIC: 无任何证据
     in_scope_definition: tier ∈ {CORE, ADJACENT}
@@ -76,36 +77,48 @@ scope:
     threshold: 召回优先、宁滥勿缺（与本项目检索侧口径一致）
   result:
     tiers:
-      CORE: 7335
-      ADJACENT: 4520
-      CHANNEL_ONLY: 1118
-      OFF_TOPIC: 1345
+      TOPIC_ALLOW: 7662
+      CORE_TEXT: 2466
+      ADJACENT_ONLY: 1640
+      CHANNEL_ONLY: 979
+      OFF_TOPIC: 1571
     variant_comparison:
-      STRONG_only:
-        in_scope: 7335
-        kb_recall: 0.8333
-      STRONG_or_ADJACENT（采用）:
-        in_scope: 11855
+      topic_only（主题白名单单独）:
+        in_scope: 7662
+        kb_recall: 0.8413
+      topic_or_strict_text（采用）:
+        in_scope: 10128
+        kb_recall: 0.9762
+        note: 严格词面门做召回救援：主题被 OpenAlex 误分类但文本明确是光固化的论文
+      再加 ADJACENT_ONLY:
+        in_scope: 11768
         kb_recall: 1.0
-      STRONG_or_ADJACENT_or_CHANNEL:
-        in_scope: 12973
-        note: 召回与采用版相同，却多纳入 CHANNEL_ONLY 1 千余篇 -> 不采用
-    in_scope: 11855
-    in_scope_pct: 0.828
-    in_scope_train: 6636
-    in_scope_eval: 4439
+        note: P4-1A pilot 证明这一档会放入石墨烯/光伏/免疫学等离题论文 -> 不采用
+    in_scope: 10128
+    in_scope_pct: 0.7074
+    in_scope_train: 5545
+    in_scope_eval: 3905
     view_counts:
       view: v_photopolymerization
       definition: in_scope=1 AND exclusion_reason IS NULL AND split IN ('TRAIN','EVAL')
-      total: 11027
-      train: 6604
-      eval: 4423
+      total: 9415
+      train: 5520
+      eval: 3895
   kb_recall_check:
     kb_intersect_pool: 126
-    missed: 0
-    recall: 1.0
+    missed: 3
+    recall: 0.9762
     method: 以 KB paper_identifiers 里已收录的论文为已知相关集，取其在池中的交集，检查范围门是否漏掉
-    missed_sample: []
+    missed_sample:
+    - paper_uid: openalex:W7155086367
+      title: 'Sulfur-Based Dynamic Covalent Polymers: From Reversible Bonds to Smart Materials'
+      primary_topic: Polymer composites and self-healing
+    - paper_uid: openalex:W2055782377
+      title: 'Chemistry of silanes: Interfaces in dental polymers and composites'
+      primary_topic: Silicone and Siloxane Chemistry
+    - paper_uid: openalex:W1860611477
+      title: Improving the fracture toughness and the strength of epoxy using nanomaterials –
+      primary_topic: Carbon Nanotubes in Composites
   usage: P4-1 采样必须从 `v_photopolymerization` 视图取（= in_scope AND 未排除 AND split∈{TRAIN,EVAL}）；CHANNEL_ONLY
     的论文是**已记录未启用**的扩张池，启用前需先评估其主题精度
   not_silently_dropped: 全部 14,318 行保留在 paper_meta，in_scope / scope_tier / scope_evidence 逐行落库，范围判定可复核、可回滚
@@ -231,6 +244,7 @@ known_limitations:
 - 语料来自既有检索缓存，不是对 OpenAlex 全库的系统抽样 —— 方向分布受当年检索策略影响（dental materials 2492 / photopolymerization 2081 /
   additive manufacturing 1451）
 - 同题同年 623 行未去重（策略见 duplicate_entity_policy）
-- 范围门排除了 1345 篇无任何主题证据的论文、保留 1118 篇「有定向通道但无词面证据」为**未启用**扩张池 —— 范围内的论文可在 paper_meta 中全部检索到（in_scope / scope_evidence
-  逐行可审计）
-- ADJACENT 档（4520 篇）只有广义高分子/材料词面证据，可能包含非光固化论文（如石墨烯-聚合物复合材料）；它保证召回但降低精度
+- 范围门用**主题白名单**（datasets/photopolymerization_v1/scope_allowlist.yaml，committed 可评审）而非纯词面：pilot 实测纯词面门抽出的
+  30 篇里 ~17 篇离题（DNA 甲基化/石墨烯/有机光伏/热重分析/T 细胞免疫/剂量换算/蛋白序列比对），逐个收紧词表后仍漏 8 篇
+- 范围外仍有 4190 篇留在 paper_meta（逐行 tier/evidence 可审计，不静默丢弃）
+- pending_review 的 9 个主题（复合材料/水凝胶/硅氧烷/通用高分子/液晶/光致变色…）**暂不纳入**，纳入与否会明显改变语料分布 —— 待用户裁定

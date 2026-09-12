@@ -63,7 +63,7 @@ from search_engine.identity import (  # noqa: E402
 )
 from search_engine.paper_writer import uid_type_matches_value  # noqa: E402
 
-BUILD_VERSION = "p4_0_v1"
+BUILD_VERSION = "p4_0_v2"
 DATASET_VERSION = "photopolymerization_v1"
 
 OPENALEX_CACHE = BASE / "data" / "cache" / "openalex_cache.json"
@@ -120,38 +120,85 @@ NOT_SET = "NOT_SET"
 #   取 STRONG|ADJ —— 召回 98.4%（126 篇 KB∩池中漏 2 篇，见 scope.kb_recall），
 #   且 10 篇全球巨引论文全部出局。CHANNEL 只作为**记录项**（可回填的扩张旋钮），
 #   因为它会把「引用了种子论文但与光固化无关」的论文一并放进来。
-STRONG_RE = re.compile(r"""
- photo-?polymer | photocure | photo-?curab | photocrosslink | photoinitiat
-| photosensiti | photolithograph | photoresist
-| acrylat | methacrylat | \bthiol | thiol-ene | vinylcyclopropane | vinyl sulfonate
-| stereolithograph | \bDLP\b | \bSLA\b | vat photopolymer | two-?photon polymeri
-| ring-?opening | \bROMP\b | ring strain
-| polymerization shrinkage | shrinkage stress | polymeri[sz]ation-induced
-| dental composite | composite resin | resin composite | dental material
-| dental restorat | dental adhesive
-| additive manufactur | 3d print | \b3-?d print
-| light-?cur | \buv-?cur | ultraviolet cur | visible-?light cur
-| 光聚合 | 光固化 | 光致聚合物 | 紫外固化 | 光刻 | 增材制造 | 光敏树脂
+STRICT_RE = re.compile(r"""
+ photo-?\s?polymer | photocure | photo-?\s?curab | photocrosslink | photoinitiat
+| photosensiti | photolithograph | photoresist | photoacid
+| light-?\s?fueled | \buv-?\s?cur | light-?\s?cur | ultraviolet\s+cur
+| thiol-?\s?ene | vinylcyclopropane | vinyl\s+sulfonate
+| ring-?\s?opening\s+polymeri | \bROMP\b | ring\s+strain\s+relief
+| polymeri[sz]ation\s+shrinkage | shrinkage\s+stress | shrink\s+stress
+| degree\s+of\s+conversion | double-?\s?bond\s+conversion | monomer\s+elution
+| dental\s+(?:composite|restorat|adhesive|resin)
+| composite\s+resin | resin\s+composite | resin\s+cement | bulk-?\s?fill
+| stereolithograph | vat\s+photopolymer | two-?\s?photon\s+polymeri | \bDLP\b | \bSLA\b
+| 光聚合 | 光固化 | 光致聚合物 | 紫外固化 | 光刻 | 光敏树脂 | 光引发剂
 """, re.I | re.X)
 
-# 广义材料/高分子词：单独不足以定范围，但能捞回摘要写法偏离的论文
-ADJACENT_RE = re.compile(r"""
- \bepoxy | epoxid | macroinitiat | macromonomer | \boligomer | \bmonomer
-| crosslink | gelation | gel point | double.?bond conversion
-| photochemical | photoreactive | photosensitive | photostable
-| \bresin | \bpolymeri[sz] | \bpolymers?\b | \bcuring\b | \bcured\b | \bcure\b
-| shrink | conversions?
-| 收缩 | 单体 | 树脂 | 交联 | 固化 | 聚合 | 复合材料 | 牙科
-""", re.I | re.X)
+# ⚠️ 上面必须用 ``\s+`` 而不是裸空格：``re.X``（verbose）模式下**模式里的空白会被忽略**，
+# 写 ``polymerization shrinkage`` 实际编译成 ``polymerizationshrinkage``，永远匹配不上。
+# 这个 bug 曾让整个强特征层形同虚设（多词短语全部失效），只剩单字词兜底。
+# 见 tests/test_p4_0_dataset.py::test_multiword_patterns_actually_match
 
-SCOPE_CORE = "CORE"                    # 命中 STRONG -> in_scope
-SCOPE_ADJACENT = "ADJACENT"            # 仅命中 ADJACENT -> in_scope
-SCOPE_CHANNEL_ONLY = "CHANNEL_ONLY"    # 无词面证据但有定向通道 -> **不**在范围内
-SCOPE_OFF_TOPIC = "OFF_TOPIC"          # 无任何证据
-IN_SCOPE_TIERS = frozenset({SCOPE_CORE, SCOPE_ADJACENT})
+# 广义材料/高分子词族：**单独不足以定范围**，必须 >= ADJACENT_MIN_FAMILIES 个不同词族同时命中。
+# 词族命中现在**只记录、不决定** in_scope —— P4-1A pilot 证明词面门在每一层都会漏
+# （epoxy / thiol / conversion / polymer 在别的材料学科同样高频）。
+ADJACENT_TERMS = (
+    ("polymer", re.compile(r"\bpolymeri[sz]|\bpolymer", re.I)),
+    ("monomer", re.compile(r"\bmonomer|macromonomer", re.I)),
+    ("acrylate", re.compile(r"acrylat|methacrylat", re.I)),
+    ("oligomer", re.compile(r"\boligomer", re.I)),
+    ("resin", re.compile(r"\bresin", re.I)),
+    ("curing", re.compile(r"\bcur(?:e|es|ed|ing|able)\b", re.I)),
+    ("conversion", re.compile(r"\bconversions?\b", re.I)),
+    ("crosslinking", re.compile(r"cross-?link", re.I)),
+    ("gelation", re.compile(r"gelation|gel\s+point", re.I)),
+    ("epoxy", re.compile(r"\bepoxy|epoxid", re.I)),
+    ("thiol", re.compile(r"\bthiol", re.I)),
+    ("composite", re.compile(r"\bcomposites?\b", re.I)),
+    ("dental", re.compile(r"\bdental\b", re.I)),
+    ("photochemistry", re.compile(
+        r"photochemic|photoreactive|photosensiti|photoinduced|photostable", re.I)),
+    ("hydrogel", re.compile(r"hydrogel", re.I)),
+    ("thermoset", re.compile(r"thermoset|thermosetting", re.I)),
+    ("mechanics", re.compile(r"mechanical\s+propert|tensile\s+strength|elastic\s+modulus",
+                             re.I)),
+    ("filler", re.compile(r"\bfiller", re.I)),
+    ("zh", re.compile(r"光聚合|光固化|光敏|紫外|固化|聚合|收缩|单体|树脂|交联"
+                      r"|复合材料|牙科|增材制造", re.I)),
+)
+ADJACENT_MIN_FAMILIES = 2
+
+# ── 范围档 ────────────────────────────────────────────────────────────
+SCOPE_TOPIC = "TOPIC_ALLOW"        # primary_topic 在白名单内 -> in_scope（主信号）
+SCOPE_TEXT = "CORE_TEXT"           # 严格词面命中 -> in_scope（召回救援）
+SCOPE_ADJACENT_ONLY = "ADJACENT_ONLY"   # 仅广义词族（>=2）-> **不**在范围内（只记录）
+SCOPE_CHANNEL_ONLY = "CHANNEL_ONLY"     # 无词面证据但有定向通道 -> **不**在范围内
+SCOPE_OFF_TOPIC = "OFF_TOPIC"           # 无任何证据
+IN_SCOPE_TIERS = frozenset({SCOPE_TOPIC, SCOPE_TEXT})
+SCOPE_TIER_ORDER = (SCOPE_TOPIC, SCOPE_TEXT, SCOPE_ADJACENT_ONLY,
+                    SCOPE_CHANNEL_ONLY, SCOPE_OFF_TOPIC)
 
 # 定向通道：查询本身带主题约束（引文扩展 / 标题检索 / 单篇查询）
 TARGETED_CHANNELS = frozenset({"title_search", "cites_expansion", "single_work"})
+
+SCOPE_ALLOWLIST = BASE / "datasets" / DATASET_VERSION / "scope_allowlist.yaml"
+
+
+def load_scope_allowlist(path=SCOPE_ALLOWLIST):
+    """读**已冻结**的主题白名单（committed 资产，改动需重跑 build + 采样）。
+
+    返回 ``(topic_set, meta)``。文件缺失时返回空集 —— 那会让范围门退化成
+    纯词面门（精度会掉），所以调用方会把这件事显式报出来。
+    """
+    if not Path(path).exists():
+        return set(), {"loaded": False, "path": _rel(path), "n": 0}
+    import yaml
+    doc = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+    topics = {e["topic"] for e in (doc.get("include") or []) if e.get("topic")}
+    pending = {e["topic"] for e in (doc.get("pending_review") or []) if e.get("topic")}
+    return topics, {"loaded": True, "path": _rel(path),
+                    "version": doc.get("version"), "n": len(topics),
+                    "pending_review": sorted(pending)}
 
 
 def classify_channel(url, payload):
@@ -166,19 +213,34 @@ def classify_channel(url, payload):
     return "single_work"
 
 
-def scope_of(title_abstract_text, channels):
-    """范围判定：返回 ``(tier, evidence)``。纯词面 + 通道，不含人工判断。"""
-    strong = sorted({m.group(0).lower()
-                     for m in STRONG_RE.finditer(title_abstract_text or "")})
-    adj = sorted({m.group(0).lower()
-                  for m in ADJACENT_RE.finditer(title_abstract_text or "")})
+def scope_of(title_abstract_text, channels, primary_topic=None, allowlist=None):
+    """范围判定：返回 ``(tier, evidence)``。
+
+    判定顺序（**主题优先**）：
+      1. ``primary_topic`` ∈ 白名单          -> ``TOPIC_ALLOW``（主信号，精度）
+      2. 严格词面命中（STRICT_RE）            -> ``CORE_TEXT``（召回救援）
+      3. 仅 >=2 个广义词族                   -> ``ADJACENT_ONLY``（只记录）
+      4. 有定向通道但无词面证据               -> ``CHANNEL_ONLY``（只记录）
+      5. 其余                                -> ``OFF_TOPIC``
+
+    为什么不是「词面单独定范围」：P4-1A pilot 实测，纯词面门抽出的 30 篇里
+    ~17 篇离题（DNA 甲基化 / 石墨烯 / 有机光伏 / 热重分析 / T 细胞免疫 /
+    剂量换算 / 蛋白序列比对），逐个收紧词表后仍漏 8 篇 —— 因为
+    ``epoxy``/``thiol``/``conversion``/``polymer`` 在别的材料学科同样高频。
+    """
+    text = title_abstract_text or ""
+    allowlist = allowlist or set()
+    if primary_topic and primary_topic in allowlist:
+        return SCOPE_TOPIC, [f"topic:{primary_topic}"]
+    strong = sorted({m.group(0).lower() for m in STRICT_RE.finditer(text)})
     if strong:
-        return SCOPE_CORE, strong[:5]
-    if adj:
-        return SCOPE_ADJACENT, adj[:5]
+        return SCOPE_TEXT, strong[:5]
+    fams = sorted({name for name, rx in ADJACENT_TERMS if rx.search(text)})
+    if len(fams) >= ADJACENT_MIN_FAMILIES:
+        return SCOPE_ADJACENT_ONLY, fams[:6]
     if channels & TARGETED_CHANNELS:
         return SCOPE_CHANNEL_ONLY, sorted(channels)
-    return SCOPE_OFF_TOPIC, []
+    return SCOPE_OFF_TOPIC, fams[:3]
 
 
 
@@ -342,7 +404,7 @@ def _split_of(year):
     return SPLIT_OUT_OF_RANGE
 
 
-def build_records(by_id, scopus_idx, kb_by_key, kb_eid_by_uid):
+def build_records(by_id, scopus_idx, kb_by_key, kb_eid_by_uid, allowlist=None):
     """把 OpenAlex work 转成 paper_meta 行（纯计算，零写入）。"""
     records = []
     stats = collections.Counter()
@@ -420,11 +482,13 @@ def build_records(by_id, scopus_idx, kb_by_key, kb_eid_by_uid):
         elif w.get("is_paratext") or (w.get("type") in NON_RESEARCH_TYPES):
             reason = EXCL_PARATEXT if w.get("is_paratext") else EXCL_TYPE
 
-        # ── 范围判定（用回填后的摘要，召回更高）─────────────────────────
+        # ── 范围判定（主题优先；用回填后的摘要，召回更高）───────────────
         channels = set(w.get("__channels") or ())
+        primary_topic = ((w.get("primary_topic") or {}).get("display_name"))
         scope_tier, scope_evidence = scope_of(
             ((w.get("title") or w.get("display_name") or "") + " "
-             + (abstract or "")), channels)
+             + (abstract or "")), channels,
+            primary_topic=primary_topic, allowlist=allowlist)
 
         records.append({
             "paper_uid": paper_uid,
@@ -446,7 +510,7 @@ def build_records(by_id, scopus_idx, kb_by_key, kb_eid_by_uid):
             "counts_by_year_json": json.dumps(cby, ensure_ascii=False) if cby else None,
             "counts_window_start": win_start,
             "counts_window_end": win_end,
-            "primary_topic": ((w.get("primary_topic") or {}).get("display_name")),
+            "primary_topic": primary_topic,
             "topics_json": json.dumps(topics, ensure_ascii=False) if topics else None,
             "keywords_json": json.dumps(kws, ensure_ascii=False) if kws else None,
             "n_authors": len(auths),
@@ -625,7 +689,7 @@ def write_jsonl(records, path, split):
     return len(rows)
 
 
-def acceptance(records, dup, pool_meta, kb_keys=()):
+def acceptance(records, dup, pool_meta, kb_keys=(), allowlist_meta=None):
     """用户要求的六项验收 + 反泄漏完整性 + 范围门审计。"""
     total = len(records)
     inc = [r for r in records if not r["exclusion_reason"]]
@@ -646,28 +710,34 @@ def acceptance(records, dup, pool_meta, kb_keys=()):
                   if ("DOI", r["doi"]) in kb_keys
                   or ("OPENALEX", r["openalex_id"]) in kb_keys]
     kb_missed = [r for r in kb_in_pool if not r["in_scope"]]
-    # 变体对照（同一次运行内实测，避免文档出现两套口径）：
-    # 只看 STRONG 会更严，召回更低 —— 记录它，让「为什么用 STRONG|ADJACENT」可复核
-    kb_missed_strong_only = [r for r in kb_in_pool
-                             if r["scope_tier"] != SCOPE_CORE]
+    n_kb = len(kb_in_pool)
+    allowlist_meta = allowlist_meta or {}
+
+    def _recall(pred):
+        if not n_kb:
+            return None
+        return round(sum(1 for r in kb_in_pool if pred(r)) / n_kb, 4)
+
+    topic_only = {SCOPE_TOPIC}
+    adopted = {SCOPE_TOPIC, SCOPE_TEXT}
+    plus_adj = adopted | {SCOPE_ADJACENT_ONLY}
     scope_block = {
-        "tiers": {k: tiers[k] for k in (SCOPE_CORE, SCOPE_ADJACENT,
-                                        SCOPE_CHANNEL_ONLY, SCOPE_OFF_TOPIC)},
+        "tiers": {k: tiers[k] for k in SCOPE_TIER_ORDER},
+        "allowlist": allowlist_meta,
         "variant_comparison": {
-            "STRONG_only": {
-                "in_scope": tiers[SCOPE_CORE],
-                "kb_recall": (round(1 - len(kb_missed_strong_only)
-                                    / len(kb_in_pool), 4) if kb_in_pool else None),
+            "topic_only（主题白名单单独）": {
+                "in_scope": sum(1 for r in records if r["scope_tier"] in topic_only),
+                "kb_recall": _recall(lambda r: r["scope_tier"] in topic_only),
             },
-            "STRONG_or_ADJACENT（采用）": {
-                "in_scope": tiers[SCOPE_CORE] + tiers[SCOPE_ADJACENT],
-                "kb_recall": (round(1 - len(kb_missed) / len(kb_in_pool), 4)
-                              if kb_in_pool else None),
+            "topic_or_strict_text（采用）": {
+                "in_scope": sum(1 for r in records if r["scope_tier"] in adopted),
+                "kb_recall": _recall(lambda r: r["scope_tier"] in adopted),
+                "note": "严格词面门做召回救援：主题被 OpenAlex 误分类但文本明确是光固化的论文",
             },
-            "STRONG_or_ADJACENT_or_CHANNEL": {
-                "in_scope": (tiers[SCOPE_CORE] + tiers[SCOPE_ADJACENT]
-                             + tiers[SCOPE_CHANNEL_ONLY]),
-                "note": "召回与采用版相同，却多纳入 CHANNEL_ONLY 1 千余篇 -> 不采用",
+            "再加 ADJACENT_ONLY": {
+                "in_scope": sum(1 for r in records if r["scope_tier"] in plus_adj),
+                "kb_recall": _recall(lambda r: r["scope_tier"] in plus_adj),
+                "note": "P4-1A pilot 证明这一档会放入石墨烯/光伏/免疫学等离题论文 -> 不采用",
             },
         },
         "in_scope": len(in_scope),
@@ -876,8 +946,12 @@ def build_benchmark_yaml(acc, dup, meta, source_hashes):
                 "P4-1 的分层采样 Layer 1（高影响基础论文）会被这些论文占满，"
                 "concept graph 会长在 R 语言与 PCR 方法学上"),
             "gate": {
-                "tier_CORE": f"标题+摘要命中 STRONG（光固化家族词）-> in_scope",
-                "tier_ADJACENT": "仅命中 ADJACENT（广义材料/高分子词）-> in_scope",
+                "tier_TOPIC_ALLOW": ("primary_topic ∈ scope_allowlist.yaml -> in_scope"
+                                     "（**主信号**，语义级，精度来源）"),
+                "tier_CORE_TEXT": ("STRICT_RE 严格词面命中 -> in_scope"
+                                   "（召回救援：主题被 OpenAlex 误分类但文本明确）"),
+                "tier_ADJACENT_ONLY": ("仅 >=2 个广义词族 -> **不**在范围内"
+                                       "（只记录；pilot 证明这一档含石墨烯/光伏/免疫学）"),
                 "tier_CHANNEL_ONLY": ("无词面证据但来自定向通道"
                                       "（title_search / cites_expansion / single_work）"
                                       "-> **不**在范围内，仅记录，可作扩张旋钮"),
@@ -1006,13 +1080,14 @@ def build_benchmark_yaml(acc, dup, meta, source_hashes):
             "方向分布受当年检索策略影响（dental materials 2492 / "
             "photopolymerization 2081 / additive manufacturing 1451）",
             "同题同年 623 行未去重（策略见 duplicate_entity_policy）",
-            f"范围门排除了 {acc['scope']['tiers'][SCOPE_OFF_TOPIC]} 篇无任何主题证据的"
-            f"论文、保留 {acc['scope']['tiers'][SCOPE_CHANNEL_ONLY]} 篇"
-            "「有定向通道但无词面证据」为**未启用**扩张池 —— 范围内的论文可在"
-            " paper_meta 中全部检索到（in_scope / scope_evidence 逐行可审计）",
-            "ADJACENT 档（"
-            f"{acc['scope']['tiers'][SCOPE_ADJACENT]} 篇）只有广义高分子/材料词面证据，"
-            "可能包含非光固化论文（如石墨烯-聚合物复合材料）；它保证召回但降低精度",
+            "范围门用**主题白名单**（datasets/photopolymerization_v1/"
+            "scope_allowlist.yaml，committed 可评审）而非纯词面：pilot 实测纯词面门"
+            "抽出的 30 篇里 ~17 篇离题（DNA 甲基化/石墨烯/有机光伏/热重分析/"
+            "T 细胞免疫/剂量换算/蛋白序列比对），逐个收紧词表后仍漏 8 篇",
+            f"范围外仍有 {acc['scope']['tiers'][SCOPE_OFF_TOPIC] + acc['scope']['tiers'][SCOPE_CHANNEL_ONLY] + acc['scope']['tiers'][SCOPE_ADJACENT_ONLY]}"
+            " 篇留在 paper_meta（逐行 tier/evidence 可审计，不静默丢弃）",
+            "pending_review 的 9 个主题（复合材料/水凝胶/硅氧烷/通用高分子/液晶/"
+            "光致变色…）**暂不纳入**，纳入与否会明显改变语料分布 —— 待用户裁定",
         ],
     }
 
@@ -1046,8 +1121,13 @@ def print_summary(acc, dup):
     t = sc["tiers"]
     print("─" * 68)
     print(f"  范围门: IN_SCOPE {sc['in_scope']} ({sc['in_scope_pct']:.1%})  "
-          f"CORE={t[SCOPE_CORE]} ADJACENT={t[SCOPE_ADJACENT]} "
-          f"CHANNEL_ONLY={t[SCOPE_CHANNEL_ONLY]} OFF={t[SCOPE_OFF_TOPIC]}")
+          f"TOPIC_ALLOW={t[SCOPE_TOPIC]} CORE_TEXT={t[SCOPE_TEXT]}")
+    print(f"          ADJACENT_ONLY={t[SCOPE_ADJACENT_ONLY]} "
+          f"CHANNEL_ONLY={t[SCOPE_CHANNEL_ONLY]} OFF_TOPIC={t[SCOPE_OFF_TOPIC]}")
+    for name, v in sc["variant_comparison"].items():
+        print(f"    · {name}: {v['in_scope']} 篇, KB 召回 "
+              f"{(v['kb_recall'] * 100):.1f}%" if v["kb_recall"] is not None
+              else f"    · {name}: {v['in_scope']} 篇")
     kr = sc["kb_recall"]
     print(f"    └ KB∩池 {kr['kb_intersect_pool']} 篇，漏 {kr['missed']}，"
           f"召回 {kr['recall']:.1%}" if kr["recall"] is not None else "    └ KB 无交集")
@@ -1065,6 +1145,7 @@ def main(argv=None):
     ap.add_argument("--openalex-cache", default=str(OPENALEX_CACHE))
     ap.add_argument("--scopus-db", default=str(SCOPUS_DB))
     ap.add_argument("--kb-db", default=str(KB_DB))
+    ap.add_argument("--scope-allowlist", default=str(SCOPE_ALLOWLIST))
     ap.add_argument("--apply", action="store_true", help="实际落盘（默认 dry-run）")
     args = ap.parse_args(argv)
 
@@ -1076,13 +1157,19 @@ def main(argv=None):
     by_id, pool_meta = load_openalex_pool(args.openalex_cache)
     scopus_idx = load_scopus_abstract_index(args.scopus_db)
     kb_by_key, kb_eid_by_uid = load_kb_bridge(args.kb_db)
+    allowlist, allowlist_meta = load_scope_allowlist(args.scope_allowlist)
+    print(f"[p4.0] 范围白名单 {allowlist_meta.get('version')} "
+          f"n={allowlist_meta.get('n')} "
+          f"{'' if allowlist_meta.get('loaded') else '[WARN] 未加载(退化为纯词面门)'}")
     print(f"[p4.0] 展开 {pool_meta['works_expanded']} -> 去重 "
           f"{pool_meta['works_deduped']} work | scopus 摘要索引 {len(scopus_idx)} "
           f"| KB 桥 {len(kb_by_key)} 键")
 
-    records = build_records(by_id, scopus_idx, kb_by_key, kb_eid_by_uid)
+    records = build_records(by_id, scopus_idx, kb_by_key, kb_eid_by_uid,
+                            allowlist=allowlist)
     dup = mark_duplicates(records)
-    acc = acceptance(records, dup, pool_meta, kb_keys=set(kb_by_key))
+    acc = acceptance(records, dup, pool_meta, kb_keys=set(kb_by_key),
+                     allowlist_meta=allowlist_meta)
 
     src_hash = _sha256(args.openalex_cache)
     meta = {

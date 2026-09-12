@@ -37,6 +37,10 @@ class DeepSeekBackend(LLMBackend):
         self.api_key = api_key
         self.model = model
         self.base_url = base_url
+        # 最近一次调用的 usage（token 计数）。**只增不改**：调用方用
+        # getattr(backend, "last_usage", None) 读，用于成本核算。
+        # 不改签名、不改返回值，对所有既有调用方零影响。
+        self.last_usage = None
 
     async def chat(self, system_prompt: str, user_message: str,
                    temperature: float = 0.3, max_tokens: int = 2048,
@@ -68,6 +72,7 @@ class DeepSeekBackend(LLMBackend):
             )
             resp.raise_for_status()
             data = resp.json()
+            self.last_usage = data.get("usage")
             choice = data["choices"][0]
             finish_reason = choice.get("finish_reason", "stop")
             if raise_on_truncation and finish_reason == "length":

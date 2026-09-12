@@ -4,3 +4,11 @@
 *.jsonl
 build_report.json
 extraction_cache/
+
+# ── C 阶段（P4-1）派生物：可由 tools/ 下的构建器重建，不入 git ──
+# 入 git 的只有冻结协议与可评审资产：benchmark.yaml / extraction_spec.yaml / scope_allowlist.yaml
+concepts_v1.jsonl*
+sample_v1.jsonl
+sample_v1_manifest.json
+extraction_audit.json
+*.summary.json

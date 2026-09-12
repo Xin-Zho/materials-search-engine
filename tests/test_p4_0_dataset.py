@@ -85,8 +85,13 @@ def as_cache(works):
 
 
 def build(pool, *, kb_keys=(), scopus_idx=None):
-    """跑完整构建链，返回 (records, acc)。"""
-    records = bld.build_records(pool, scopus_idx or {}, {}, {})
+    """跑完整构建链，返回 (records, acc)。
+
+    使用**真实的 committed 白名单**（与生产同源）—— 白名单解析失败或为空时
+    范围门会静默退化成纯词面门，测试必须能发现这件事。
+    """
+    allow, _meta = bld.load_scope_allowlist()
+    records = bld.build_records(pool, scopus_idx or {}, {}, {}, allowlist=allow)
     dup = bld.mark_duplicates(records)
     acc = bld.acceptance(records, dup, {"works_deduped": len(pool)},
                          kb_keys=kb_keys)
@@ -156,55 +161,108 @@ def test_no_counts_by_year_gives_null_asof():
 
 
 # ══ 3. 范围门：污染回归（本步最重要的发现）═══════════════════════════════
-@pytest.mark.parametrize("title", [
-    "R: A Language and Environment for Statistical Computing",
-    "Generalized Gradient Approximation Made Simple",
-    "Deep Residual Learning for Image Recognition",
-    "PROTEIN MEASUREMENT WITH THE FOLIN PHENOL REAGENT",
-    "Using thematic analysis in psychology",
-    "Random Forests",
-])
-def test_globally_mega_cited_offtopic_papers_are_excluded(title):
-    """语料池由松散文本检索 + 按引用降序构造，必然混入全库巨引论文。
+# 两轮实测得到的**具体离题论文**——直接固化为断言，防止范围门再退化。
+PILOT_OFF_TOPIC_TITLES = [
+    # 第一轮：纯通用词（conversion）放进来的
+    "Conversion of 5-Methylcytosine to 5-Hydroxymethylcytosine in Mammalian DNA",
+    "Design Rules for Donors in Bulk-Heterojunction Solar Cells-Towards 10 % Efficiency",
+    "A New Method of Analyzing Thermogravimetric Data",
+    "Conversion of Peripheral CD4+CD25- Naive T Cells to CD4+CD25+ Regulatory T Cells",
+    "PAL2NAL: robust conversion of protein sequence alignments into the corresponding codon alignments",
+    "A simple practice guide for dose conversion between animals and human",
+    "Flexible metal-organic frameworks",
+    "Enzyme immobilisation in biocatalysis: why, what and how",
+    "Photoinduced Conversion of Silver Nanospheres to Nanoprisms",
+    # 第二轮：广义材料词（epoxy / thiol / polymer）放进来的
+    "Graphene Oxide, Highly Reduced Graphene Oxide, and Graphene: Versatile Building Blocks",
+    "Polymer/Silica Nanocomposites: Preparation, Characterization, and Properties",
+    "Enhanced Mechanical Properties of Nanocomposites at Low Graphene Content",
+    "For the Bright Future-Bulk Heterojunction Polymer Solar Cells",
+]
 
-    这些论文一旦进入 in_scope，就会占满 P4-1 分层采样的 Layer 1
-    （高影响基础论文），使 concept graph 长在 R 语言/PCR/ResNet 上。
-    本测试把「必须排除」固化成断言。
+ANACHRONISM_GUARD_MUST_MATCH = [
+    "Enhanced reduction of polymerization-induced shrinkage stress via combination",
+    "Thiol-Ene Click Chemistry",
+    "Cationic photopolymerization of cyclic esters",
+    "Resin composite-State of the art",
+    "改善光致聚合物全息记录材料体积收缩率的研究进展",
+    "Degree of conversion and monomer elution of bulk-fill composites",
+]
+
+
+@pytest.mark.parametrize("title", PILOT_OFF_TOPIC_TITLES)
+def test_off_topic_titles_from_pilot_are_excluded(title):
+    """pilot 实测抓到的离题论文（DNA 甲基化/光伏/热重/T 细胞/蛋白比对/MOF/
+    石墨烯/环氧纳米复合材料…）必须判为范围外。
+
+    它们靠 `conversion`、`polymer`、`epoxy`、`thiol` 这类通用词混进了纯词面门，
+    而主题（topic）不在白名单 —— 这正是改用主题门的原因。
     """
-    w = work("W1", title, year=2015, cited=353396, abstract=None)
+    w = work("W1", title, year=2015, cited=1000,
+             topic="Graphene research and applications", channels=set())
     records, acc = build({"W1": w})
-    assert records[0]["scope_tier"] == bld.SCOPE_OFF_TOPIC
     assert records[0]["in_scope"] == 0
-    assert acc["scope"]["tiers"][bld.SCOPE_OFF_TOPIC] == 1
+    assert records[0]["scope_tier"] not in bld.IN_SCOPE_TIERS
+    assert acc["scope"]["in_scope"] == 0
 
 
-@pytest.mark.parametrize("title,expect", [
-    # 光固化家族 -> CORE
-    ("Enhanced reduction of polymerization-induced shrinkage stress",
-     bld.SCOPE_CORE),
-    ("Cationic photopolymerization of cyclic esters",
-     bld.SCOPE_CORE),
-    ("Thiol-ene photopolymer networks with reduced shrinkage",
-     bld.SCOPE_CORE),
-    ("Vat photopolymerization of dental composites",
-     bld.SCOPE_CORE),
-    # 中文摘要/标题（词面门最容易漏的一类）
-    ("改善光致聚合物全息记录材料体积收缩率的研究进展",
-     bld.SCOPE_CORE),
-    # 仅广义高分子词 -> ADJACENT
-    ("Monomer elution and shrinkage stress analysis of resin composites",
-     bld.SCOPE_ADJACENT),
-    # 有定向通道但无词面证据 -> CHANNEL_ONLY（不在范围内，仅记录）
-    ("Graphene oxide membranes for water desalination",
-     bld.SCOPE_CHANNEL_ONLY),
-])
-def test_scope_tier_classification(title, expect):
-    ch = ({"cites_expansion"} if expect == bld.SCOPE_CHANNEL_ONLY
-          else {"keyword_search"})
-    w = work("W1", title, channels=ch)
+@pytest.mark.parametrize("title", ANACHRONISM_GUARD_MUST_MATCH)
+def test_on_topic_titles_are_in_scope(title):
+    """真相关论文必须留在范围内（范围门不能靠收紧来"变干净"）。"""
+    w = work("W1", title, year=2015)
     records, _ = build({"W1": w})
-    assert records[0]["scope_tier"] == expect
-    assert records[0]["in_scope"] == (1 if expect in bld.IN_SCOPE_TIERS else 0)
+    assert records[0]["in_scope"] == 1
+    assert records[0]["scope_tier"] == bld.SCOPE_TEXT
+
+
+def test_topic_allowlist_grants_scope_without_text_evidence():
+    """主题门是**主信号**：文本没有强特征、但主题在白名单内 -> in_scope。"""
+    w = work("W1", "A study of process parameter optimisation", year=2015,
+             topic="Dental materials and restorations")
+    records, _ = build({"W1": w})
+    assert records[0]["scope_tier"] == bld.SCOPE_TOPIC
+    assert records[0]["in_scope"] == 1
+    assert any(e.startswith("topic:") for e in json.loads(records[0]["scope_evidence"]))
+
+
+def test_topic_allowlist_asset_loads_and_is_nonempty():
+    """committed 白名单资产必须可解析且非空。
+
+    真实踩过：主题名 `Hydrogels: synthesis, ...` 含冒号，未加引号会让 YAML 解析失败；
+    且白名单一旦解析成空集，范围门会**静默退化**成纯词面门（精度崩塌）。
+    """
+    topics, meta = bld.load_scope_allowlist()
+    assert meta["loaded"] is True
+    assert meta["n"] >= 8, f"白名单过小：{meta}"
+    assert "Photopolymerization techniques and applications" in topics
+    assert "Dental materials and restorations" in topics
+
+
+def test_multiword_patterns_actually_match():
+    r"""``re.X`` 模式下**模式里的空白会被忽略** —— 多词短语必须写 ``\s+``。
+
+    这个 bug 曾让强特征层形同虚设：``polymerization shrinkage`` 编译成
+    ``polymerizationshrinkage``，永远匹配不上，于是范围判定只剩单字词兜底，
+    离题论文批量涌入。这条测试直接盯住编译后的行为。
+    """
+    for phrase in ("polymerization shrinkage stress", "shrinkage stress",
+                   "degree of conversion", "dental composite resin",
+                   "resin composite", "monomer elution"):
+        assert bld.STRICT_RE.search(phrase), f"多词短语未匹配：{phrase}"
+    # 反例：这些**不该**靠强特征词通过（它们是别的学科的高频词）
+    for trap in ("conversion", "dialysis", "concrete shrinkage",
+                 "gene conversion", "energy conversion"):
+        assert not bld.STRICT_RE.search(trap), f"过宽的强特征词：{trap}"
+
+
+def test_adjacent_family_is_recorded_but_not_decisive():
+    """广义词族只记录、不决定 in_scope（pilot 证明这一档会放进石墨烯/光伏）。"""
+    w = work("W1", "Polymer nanocomposites with epoxy resin and thiol curing",
+             year=2015, topic="Graphene research and applications", channels=set())
+    records, _ = build({"W1": w})
+    assert records[0]["scope_tier"] == bld.SCOPE_ADJACENT_ONLY
+    assert records[0]["in_scope"] == 0
+    assert bld.SCOPE_ADJACENT_ONLY not in bld.IN_SCOPE_TIERS
 
 
 def test_scope_evidence_is_recorded_per_row():
@@ -219,8 +277,9 @@ def test_scope_evidence_is_recorded_per_row():
 def test_channel_only_is_not_in_scope_by_default():
     """CHANNEL_ONLY 是「已记录未启用」的扩张池，默认不进范围。"""
     assert bld.SCOPE_CHANNEL_ONLY not in bld.IN_SCOPE_TIERS
-    assert bld.SCOPE_CORE in bld.IN_SCOPE_TIERS
-    assert bld.SCOPE_ADJACENT in bld.IN_SCOPE_TIERS
+    assert bld.SCOPE_ADJACENT_ONLY not in bld.IN_SCOPE_TIERS
+    assert bld.SCOPE_TOPIC in bld.IN_SCOPE_TIERS
+    assert bld.SCOPE_TEXT in bld.IN_SCOPE_TIERS
 
 
 def test_all_pool_rows_are_preserved_not_dropped():
