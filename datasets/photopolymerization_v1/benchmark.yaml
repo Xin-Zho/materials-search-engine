@@ -1,0 +1,236 @@
+dataset: photopolymerization_v1
+build_version: p4_0_v1
+built_at: '2026-09-12T17:52:37'
+role: Temporal Scientific Forecasting Benchmark (P4-0)
+statement: 本数据集的目的不是「建立完整光固化数据库」，而是验证一个闭环：历史文献结构 -> 知识表示 -> 方向预测 -> 未来验证。因此它的第一属性是**时间隔离**，不是覆盖度。
+corpus:
+  source: data/cache/openalex_cache.json
+  source_sha256: 57a78c117b8430514aee8758b7e6626f232db7f56853b089766fe7305f8e807a
+  records_expanded: 18724
+  records_deduped: 14318
+  dedup_key: OpenAlex work id
+  record_source_label: openalex_cache
+  note: 主池只此一处。scopus_cache.db 仅用于**摘要回填**，不引入新语料；knowledge_base.db 仅用于身份桥与 EID 补齐，全程只读
+split:
+  rule: publication_year
+  train:
+    max_year: 2020
+    n: 8070
+  eval:
+    min_year: 2021
+    max_year: 2025
+    n: 5289
+  excluded_out_of_range:
+    n: 887
+    reason: year > 2025；既不可训练也不可作 label
+  no_year:
+    n: 4
+    policy: split=NULL，**禁止插值**；保留在 paper_meta 供审计
+  year_missing_policy: NULL（时间隔离数据集里假年份比缺样本危险）
+  total_records: 14318
+  included_records: 14247
+leakage_policy:
+  hard_rules:
+  - TRAIN 侧的一切特征只能来自 publication_year <= 2020 时可获得的信息
+  - cited_by_count 是 2026 快照，包含 2021-2025 的引用 —— **禁止**作为 TRAIN 特征、选样依据或任何排序键
+  - TRAIN 侧引用强度只允许使用 citations_asof_cutoff（= counts_by_year 中 year<=2020 之和）
+  - EVAL 侧语料不得参与任何 concept 抽取、graph 构建、指标计算或超参选择
+  - 验证阶段只读 EVAL 侧；任何跨 split 的字符串/标识匹配都必须在 TRAIN 快照上做
+  forbidden_train_features:
+  - citation_count
+  - citation_normalized_percentile
+  - counts_by_year_json（除 year<=2020 部分）
+  - fwci
+  allowed_train_features:
+  - title
+  - abstract
+  - year
+  - venue
+  - primary_topic
+  - topics_json
+  - keywords_json
+  - n_authors
+  - referenced_works_count
+  - citations_asof_cutoff
+  known_censoring:
+  - field: citations_asof_cutoff
+    issue: OpenAlex counts_by_year 只返回约 15 年窗口（本池实测 2012-2026），早于窗口起点的引用不可见
+    evidence: 1995 年某篇 cited_by_count=406，而 counts_by_year 求和仅 203
+    consequence: 旧论文的 asof 引用被**左截断**，跨年代比较会低估早期论文
+    mitigation: counts_window_start / counts_window_end 随行保存；P4-2 若做引用速率类指标，必须同年份窗口比较，或改用 TRAIN 内部相对排序
+  self_check: build_report.json -> acceptance.leakage_integrity / split_integrity
+scope:
+  status: APPLIED（构建时逐行判定，证据落库可审计）
+  problem: 语料池由 `filter=title_and_abstract.search:"..."` 与 `q="title/abstract has (...)"` 这类**松散文本匹配**构造，并全部
+    `sort=cited_by_count:desc`。松散匹配 + 按引用降序 必然返回全库引用最高的论文：实测每一页都混入 R 语言(35.3 万引)、GGA(21.5 万引)、ResNet(22.7
+    万引)、Folin 酚试剂蛋白定量(31.9 万引) 等与光固化无关的论文
+  consequence: P4-1 的分层采样 Layer 1（高影响基础论文）会被这些论文占满，concept graph 会长在 R 语言与 PCR 方法学上
+  gate:
+    tier_CORE: 标题+摘要命中 STRONG（光固化家族词）-> in_scope
+    tier_ADJACENT: 仅命中 ADJACENT（广义材料/高分子词）-> in_scope
+    tier_CHANNEL_ONLY: 无词面证据但来自定向通道（title_search / cites_expansion / single_work）-> **不**在范围内，仅记录，可作扩张旋钮
+    tier_OFF_TOPIC: 无任何证据
+    in_scope_definition: tier ∈ {CORE, ADJACENT}
+    validation: 变体对照在同一次构建内实测（见 result.variant_comparison）：STRONG 单独更严、召回更低；STRONG|ADJACENT 召回达标；再加 CHANNEL
+      召回不升却多纳入 1 千余篇，故不采用。三者的「全球巨引残留」均为 0/10
+    threshold: 召回优先、宁滥勿缺（与本项目检索侧口径一致）
+  result:
+    tiers:
+      CORE: 7335
+      ADJACENT: 4520
+      CHANNEL_ONLY: 1118
+      OFF_TOPIC: 1345
+    variant_comparison:
+      STRONG_only:
+        in_scope: 7335
+        kb_recall: 0.8333
+      STRONG_or_ADJACENT（采用）:
+        in_scope: 11855
+        kb_recall: 1.0
+      STRONG_or_ADJACENT_or_CHANNEL:
+        in_scope: 12973
+        note: 召回与采用版相同，却多纳入 CHANNEL_ONLY 1 千余篇 -> 不采用
+    in_scope: 11855
+    in_scope_pct: 0.828
+    in_scope_train: 6636
+    in_scope_eval: 4439
+    view_counts:
+      view: v_photopolymerization
+      definition: in_scope=1 AND exclusion_reason IS NULL AND split IN ('TRAIN','EVAL')
+      total: 11027
+      train: 6604
+      eval: 4423
+  kb_recall_check:
+    kb_intersect_pool: 126
+    missed: 0
+    recall: 1.0
+    method: 以 KB paper_identifiers 里已收录的论文为已知相关集，取其在池中的交集，检查范围门是否漏掉
+    missed_sample: []
+  usage: P4-1 采样必须从 `v_photopolymerization` 视图取（= in_scope AND 未排除 AND split∈{TRAIN,EVAL}）；CHANNEL_ONLY
+    的论文是**已记录未启用**的扩张池，启用前需先评估其主题精度
+  not_silently_dropped: 全部 14,318 行保留在 paper_meta，in_scope / scope_tier / scope_evidence 逐行落库，范围判定可复核、可回滚
+identifier_policy:
+  paper_uid:
+    priority:
+    - OPENALEX
+    - DOI
+    - SCOPUS_EID
+    reason: 语料以 OpenAlex 为记录源（用户 2026-09-12 裁定）
+    prefix_by_type:
+      OPENALEX: openalex
+      DOI: doi
+      SCOPUS_EID: scopus
+    generator: search_engine.identity.make_paper_uid（唯一出口，priority 参数化）
+    invariant: 前缀与值形态必须一致；uid 生成后**永不变**
+  preferred_identifier:
+    priority:
+    - DOI
+    - OPENALEX
+    - SCOPUS_EID
+    reason: KB 口径。用户裁定 entity_id 与 preferred_identifier 是两个概念：前者像 git commit hash（不变），后者像 branch pointer（可变）。resolver
+      返回 {entity_id, preferred_identifier} 即可，不改写 entity_id
+  kb_paper_uid: 跨库桥（NULL = 不在 KB）；防止出现第二个身份命名空间
+  shared_code: search_engine/identity.py —— 本数据集**不新写**归一化/前缀拼接
+duplicate_entity_policy:
+  policy: 只标记不合并（KB 铁律）；duplicate_group_id 由强到弱取档
+  tiers:
+  - same_uid（构造保证 0）
+  - same_doi_multi_uid
+  - same_title_year_multi_uid
+  counts:
+    same_uid:
+      groups: 0
+      rows: 0
+    same_doi_multi_uid:
+      groups: 6
+      rows: 12
+    same_title_year_multi_uid:
+      groups: 277
+      rows: 590
+    policy: '**只标记不合并**（KB 铁律）。同 DOI 是强证据但可能是版本/镜像；同题同年大量为 preprint、book chapter、以及标题极短的普通论文，**不得**作为合并依据'
+  warning: 同题同年共 590 行，其中大量是 preprint、book chapter 或标题极短的普通论文 —— **不得**作为合并依据，也不得在采样时静默去重
+exclusion_policy:
+  retracted: 9
+  paratext: 16
+  non_research_type: 46
+  non_research_type_values:
+  - book-review
+  - editorial
+  - erratum
+  - paratext
+  - peer-review
+  - reference-entry
+  - retraction
+  policy: 保留在 paper_meta（exclusion_reason 可审计），但不进 train/eval jsonl
+extraction_protocol:
+  status: DEFINED_NOT_EXECUTED（P4-1）
+  never_extract:
+  - EVAL 侧（它只用于对答案）
+  candidate_pool: TRAIN 侧 **且 in_scope=1**（视图 v_photopolymerization） —— 直接对全池采样会把全球巨引论文排到 Layer 1
+  schema:
+    material: []
+    mechanism: []
+    method: []
+    application: []
+    problem: []
+    keywords: []
+  target_size:
+    min: 1000
+    max: 2000
+  sampling:
+    strategy: 分层（禁止纯随机 —— 热门方向会占满样本）
+    layer1_high_impact:
+      share: 0.2
+      purpose: 捕获 foundational concepts
+      rank_by: citations_asof_cutoff（非快照）
+    layer2_fast_growth:
+      share: 0.4
+      purpose: 发现 emerging topics
+      rank_by: TRAIN 内部引用增速（限同年窗口）
+    layer3_long_tail:
+      share: 0.4
+      purpose: 避免知识树只看热点
+    strata_key: primary_topic（742 个）
+  first_version_scope: 不做 Search->Learn->Search 的复杂 Agent；只做 Paper -> extractor -> graph -> trend -> prediction
+  cache_dir: extraction_cache/
+prediction_protocol:
+  status: DEFINED_NOT_EXECUTED（P4-2）
+  no_ml_v1: true
+  metrics:
+    growth: N2020 / N2015
+    acceleration: slope(2018-2020)
+    novelty: first_seen
+    connectivity: degree centrality on concept graph
+    cross_domain: 跨主题共现（如 photopolymerization + biomedicine + 3D printing）
+  score: Emergence Score = 上述指标的排序组合
+validation_protocol:
+  status: DEFINED_NOT_EXECUTED（P4-3）
+  eval_window:
+  - 2021
+  - 2025
+  top_k: 20
+  ground_truth: EVAL 侧 concept 的真实增长方向
+  venues:
+  - Nature
+  - Science
+  - Advanced Materials
+  - Advanced Functional Materials
+  - Nature Communications
+  - Nature Materials
+  - Science Advances
+paused_by_decision:
+- Active learning
+- Recall audit
+- 全量 citation expansion
+- 完善 knowledge graph ontology
+- agent workflow
+known_limitations:
+- 摘要覆盖 79.3%（OpenAlex 自带的 inverted index 为 9923，scopus_cache 回填 1431） —— 无摘要的论文在 P4-1 只能靠标题抽取
+- scopus_eid 覆盖仅 44（0.3%）
+- counts_by_year 左截断（见 leakage_policy.known_censoring）
+- 语料来自既有检索缓存，不是对 OpenAlex 全库的系统抽样 —— 方向分布受当年检索策略影响（dental materials 2492 / photopolymerization 2081 /
+  additive manufacturing 1451）
+- 同题同年 623 行未去重（策略见 duplicate_entity_policy）
+- 范围门排除了 1345 篇无任何主题证据的论文、保留 1118 篇「有定向通道但无词面证据」为**未启用**扩张池 —— 范围内的论文可在 paper_meta 中全部检索到（in_scope / scope_evidence
+  逐行可审计）
+- ADJACENT 档（4520 篇）只有广义高分子/材料词面证据，可能包含非光固化论文（如石墨烯-聚合物复合材料）；它保证召回但降低精度

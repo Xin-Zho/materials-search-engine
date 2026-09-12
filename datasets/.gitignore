@@ -1,0 +1,6 @@
+# 数据集二进制与派生产物 —— 可由 tools/build_p4_0_dataset.py 从 data/ 缓存重建
+# 入 git 的只有冻结的实验协议 benchmark.yaml
+*.db
+*.jsonl
+build_report.json
+extraction_cache/

@@ -135,18 +135,30 @@ def scopus_cache_key_value(paper_id):
 _TITLE_HASH_LEN = 16
 
 
-def make_paper_uid(*, claims=None, title=None, year=None):
+def make_paper_uid(*, claims=None, title=None, year=None, priority=None):
     """由标识集合生成**稳定** uid（KB 身份的唯一生成规则）。
 
     规则（deterministic，与调用顺序无关）：
-      1. 取 ``PRIMARY_PRIORITY`` 最高的可用标识 -> ``<prefix>:<normalized_value>``
+      1. 取**优先级**最高的可用标识 -> ``<prefix>:<normalized_value>``
       2. 无任何标识（title-only）-> ``local:<sha256(norm_title|year)[:16]``
          **绝不**把 title 塞进 ``openalex:`` / ``scopus:`` 命名空间。
 
+    ``priority``
+        可选的 ``{id_type: rank}`` 覆写，默认 ``PRIMARY_PRIORITY``（KB 口径：
+        DOI > OPENALEX > SCOPUS_EID）。P4 时间基准数据集传 **OPENALEX 优先**，
+        因为它的语料以 OpenAlex 为记录源。
+
+        ⚠️ 这是**参数**，不是第二套实现 —— uid 命名空间的生成仍然只有本函数一处
+        （static guard G2 守的就是这一点）。用户 2026-09-12 的裁定把
+        ``entity_id`` 与 ``preferred_identifier`` 分成两个概念：改优先级只影响
+        **新建实体**用哪个标识做 id，不影响既有 uid，也不影响「引用时哪个标识最优」。
+        故数据集侧同时落 ``preferred_identifier``（DOI 优先）与 ``kb_paper_uid`` 作桥。
+
     注意：本函数只生成**新** uid。既有 uid 的解析走 ``lookup_owners``，永不重算。
     """
+    ranks = priority or PRIMARY_PRIORITY
     if claims:
-        best = min(claims, key=lambda c: PRIMARY_PRIORITY.get(c.id_type, 99))
+        best = min(claims, key=lambda c: ranks.get(c.id_type, 99))
         return f"{uid_prefix(best.id_type)}:{best.normalized_value}"
     key = "|".join([normalize_title(title) or "", str(year or "")])
     digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:_TITLE_HASH_LEN]
