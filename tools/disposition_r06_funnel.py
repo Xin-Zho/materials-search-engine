@@ -47,6 +47,19 @@ R06_LABELS = ROOT / "data" / "exports" / "completeness_labels" / "pc_001__202609
 TOPIC_ID = "pc_001"
 RULES_VERSION = "U_PROMOTION_RULE_V1"
 
+# ── P0-B1b：KB 写入全部经唯一身份入口（R1/R8/R9）────────────────────────
+# 迁移前本脚本是**第二个 papers 直写点**，且沿用了同一套「信任字段名」的写法：
+#   paper_id = f"scopus:{p['key']}"            <- key 若是 DOI 形态，前缀就错配
+#   doi      = p.get("doi")                    <- 同一列可能装着 EID（与 W1 同源缺陷）
+#   con.execute("insert into papers ...")      <- 绕过身份裁决
+# 它的真实职责只有一半是「建论文」，另一半是「给已存在论文补摘要」——
+# 后者正因如此才需要 backfill_paper_fields 这个**受限**的第二入口（权限分离）。
+sys.path.insert(0, str(ROOT))
+from search_engine import identity as idt  # noqa: E402
+from search_engine import paper_writer as pw  # noqa: E402
+
+SOURCE = "tools/disposition_r06_funnel"
+
 
 def norm_doi(doi: str | None) -> str:
     return (doi or "").strip().lower()
@@ -138,8 +151,11 @@ def scopus_abstract(doi: str) -> str:
         return ""
     try:
         con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        # 这是 **scopus_cache.db.papers** 的源记录标识（引擎缓存，同名不同库），
+        # 不是 KB 的 paper_uid —— 故用 make_record_id 而非 make_paper_uid。
         row = con.execute(
-            "select normalized_json from papers where paper_id = ?", (f"scopus:{doi}",)
+            "select normalized_json from papers where paper_id = ?",
+            (idt.make_record_id("scopus", doi),),
         ).fetchone()
         con.close()
         if row:
@@ -230,56 +246,59 @@ def main() -> int:
         print("dry-run 未写 KB；确认后 --apply 执行")
         return 0
 
-    # ── KB 写入（分批、写前快照；已存在但缺摘要的条目做升级 UPDATE）──
+    # ── KB 写入（分批、写前快照）──────────────────────────────────────
+    # P0-B1b：**全部**经唯一身份入口。本脚本不再有任何 papers 直写语句。
+    #   身份 -> resolve_or_create_paper（唯一生产者，R1）
+    #   内容 -> backfill_paper_fields（受限：只允许 title/abstract/year，R8）
+    #   关系 -> register_topic_paper（关系后置于实体，R9）
     to_write = [p for p in proposals if p["action"].startswith("promote")]
     shutil.copy2(KB_DB, KB_DB.with_suffix(".preDisposition.db"))
     con = sqlite3.connect(KB_DB)
     status_map = {"promote": "promoted", "promote_tentative": "promoted_tentative_u"}
-    n = n_upgraded = 0
-    for p in to_write:
-        paper_id = f"openalex:{p['key']}" if p["key"].startswith("W") else f"scopus:{p['key']}"
-        doi = p.get("doi") or ""
-        ab, ab_src = any_abstract(doi, p["key"] if p["key"].startswith("W") else "")
-        exists = con.execute(
-            "select paper_id, abstract from papers where paper_id = ? or (doi != '' and doi = ?)",
-            (paper_id, norm_doi(doi)),
-        ).fetchone()
-        if exists:
-            if not (exists[1] or "").strip() and ab:
-                con.execute("update papers set abstract = ? where paper_id = ?",
-                            (ab, exists[0]))
-                con.execute(
-                    "update topic_papers set evidence_json = ? where paper_id = ?",
-                    (json.dumps({"rule": p["rule"], "reason": p.get("reason"),
-                                 "abstract_backfilled": True, "title_level": False,
-                                 "abstract_source": ab_src}, ensure_ascii=False), exists[0]))
-                n_upgraded += 1
-            continue
-        con.execute(
-            "insert into papers (paper_id, doi, openalex_id, scopus_eid, title, abstract, source_json, created_at)"
-            " values (?,?,?,?,?,?,?,datetime('now'))",
-            (paper_id, doi or None,
-             p["key"] if p["key"].startswith("W") else None,
-             p["key"] if p["key"].startswith("2-s2.0") else None,
-             p.get("title", ""), ab,
-             json.dumps({"origin": "r06_disposition", "rule": p["rule"]}, ensure_ascii=False)),
-        )
-        con.execute(
-            "insert into topic_papers (topic_id, paper_id, relevance_label, label_source,"
-            " promotion_status, first_seen_run, evidence_json, created_at)"
-            " values (?,?,?,?,?,?,?,datetime('now'))",
-            (TOPIC_ID, paper_id, p["label"],
-             "r06_external_audit" if p["rule"].startswith("R1") else RULES_VERSION,
-             status_map[p["action"]], "r06_disposition",
-             json.dumps({"rule": p["rule"], "reason": p.get("reason"),
-                         "abstract_backfilled": bool(ab), "title_level": not bool(ab),
-                         **({"abstract_source": ab_src} if ab_src else {})},
-                        ensure_ascii=False)),
-        )
-        n += 1
-    con.commit()
-    con.close()
-    print(f"[ok] KB 写入 {n} 篇、摘要升级 {n_upgraded} 篇"
+    n = n_upgraded = n_conflict = 0
+    try:
+        con.execute("BEGIN")
+        for p in to_write:
+            key = p["key"]
+            is_w = key.startswith("W")
+            doi = p.get("doi") or ""
+            ab, ab_src = any_abstract(doi, key if is_w else "")
+            # 声明列只是输入；入口按**值形态**决定归属与 uid。
+            # key 为 W 形态 -> OPENALEX；否则按值识别（EID / DOI 各自归位）。
+            meta = {"title": p.get("title") or "", "abstract": ab, "doi": doi or None}
+            if is_w:
+                meta["openalex_id"] = key
+            else:
+                meta["scopus_eid"] = key
+            out = pw.resolve_or_create_paper(con, meta, SOURCE)
+            if out.status == pw.STATUS_CONFLICT_REVIEW:
+                # 该标识被多个 uid 认领 -> 只记录冲突，绝不自动合并（R4）
+                print(f"  [conflict] {key}: {out.note}")
+                n_conflict += 1
+                continue
+            if ab:
+                res = pw.backfill_paper_fields(con, out.paper_uid, {"abstract": ab}, SOURCE)
+                if any(r.applied for r in res):
+                    n_upgraded += 1
+            pw.register_topic_paper(
+                con, TOPIC_ID, out.paper_uid, p["label"], source=SOURCE,
+                label_source=("r06_external_audit" if p["rule"].startswith("R1")
+                              else RULES_VERSION),
+                promotion_status=status_map[p["action"]],
+                first_seen_run="r06_disposition",
+                evidence={"rule": p["rule"], "reason": p.get("reason"),
+                          "abstract_backfilled": bool(ab), "title_level": not bool(ab),
+                          **({"abstract_source": ab_src} if ab_src else {})},
+                refresh_evidence=(out.status == pw.STATUS_REUSED))
+            if out.status == pw.STATUS_CREATED:
+                n += 1
+        con.commit()
+    except Exception:
+        con.rollback()
+        raise
+    finally:
+        con.close()
+    print(f"[ok] KB 新建 {n} 篇、摘要升级 {n_upgraded} 篇、待人工裁决 {n_conflict} 篇"
           f"（快照 {KB_DB.with_suffix('.preDisposition.db').name}）")
     return 0
 

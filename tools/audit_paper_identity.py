@@ -31,6 +31,7 @@ import sys
 
 from search_engine.knowledge_base import KnowledgeBase
 from search_engine.backends import OpenAlexBackend
+from search_engine.identity import extract_from_paper_uid, make_canonical_uid
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -53,11 +54,14 @@ def _norm_title(t: str) -> str:
 # ── OpenAlex 解析 ──────────────────────────────────────
 
 def _strip_openalex_prefix(pid: str) -> str:
-    """'openalex:https://openalex.org/W...' 或 'openalex:W...' → 'W...'"""
-    if pid.startswith("openalex:"):
-        pid = pid[len("openalex:"):]
-    if pid.startswith("https://openalex.org/"):
-        pid = pid[len("https://openalex.org/"):]
+    """去 ``openalex:`` / ``https://openalex.org/`` 前缀取 W-ID。
+
+    P0-B1b：改经 identity.extract_from_paper_uid（uid 反解的唯一出口）——
+    前缀字面量不再散落在业务代码里。
+    """
+    for t, v in extract_from_paper_uid(pid):
+        if t == "OPENALEX":
+            return v
     return pid
 
 
@@ -80,7 +84,7 @@ async def _resolve(oa, rec) -> dict:
     """→ {key, doi, openalex_id, title, year}；key=None = 无法解析。"""
     pid = rec.paper_id
     try:
-        if pid.startswith("openalex:"):
+        if _is_openalex(pid):
             oid = _strip_openalex_prefix(pid)
             papers = await _fetch_with_retry(oa, oid)
             if not papers:
@@ -103,7 +107,8 @@ async def _resolve(oa, rec) -> dict:
 
 
 def _is_openalex(pid: str) -> bool:
-    return pid.startswith("openalex:")
+    """是否为 OpenAlex uid（经唯一反解出口，不自拼前缀字面量）。"""
+    return any(t == "OPENALEX" for t, _ in extract_from_paper_uid(pid))
 
 
 # ── 分级检测 ──────────────────────────────────────────
@@ -269,7 +274,8 @@ def _merge_identity(kb, canonical_member: dict, merged_infos: list) -> None:
             rec.doi = info["doi"]
         if not rec.openalex_id and info.get("openalex_id"):
             rec.openalex_id = info["openalex_id"]
-    rec.canonical_paper_id = f"doi:{rec.doi}" if rec.doi else rec.paper_id
+    # P0-B1b: 不再信任 doi 字段名，按**值形态**经唯一出口产出 canonical uid
+    rec.canonical_paper_id = make_canonical_uid(doi=rec.doi, openalex_id=rec.openalex_id)
     kb.store(rec)
 
 

@@ -14,8 +14,12 @@ import datetime
 import json
 import os
 import sqlite3
+import sys
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
+from search_engine.identity import scopus_cache_key  # noqa: E402
+
 T = os.path.join(BASE, "data", "exports", "terminology")
 CACHE_DB = os.path.join(BASE, "data", "cache", "scopus_cache.db")
 MEM = os.path.join(T, "s7_community_memory.json")
@@ -60,7 +64,7 @@ def main():
             if doi:
                 row = conn.execute(
                     "SELECT normalized_json FROM papers WHERE paper_id=?",
-                    ("scopus:" + doi,)).fetchone()
+                    (scopus_cache_key(doi),)).fetchone()
                 if row:
                     try:
                         ab = (json.loads(row[0]).get("abstract") or "").strip()

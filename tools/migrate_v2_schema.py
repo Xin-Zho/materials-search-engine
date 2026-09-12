@@ -41,6 +41,17 @@ TOPIC_QUESTION = "光固化聚合物降低聚合收缩与收缩应力的机制 (
 RUBRIC_VERSION = "S6_QA_RUBRIC_V1"
 SCHEMA_VERSION = "v2.0-topic-2026-09-08"
 
+# ── P0-B1b：本脚本不再自己拼 uid，也不再自己 INSERT papers ──────────────
+# 全部经唯一身份写入入口 search_engine.paper_writer（R1 唯一生产者 / R7 统一查询）。
+# 迁移前本脚本是 30 条 ``doi:2-s2.0-*`` 错位的**生产端**：canonical_paper_id() 无条件
+# 按 ``e["doi"]`` 拼 ``doi:`` 前缀，而 build_entities() 早已把 EID 塞进了 ``e["doi"]``。
+# 走入口后 uid 由值形态决定 —— 重放不再制造错位（差异恰好等于那 30 条）。
+sys.path.insert(0, BASE)
+from search_engine import paper_writer as pw  # noqa: E402
+from search_engine.identity import normalize_identifier  # noqa: E402
+
+SOURCE = "tools/migrate_v2_schema"
+
 try:
     sys.stdout.reconfigure(encoding="utf-8")
 except Exception:
@@ -58,23 +69,19 @@ def norm_doi(d):
 
 
 def extract_w(w):
-    if not w:
-        return None
-    w = str(w).strip()
-    if w.startswith("https://openalex.org/"):
-        w = w[len("https://openalex.org/"):]
-    if w.startswith("openalex:"):
-        w = w[len("openalex:"):]
-    w = w.replace("https://openalex.org/", "")
-    return w if w.startswith("W") else None
+    """取 W-ID（P0-B1b：改走 normalize_identifier，唯一标准化出口）。
+
+    旧实现只做前缀剥离 + ``startswith("W")``，``Wabc`` 这种非法形态也会通过。
+    """
+    return normalize_identifier("OPENALEX", w)
 
 
 def extract_eid_from_paper_id(pid):
-    # 'scopus:2-s2.0-xxx' -> '2-s2.0-xxx'
-    pid = str(pid or "")
-    if pid.startswith("scopus:"):
-        pid = pid[len("scopus:"):]
-    return pid if pid.startswith("2-s2.0-") else None
+    """'scopus:2-s2.0-xxx' -> '2-s2.0-xxx'（P0-B1b：形态校验由唯一出口负责）。
+
+    旧实现 ``startswith("2-s2.0-")`` 会接受 ``2-s2.0-keep`` 这种非法形态。
+    """
+    return normalize_identifier("SCOPUS_EID", pid)
 
 
 SCHEMA_SQL = """
@@ -290,12 +297,47 @@ def build_entities(kb, catalog, wm, dm):
     return ents, order
 
 
+def plan_identity(e):
+    """纯函数规划 ``(uid, claims, anomalies)``：dry-run 与 commit 共用同一判定。
+
+    走 ``paper_writer.classify_metadata`` + ``identity.make_paper_uid``，因此
+    **不需要数据库连接**即可预演 —— dry-run 给出的 uid 就是 commit 会写下的 uid。
+    """
+    metadata = {
+        "doi": e["doi"], "openalex_id": e["openalex_id"],
+        "scopus_eid": e["scopus_eid"],
+        "title": e["title"], "year": e["year"],
+    }
+    claims, anomalies = pw.classify_metadata(metadata)
+    uid = pw.make_paper_uid(claims=claims, title=e["title"], year=e["year"])
+    return uid, claims, anomalies
+
+
+def effective_columns(e):
+    """入口**实际会落库**的三列值（有效值口径）。
+
+    ``e["doi"]`` 可能装着 EID（那 30 条），但入口不会把它写进 ``doi`` 列；
+    统计必须基于本函数的输出，而不是 entity 的声明字段 —— 否则 stats 会说谎。
+    """
+    _, claims, _ = plan_identity(e)
+    cols = {"doi": None, "openalex_id": None, "scopus_eid": None}
+    for c in claims:
+        col = {"DOI": "doi", "OPENALEX": "openalex_id",
+               "SCOPUS_EID": "scopus_eid"}.get(c.id_type)
+        if col and cols[col] is None:
+            cols[col] = c.id_value
+    return cols
+
+
 def canonical_paper_id(e):
-    if e["doi"]:
-        return "doi:" + e["doi"]
-    if e["openalex_id"]:
-        return "openalex:" + e["openalex_id"]
-    return "scopus:" + e["scopus_eid"]
+    """entity -> KB uid。
+
+    P0-B1b：不再拼接前缀，改由唯一入口规划。
+    **行为变化（有意为之）**：``e["doi"]`` 实际是 Scopus EID 时，旧实现产出
+    ``doi:2-s2.0-*``，新实现按**真实类型**产出 ``scopus:2-s2.0-*``。
+    差异恰好等于 P0-A 记录的 30 条 UID_PREFIX_MISMATCH —— 即重放不再制造错位。
+    """
+    return plan_identity(e)[0]
 
 
 def collect_claims(e, pid):
@@ -346,8 +388,14 @@ def migrate(dry_run=True):
         e = ents[k]
         pid = canonical_paper_id(e)
         rows_papers.append({
-            "paper_id": pid, "doi": e["doi"], "openalex_id": e["openalex_id"],
-            "scopus_eid": e["scopus_eid"], "title": e["title"] or None,
+            "paper_id": pid,
+            # 入口的**原始输入**（声明列）。字段名只是声明，值形态才是事实。
+            "metadata": {"doi": e["doi"], "openalex_id": e["openalex_id"],
+                         "scopus_eid": e["scopus_eid"], "title": e["title"] or "",
+                         "abstract": e["abstract"] or "", "year": e["year"]},
+            # 入口**实际落库**的三列（有效值口径）
+            "effective": effective_columns(e),
+            "title": e["title"] or None,
             "abstract": e["abstract"] or None, "year": e["year"],
             "source_json": json.dumps({"sources": e["sources"],
                                        "n_kb_records": len(e["kb_records"])}, ensure_ascii=False),
@@ -395,13 +443,14 @@ def migrate(dry_run=True):
     stats["topic_papers_by_label"] = dict(Counter(r["relevance_label"] for r in rows_tp))
     stats["claims_by_type"] = dict(Counter(r["claim_type"] for r in rows_claims))
     for r in rows_papers:
-        if r["doi"]:
+        eff = r["effective"]
+        if eff["doi"]:
             stats["identity"]["with_doi"] += 1
-        if r["openalex_id"]:
+        if eff["openalex_id"]:
             stats["identity"]["with_wid"] += 1
-        if r["scopus_eid"]:
+        if eff["scopus_eid"]:
             stats["identity"]["with_eid"] += 1
-        if not (r["doi"] or r["openalex_id"] or r["scopus_eid"]):
+        if not (eff["doi"] or eff["openalex_id"] or eff["scopus_eid"]):
             stats["identity"]["no_doi_no_wid_no_eid"] += 1
         if r["title"]:
             stats["title_fill"] += 1
@@ -418,9 +467,20 @@ def migrate(dry_run=True):
     checks["tp_total_249"] = len(rows_tp) == 249
     checks["tp_R170_U79"] = stats["topic_papers_by_label"].get("RELEVANT") == 170 and \
         stats["topic_papers_by_label"].get("UNCERTAIN") == 79
-    checks["papers_doi_unique"] = len({r["doi"] for r in rows_papers if r["doi"]}) == \
-        sum(1 for r in rows_papers if r["doi"])
+    checks["papers_doi_unique"] = len({r["effective"]["doi"] for r in rows_papers
+                                       if r["effective"]["doi"]}) == \
+        sum(1 for r in rows_papers if r["effective"]["doi"])
     checks["no_identityless"] = stats["identity"]["no_doi_no_wid_no_eid"] == 0
+    # P0-B1b：入口产出的 uid 前缀必须与值形态一致（结构性不变式，见 paper_writer R5 注）。
+    # 这条断言就是「重放不再制造错位」的机械证据。
+    checks["uid_prefix_consistent"] = all(
+        pw.uid_type_matches_value(r["paper_id"])[0] for r in rows_papers)
+    # 声明 doi 列非空、但入口判定其**不是**有效 DOI 的数量 —— 即历史错位被就地纠正的篇数。
+    stats["identity"]["recovered_from_misplaced_column"] = sum(
+        1 for r in rows_papers
+        if (r["metadata"]["doi"] or "").strip() and not r["effective"]["doi"])
+    stats["identity"]["uid_prefix_mismatch_new"] = sum(
+        0 if pw.uid_type_matches_value(r["paper_id"])[0] else 1 for r in rows_papers)
     for name, ok in checks.items():
         print(f"  [check] {name}: {'PASS' if ok else 'FAIL'}")
 
@@ -441,22 +501,34 @@ def migrate(dry_run=True):
             print(f"[ABORT] papers 表已有 {n_papers} 行；拒绝重入。如需重建请手动清空 v2 表。")
             sys.exit(2)
         con.execute("BEGIN")
-        con.executemany(
-            "INSERT INTO papers (paper_id, doi, openalex_id, scopus_eid, title, abstract, "
-            "year, source_json, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
-            [(r["paper_id"], r["doi"], r["openalex_id"], r["scopus_eid"], r["title"],
-              r["abstract"], r["year"], r["source_json"], now) for r in rows_papers])
+        # papers：**全部**经唯一身份入口（R1）。本脚本不再直写 papers。
+        # 断言 plan == entry：dry-run 给出的 uid 必须就是 commit 写下的 uid，
+        # 否则 dry-run 就是谎言（这是本脚本 dry-run 契约的一部分）。
+        for r in rows_papers:
+            meta = dict(r["metadata"])
+            meta["source_json"] = r["source_json"]
+            out = pw.resolve_or_create_paper(con, meta, SOURCE)
+            if out.paper_uid != r["paper_id"]:
+                raise RuntimeError(
+                    f"规划/写入 uid 不一致: plan={r['paper_id']!r} "
+                    f"entry={out.paper_uid!r}（dry-run 与 commit 必须共用同一判定）")
+            if out.status == pw.STATUS_CONFLICT_REVIEW:
+                raise RuntimeError(
+                    f"入口判定为 CONFLICT_REVIEW（拒绝自动合并）: {out.note}")
         con.execute(
             "INSERT INTO topics (topic_id, name, research_question, rubric_version, "
             "config_path, created_at) VALUES (?,?,?,?,?,?)",
             (TOPIC_ID, TOPIC_NAME, TOPIC_QUESTION, RUBRIC_VERSION,
              "topics/photopolymerization_shrinkage/topic.yaml", now))
-        con.executemany(
-            "INSERT INTO topic_papers (topic_id, paper_id, relevance_label, label_source, "
-            "promotion_status, first_seen_run, evidence_json, created_at) VALUES (?,?,?,?,?,?,?,?)",
-            [(r["topic_id"], r["paper_id"], r["relevance_label"], r["label_source"],
-              r["promotion_status"], r["first_seen_run"], r["evidence_json"], now)
-             for r in rows_tp])
+        # topic_papers：经关系入口（R9）。关系不得先于实体 —— 上面的 papers 已建。
+        for r in rows_tp:
+            tp = pw.register_topic_paper(
+                con, r["topic_id"], r["paper_id"], r["relevance_label"],
+                source=SOURCE, label_source=r["label_source"],
+                promotion_status=r["promotion_status"],
+                first_seen_run=r["first_seen_run"], evidence=r["evidence_json"])
+            if tp.status != pw.TOPIC_PAPER_CREATED:
+                raise RuntimeError(f"topic_papers 未按预期新建: {tp.as_dict()}")
         con.executemany(
             "INSERT INTO knowledge_claims (paper_id, topic_id, claim_type, material, "
             "mechanism, property, evidence, confidence, payload_json, source_record) "

@@ -42,6 +42,7 @@ from collections import Counter, defaultdict
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE)
 from search_engine.topic_config import DEFAULT_TOPIC, resolve_input, resolve_output  # noqa: E402
+from search_engine.identity import scopus_cache_key, scopus_cache_key_value  # noqa: E402
 
 T = os.path.join(BASE, "data", "exports", "terminology")
 # P0-2: 以下为 v1.0 legacy 冻结原址；非 legacy topic 自动路由 topics/<id>/runs/ 通用名
@@ -118,8 +119,8 @@ def restore_abstracts(papers):
         marks = ",".join("?" for _ in chunk)
         q = (f"SELECT paper_id, normalized_json FROM papers "
              f"WHERE paper_id IN ({marks})")
-        for pid, js in conn.execute(q, ["scopus:" + d for d in chunk]):
-            d = pid[len("scopus:"):]
+        for pid, js in conn.execute(q, [scopus_cache_key(d) for d in chunk]):
+            d = scopus_cache_key_value(pid)
             k = doi2key.get(d)
             if not k:
                 continue

@@ -28,6 +28,7 @@ from .term_matrix import TermMatrixGenerator
 from .query_population import QueryPopulation
 from .coverage.route_coverage import CoverageMap
 from .evaluator import normalize_doi
+from .identity import make_record_id, normalize_identifier
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +38,16 @@ def dedup_key(paper: Paper) -> str:
 
     Scopus 用 EID、OpenAlex 用 openalex:ID，同一篇论文两处 ID 不同。
     用 DOI 作为统一键才能正确去重。
+
+    P0-B1b：字面量收口到 ``identity.make_record_id``；DOI 分支改走
+    ``identity.normalize_identifier``（唯一标准化出口）。原来只做
+    ``lower().rstrip(".")``，带 ``https://doi.org/`` 前缀的 DOI 会算出**第二个键**，
+    跨源去重因此漏合并；现在与 KB 侧同一套归一化，口径不再分裂。
+    （本键只用于内存字典，不落盘，故值变化安全。）
     """
     if paper.doi:
-        return "doi:" + paper.doi.strip().lower().rstrip(".")
+        norm = normalize_identifier("DOI", paper.doi)
+        return make_record_id("doi", norm or paper.doi.strip().lower().rstrip("."))
     title = re.sub(r"[^a-z0-9]+", "", (paper.title or "").lower())
     return f"title:{title}:{paper.year}"
 

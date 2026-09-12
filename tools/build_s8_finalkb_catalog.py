@@ -23,6 +23,7 @@ sys.path.insert(0, BASE)
 from search_engine.topic_config import (  # noqa: E402
     DEFAULT_TOPIC, is_legacy_topic, resolve_output,
 )
+from search_engine.identity import scopus_cache_key  # noqa: E402
 
 T = "data/exports/terminology"
 KB_DB = "data/cache/knowledge_base.db"
@@ -116,7 +117,7 @@ def scopus_abstract(doi):
         sc = sqlite3.connect(SCOPUS_DB)
         row = sc.execute(
             "SELECT normalized_json FROM papers WHERE paper_id=?",
-            ("scopus:" + doi,)).fetchone()
+            (scopus_cache_key(doi),)).fetchone()
         sc.close()
         if row:
             try:

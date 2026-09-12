@@ -15,6 +15,7 @@ from .models import Paper, SearchResult, SearchCost, SearchIntent, Author
 from .compiler import ScopusQueryCompiler
 from .cache import SearchCache
 from .csv_exporter import CsvExporter
+from .identity import make_record_id
 
 logger = logging.getLogger(__name__)
 
@@ -514,7 +515,9 @@ class ScopusSearchEngine:
                 pass
 
         doi = get("DOI") or None
-        paper_id = f"scopus:{doi}" if doi else f"scopus:{title[:80]}"
+        # 检索层「源记录标识」的唯一构造出口（P0-B1b）；语义同 parser.py：
+        # 传输层记录键，不是 KB 的 paper_uid。
+        paper_id = make_record_id("scopus", doi or title[:80])
 
         citation_count = None
         cite_str = get("被引频次", "Cited by")

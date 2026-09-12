@@ -14,6 +14,8 @@ import json
 import logging
 from .models import Paper, KnowledgeRecord, Mechanism, SearchHypothesis
 from .llm import LLMBackend
+from .identity import (IdentifierClaim, extract_from_paper_uid, make_paper_uid,
+                       normalize_identifier)
 
 logger = logging.getLogger(__name__)
 
@@ -146,17 +148,35 @@ class KnowledgeExtractor:
         ]
 
         # Phase 1.8: identity（canonical_paper_id/doi/openalex_id 分离，不随删行丢失）
+        #
+        # P0-B1b：两处手拼字面量全部收口 ——
+        #   1) 不再用 `"openalex:"` / `"https://openalex.org/"` 字面量拆 paper_id，
+        #      改经 identity.extract_from_paper_uid（uid 反解的唯一出口）。
+        #   2) canonical_paper_id 不再手拼 `f"doi:{doi}"`，改由 make_paper_uid 生成；
+        #      无任何标识时落 `local:<hash>` —— **绝不**回落 transport 层的 paper_id。
+        #      旧写法 `else paper.paper_id` 会把 `scopus:<标题前80字>` 带进 KB 事实层，
+        #      与那 30 条 `doi:2-s2.0-*` 是同一类「命名空间被塞进非本类型值」的病理。
         doi = (paper.doi or "").strip()
         openalex_id = ""
-        if (paper.paper_id or "").startswith("openalex:"):
-            oid = paper.paper_id[len("openalex:"):]
-            if oid.startswith("https://openalex.org/"):
-                oid = oid[len("https://openalex.org/"):]
-            openalex_id = oid
+        for id_type, norm in extract_from_paper_uid(paper.paper_id):
+            if id_type == "OPENALEX":
+                openalex_id = norm
+            elif id_type == "DOI" and not doi:
+                doi = norm
+
+        claims = []
+        for id_type, raw in (("DOI", doi), ("OPENALEX", openalex_id)):
+            if not raw:
+                continue
+            norm = normalize_identifier(id_type, raw)
+            if norm is not None:
+                claims.append(IdentifierClaim(id_type, norm, raw, None,
+                                              "knowledge_extractor"))
 
         return KnowledgeRecord(
             paper_id=paper.paper_id,
-            canonical_paper_id=f"doi:{doi}" if doi else paper.paper_id,
+            canonical_paper_id=make_paper_uid(claims=claims, title=paper.title,
+                                              year=paper.year),
             doi=doi,
             openalex_id=openalex_id,
             problem=data.get("problem", ""),

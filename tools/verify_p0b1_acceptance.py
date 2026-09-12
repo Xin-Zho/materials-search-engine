@@ -117,31 +117,56 @@ def main() -> int:
     print()
 
     # ══ A1 唯一生产者 ═══════════════════════════════════
+    # P0-B1b：扫描改用 **AST** 而非文本匹配。理由不是洁癖 ——
+    # 迁移脚本的头注释必须逐字引用旧代码（``con.execute("insert into papers ...")``）
+    # 才能说明「这里曾经错在哪」，文本扫描会把这种解释性注释当成新的直写点，
+    # 守卫于是被迫加豁免，最终失去意义。
     print("[A1] 唯一生产者")
+    import ast
     import re
     pat = re.compile(r"INSERT\s+(OR\s+\w+\s+)?INTO\s+papers\b", re.I)
-    prod_hits = set()
-    for root, dirs, files in os.walk(os.path.join(BASE, "search_engine")):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
-        for fn in files:
-            if fn.endswith(".py"):
+
+    def _docstring_ids(tree):
+        ids = set()
+        owners = (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+        for node in ast.walk(tree):
+            if not isinstance(node, owners):
+                continue
+            body = getattr(node, "body", None) or []
+            if (body and isinstance(body[0], ast.Expr)
+                    and isinstance(body[0].value, ast.Constant)
+                    and isinstance(body[0].value.value, str)):
+                ids.add(id(body[0].value))
+        return ids
+
+    def _sql_writers(dirpath):
+        hits = set()
+        for root, dirs, files in os.walk(dirpath):
+            dirs[:] = [d for d in dirs if d != "__pycache__"]
+            for fn in sorted(files):
+                if not fn.endswith(".py"):
+                    continue
                 p = os.path.join(root, fn)
-                if pat.search(open(p, encoding="utf-8", errors="ignore").read()):
-                    prod_hits.add(os.path.relpath(p, BASE).replace("\\", "/"))
-    tool_hits = set()
-    for root, dirs, files in os.walk(os.path.join(BASE, "tools")):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
-        for fn in files:
-            if fn.endswith(".py"):
-                p = os.path.join(root, fn)
-                if pat.search(open(p, encoding="utf-8", errors="ignore").read()):
-                    tool_hits.add(os.path.relpath(p, BASE).replace("\\", "/"))
-    check(1, "事实层 papers 唯一生产写入者 = paper_writer.py",
+                try:
+                    tree = ast.parse(open(p, encoding="utf-8", errors="ignore").read())
+                except SyntaxError:
+                    continue
+                doc_ids = _docstring_ids(tree)
+                for node in ast.walk(tree):
+                    if (isinstance(node, ast.Constant) and isinstance(node.value, str)
+                            and id(node) not in doc_ids and pat.search(node.value)):
+                        hits.add(os.path.relpath(p, BASE).replace("\\", "/"))
+                        break
+        return hits
+
+    prod_hits = _sql_writers(os.path.join(BASE, "search_engine"))
+    tool_hits = _sql_writers(os.path.join(BASE, "tools"))
+    check(1, "A1 事实层 papers 唯一生产写入者 = paper_writer.py",
           prod_hits == {"search_engine/paper_writer.py", "search_engine/cache.py"},
           f"search_engine/ 命中 {sorted(prod_hits)}（cache.py 写引擎缓存库，非事实层）")
-    check(2, "遗留 tools/ 直写点已被冻结登记（只许缩短）",
-          tool_hits == {"tools/migrate_v2_schema.py", "tools/disposition_r06_funnel.py"},
-          f"tools/ 命中 {sorted(tool_hits)}")
+    check(2, "A1 tools/ 直写点已归零（W1/W2 全部迁移到入口）",
+          tool_hits == set(),
+          f"tools/ 命中 {sorted(tool_hits) if tool_hits else '（空）'}")
 
     # ══ A4 / A6 / A7 / A8：真库副本上重放 30 条真实输入 ═════
     print("\n[A4/A6/A7/A8] 在真库副本上重放那 30 条真实错位输入")

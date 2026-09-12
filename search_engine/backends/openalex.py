@@ -17,6 +17,7 @@ import logging
 import httpx
 
 from ..models import Paper, Author
+from ..identity import make_record_id
 from .base import SearchBackend
 
 logger = logging.getLogger(__name__)
@@ -407,7 +408,10 @@ class OpenAlexBackend(SearchBackend):
         doi = (work.get("doi") or "").replace("https://doi.org/", "")
 
         openalex_id = work.get("id", "")
-        paper_id = f"openalex:{openalex_id}" if openalex_id else f"openalex:{title[:80]}"
+        # 检索层「源记录标识」的唯一构造出口（P0-B1b）。
+        # 注意 openalex_id 此处是**完整 URL**（https://openalex.org/W...），值保持原样
+        # 不变以免破坏既有缓存键；KB 身份由入口按值形态重新判定。
+        paper_id = make_record_id("openalex", openalex_id or title[:80])
 
         return Paper(
             paper_id=paper_id,

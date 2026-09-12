@@ -32,6 +32,7 @@ import sys
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE)
 from search_engine.topic_config import DEFAULT_TOPIC, resolve_input, resolve_output  # noqa: E402
+from search_engine.identity import scopus_cache_key  # noqa: E402
 
 T = os.path.join(BASE, "data", "exports", "terminology")
 # P0-2: 以下为 v1.0 legacy 冻结原址；非 legacy topic 自动路由 topics/<id>/runs/ 通用名
@@ -75,13 +76,13 @@ def load_paper_abstract(con, doi: str, eid: str) -> str:
     """按 paper_id 主键回填 abstract（3 级 fallback）。"""
     try:
         if doi:
-            pid = "scopus:" + doi.lower()
+            pid = scopus_cache_key(doi)
             row = con.execute("SELECT normalized_json FROM papers WHERE paper_id=?",
                               (pid,)).fetchone()
             if row:
                 return json.loads(row[0]).get("abstract") or ""
         if eid:
-            pid2 = "scopus:" + eid
+            pid2 = scopus_cache_key(eid)
             row = con.execute("SELECT normalized_json FROM papers WHERE paper_id=?",
                               (pid2,)).fetchone()
             if row:

@@ -22,6 +22,9 @@ import os
 import sys
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
+from search_engine.identity import scopus_cache_key  # noqa: E402
+
 DEFAULT_LABELS_DIR = os.path.join(BASE, "data", "exports", "completeness_labels")
 
 VALID = {"RELEVANT", "IRRELEVANT", "UNCERTAIN"}
@@ -63,7 +66,7 @@ def _scopus_abstract(doi: str, base: str = BASE) -> str:
         shutil.copy2(src, tmp)
         con = sqlite3.connect(f"file:{tmp}?mode=ro&immutable=1", uri=True)
         row = con.execute("SELECT normalized_json FROM papers WHERE paper_id=?",
-                          (f"scopus:{doi.strip().lower()}",)).fetchone()
+                          (scopus_cache_key(doi),)).fetchone()
         con.close()
         if row:
             return (json.loads(row[0]).get("abstract") or "").strip()

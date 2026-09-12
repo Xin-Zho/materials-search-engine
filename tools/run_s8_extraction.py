@@ -6,9 +6,15 @@
 写入策略（安全默认）：
   - 默认只写 data/exports/terminology/s8_extraction_output.json（评审用）
   - --commit 追加写 knowledge_base.db：
-      paper_id = 'scopus:'+EID（如 scopus:2-s2.0-xxx，与 openalex: 体系一致、无 doi 也唯一）
-      canonical_paper_id = 'doi:10.xxx'（有 doi 时）
+      paper_id          = 源记录键（按**值形态**决定命名空间：EID -> scopus:、W -> openalex:）
+      canonical_paper_id= 该论文的最优身份（make_paper_uid，DOI > W > EID；
+                          无任何有效标识时落 local:<hash>，**绝不**借外部命名空间）
   - 断点续跑：已完成的 key 跳过（读 output 文件）
+
+P0-B1b：本脚本原先是「近失事件」的现场 —— 它写 ``canonical_paper_id = "doi:" + p["doi"]``，
+而 ``p["doi"]`` 来自 S8 catalog，那里 EID 曾被兜底塞进 ``doi`` 字段（那 30 条的源头）。
+30 条里 4 条 label=RELEVANT，**仅因摘要为空**才没走到这里；否则
+``knowledge_records`` 会出现 ``doi:2-s2.0-*``。现在身份一律经唯一出口按值形态识别。
 
 用法（--live 门禁：真实 LLM 抽取须显式确认，默认连 dry-run 也禁止）：
   python tools/run_s8_extraction.py                     # 纯离线：replay/统计，待抽被 gate 拦
@@ -31,6 +37,12 @@ from search_engine.topic_config import (  # noqa: E402
 from search_engine.llm import DeepSeekBackend
 from search_engine.models import Paper
 from search_engine.knowledge_extractor import KnowledgeExtractor
+from search_engine.identity import (  # noqa: E402
+    LOCAL_UID_PREFIX, IdentifierClaim, make_paper_uid, make_record_id,
+    normalize_identifier, uid_prefix,
+)
+
+SOURCE = "tools/run_s8_extraction"
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -82,10 +94,11 @@ async def extract_one(ex, p, entries, status_counts):
                         "error": err if "err" in dir() else "extract None"})
         status_counts["fail"] += 1
         return False
+    _pid_db, _canonical = paper_identity(p["key"], p.get("doi"))
     entries.append({
         "key": p["key"], "status": "ok", "duration_s": round(dt, 1),
-        "paper_id_db": "scopus:" + p["key"],
-        "canonical_paper_id": ("doi:" + p["doi"]) if p["doi"] else "",
+        "paper_id_db": _pid_db,
+        "canonical_paper_id": _canonical,
         "problem": rec.problem,
         "strategy_routes": rec.strategy_routes,
         "materials": rec.materials,
@@ -109,14 +122,52 @@ async def extract_one(ex, p, entries, status_counts):
     return True
 
 
+def _value_claims(*raws):
+    """按**值形态**识别标识（不信任字段名）：返回 IdentifierClaim 列表。
+
+    P0-B1b：本脚本原先直接信任 ``p["doi"]``；而 S8 catalog 的 ``doi`` 字段曾被 EID
+    污染（那 30 条的源头）。现在逐个试 DOI / OPENALEX / SCOPUS_EID 的**形态校验** ——
+    EID 再也拿不到 ``doi:`` 前缀。
+    """
+    claims, seen = [], set()
+    for raw in raws:
+        s = str(raw or "").strip()
+        if not s:
+            continue
+        for t in ("DOI", "OPENALEX", "SCOPUS_EID"):
+            n = normalize_identifier(t, s)
+            if n and (t, n) not in seen:
+                seen.add((t, n))
+                claims.append(IdentifierClaim(t, n, s, None, SOURCE))
+                break
+    return claims
+
+
+def paper_identity(key, doi):
+    """-> ``(knowledge_records.paper_id, canonical_paper_id)``。
+
+    ``paper_id``            源记录键：命名空间由 **key 的值形态**决定（保持既有语义，
+                            W1 的 build_entities 仍可反解）
+    ``canonical_paper_id``  论文最优身份：DOI > W > EID（``make_paper_uid`` 规则；
+                            无任何有效标识时落 ``local:<hash>``，绝不借外部命名空间）
+    """
+    key_claims = _value_claims(key)
+    pid = (make_record_id(uid_prefix(key_claims[0].id_type), key_claims[0].normalized_value)
+           if key_claims else make_record_id(LOCAL_UID_PREFIX, str(key or "")[:64]))
+    all_claims = _value_claims(doi, key)
+    canonical = make_paper_uid(claims=all_claims) if all_claims else ""
+    return pid, canonical
+
+
 def store_entry(kb, key, doi, entry):
     """entry(ok 记录) → KnowledgeRecord → knowledge_base.db。"""
     from search_engine.models import (KnowledgeRecord, Mechanism,
                                       SearchHypothesis,
                                       RouteMechanismEvidenceEdge)
+    _pid, _canonical = paper_identity(key, doi)
     rec = KnowledgeRecord(
-        paper_id="scopus:" + key,
-        canonical_paper_id=("doi:" + doi) if doi else "",
+        paper_id=_pid,
+        canonical_paper_id=_canonical,
         doi=doi or "", openalex_id="",
         problem=entry.get("problem") or "",
         strategy_routes=entry.get("strategy_routes") or [],
@@ -128,7 +179,7 @@ def store_entry(kb, key, doi, entry):
                              for m in entry.get("mechanisms") or []],
         route_mechanism_edges=[
             RouteMechanismEvidenceEdge(
-                paper_id="scopus:" + key,
+                paper_id=_pid,
                 raw_route=e.get("route") or "",
                 canonical_route=e.get("canonical_route") or "",
                 raw_mechanism=e.get("mechanism") or "",

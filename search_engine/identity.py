@@ -25,6 +25,7 @@
 本模块为纯函数层：不打开数据库、不写盘。迁移工具与后续读写路径（P0-B/P1）共用它。
 """
 
+import hashlib
 import re
 
 # id_type 白名单（与 DDL CHECK 一致）
@@ -56,7 +57,100 @@ COLUMN_SOURCES = (
     ("scopus_eid", "SCOPUS_EID", "papers.scopus_eid"),
 )
 
-_PID_PREFIX_TYPE = (("doi:", "DOI"), ("openalex:", "OPENALEX"), ("scopus:", "SCOPUS_EID"))
+# ── uid 前缀的**唯一**权威表（P0-B1b 收口）──────────────────────────────
+# 命名空间即类型声明：``<prefix>:<value>`` 的 value 必须是该类型的**合法形态**。
+# 全仓任何模块需要拼 uid 字符串，都必须经 make_paper_uid() / make_record_id()；
+# 静态守卫（tests/test_p0b1b_static_guards.py）据此证明不存在第二个自造命名空间的地方。
+UID_PREFIX_BY_TYPE = {
+    "DOI": "doi",
+    "OPENALEX": "openalex",
+    "SCOPUS_EID": "scopus",
+    "PUBMED": "pubmed",
+    "ARXIV": "arxiv",
+    "ISBN": "isbn",
+    "URL": "url",
+}
+UID_TYPE_BY_PREFIX = {v: k for k, v in UID_PREFIX_BY_TYPE.items()}
+
+# 无任何可识别标识时的本地命名空间。
+# **绝不**把 title / hash 塞进 openalex: / scopus: —— 那正是 P0-A 那 30 条的病理。
+LOCAL_UID_PREFIX = "local"
+
+_PID_PREFIX_TYPE = tuple((UID_PREFIX_BY_TYPE[t] + ":", t)
+                         for t in ("DOI", "OPENALEX", "SCOPUS_EID"))
+
+
+def uid_prefix(id_type):
+    """id_type -> uid 前缀。无对应前缀时抛错（不静默回退，避免类型混淆）。"""
+    p = UID_PREFIX_BY_TYPE.get(id_type)
+    if p is None:
+        raise ValueError(f"no uid prefix for id_type={id_type!r}; "
+                         f"known={sorted(UID_PREFIX_BY_TYPE)}")
+    return p
+
+
+def make_record_id(source, value):
+    """**检索层源记录标识**的唯一构造出口：``<source>:<value>``。
+
+    ⚠️ 这不是 KB 的 paper_uid —— 两者语义不同，切勿互换：
+
+    ==================  ===========================  ==============================
+                         KB 身份                      源记录 ID
+    ==================  ===========================  ==============================
+    构造函数            ``make_paper_uid()``         ``make_record_id()``
+    落库位置            ``papers.paper_id``          ``Paper.paper_id``（内存传输）
+    值的要求            **标准化后的合法标识**        外部源返回的任意串（可为标题片段）
+    唯一性              全库唯一                     仅在同一 source 内可比
+    ==================  ===========================  ==============================
+
+    存在的意义是**消除字面量**：``f"scopus:{x}"`` 这类写法曾经散落 29 处，
+    其中一部分（``knowledge_extractor`` 的 ``canonical_paper_id``）直接写进了 KB 事实层，
+    另一部分在 uid 前缀语义过载时无法与真正的 KB uid 区分。
+    收口到本函数后，静态守卫可以证明全仓不存在第二处自造命名空间。
+    """
+    return f"{source}:{value}"
+
+
+def scopus_cache_key(value):
+    """``scopus_cache.db.papers.paper_id`` 的构造出口。
+
+    ⚠️ 与 KB uid **无关**：这是**引擎层缓存库**的记录键（同名 ``papers`` 表，不同库，
+    9.8 万行 vs 331 行）。全仓曾有 9 处 ``"scopus:" + doi`` 手工拼接去查这张表 ——
+    收口到本函数后，静态守卫能证明没有第二处在自造这个命名空间。
+    """
+    return f"{UID_PREFIX_BY_TYPE['SCOPUS_EID']}:{str(value or '').strip().lower()}"
+
+
+def scopus_cache_key_value(paper_id):
+    """``scopus_cache_key`` 的逆运算（读写必须对称）。
+
+    ⚠️ 不能用 :func:`extract_from_paper_uid` 代替：后者做**形态校验**，
+    而缓存键里的值是任意串（可能是 DOI、可能是空），形态校验会把合法键判为 None。
+    """
+    p = str(paper_id or "")
+    pref = UID_PREFIX_BY_TYPE["SCOPUS_EID"] + ":"
+    return p[len(pref):] if p.startswith(pref) else p
+
+
+_TITLE_HASH_LEN = 16
+
+
+def make_paper_uid(*, claims=None, title=None, year=None):
+    """由标识集合生成**稳定** uid（KB 身份的唯一生成规则）。
+
+    规则（deterministic，与调用顺序无关）：
+      1. 取 ``PRIMARY_PRIORITY`` 最高的可用标识 -> ``<prefix>:<normalized_value>``
+      2. 无任何标识（title-only）-> ``local:<sha256(norm_title|year)[:16]``
+         **绝不**把 title 塞进 ``openalex:`` / ``scopus:`` 命名空间。
+
+    注意：本函数只生成**新** uid。既有 uid 的解析走 ``lookup_owners``，永不重算。
+    """
+    if claims:
+        best = min(claims, key=lambda c: PRIMARY_PRIORITY.get(c.id_type, 99))
+        return f"{uid_prefix(best.id_type)}:{best.normalized_value}"
+    key = "|".join([normalize_title(title) or "", str(year or "")])
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:_TITLE_HASH_LEN]
+    return f"{LOCAL_UID_PREFIX}:{digest}"
 
 _DOI_RE = re.compile(r"^10\.\d{4,9}/\S+$")
 _W_RE = re.compile(r"^[Ww]\d+$")
@@ -103,11 +197,21 @@ def normalize_identifier(id_type, raw):
 
     if id_type == "OPENALEX":
         s = s.strip()
-        for p in ("https://openalex.org/", "http://openalex.org/",
-                  "https://api.openalex.org/works/", "openalex:"):
-            if s.lower().startswith(p):
-                s = s[len(p):]
-                break
+        # ⚠️ 必须**循环**剥离：KB 历史数据里存在叠加前缀形态
+        # ``openalex:https://openalex.org/W...``（uid 前缀 + URL 前缀），
+        # 单次剥离只去掉一层，随后 _W_RE 匹配失败 —— 于是这条记录会被判为
+        # 「无任何标识」并落到 local:<hash>，与它真实拥有的 W-ID 脱钩。
+        # （P0-B1b 实测：这正是 W1 重放差异中除那 30 条之外的**唯一**一条。）
+        prefixes = ("https://openalex.org/", "http://openalex.org/",
+                    "https://api.openalex.org/works/", "openalex:")
+        changed = True
+        while changed:
+            changed = False
+            for p in prefixes:
+                if s.lower().startswith(p):
+                    s = s[len(p):]
+                    changed = True
+                    break
         s = s.strip().strip("/")
         s = re.sub(r"^works/", "", s, flags=re.I)
         return s.upper() if _W_RE.match(s) else None
@@ -575,3 +679,44 @@ def compute_terms(rows):
         claims, _ = collect_row_claims(uid, doi=doi, openalex_id=wid, scopus_eid=eid)
         accumulate_terms(t, uid, claims)
     return t
+
+
+def make_canonical_uid(*, doi=None, openalex_id=None, scopus_eid=None,
+                       title=None, year=None):
+    """便捷入口：从常见**声明字段**产出 canonical uid（P0-B1b）。
+
+    与 ``paper_writer.classify_metadata`` 的区别：本函数**只在传入的那几个字段内**
+    按值形态识别（不跨列乱猜、不产生冲突记录），供 tools 层的写入/审计脚本使用 ——
+    那些脚本原先各自手拼 ``f"doi:{doi}" if doi else paper_id``，其中「信任 doi 字段」
+    正是 30 条错位扩散的路径（见 ``run_s8_extraction`` 的近失事件）。
+
+    无任何有效标识 -> ``local:<hash>``（由 ``make_paper_uid`` 处理），**绝不**借用
+    ``doi:`` / ``openalex:`` / ``scopus:`` 命名空间。
+    """
+    claims = []
+    for id_type, raw in (("DOI", doi), ("OPENALEX", openalex_id),
+                         ("SCOPUS_EID", scopus_eid)):
+        if raw is None:
+            continue
+        s = str(raw).strip()
+        if not s:
+            continue
+        n = normalize_identifier(id_type, s)
+        if n is not None:
+            claims.append(IdentifierClaim(id_type, n, s, None,
+                                          "identity.make_canonical_uid"))
+    return make_paper_uid(claims=claims, title=title, year=year)
+
+
+def uid_id_type(paper_uid):
+    """uid -> 它**声明**的 id_type（前缀语义的唯一查询出口）。
+
+    ``local:`` 前缀返回 None（本地命名空间，不代表任何外部标识）。
+    用它可以避免各处自己写 ``uid.startswith("doi:")`` 之类的判断 ——
+    那类判断一旦散开，前缀命名空间就不再受单一权威表约束。
+    """
+    prefix = str(paper_uid or "").partition(":")[0]
+    if prefix == LOCAL_UID_PREFIX:
+        return None
+    return UID_TYPE_BY_PREFIX.get(prefix)
+

@@ -496,43 +496,19 @@ def test_conflict_dedup_matches_p0a_convention(tmp_path, misplaced30):
     db.close()
 
 
-# ══ A1：唯一生产者（静态守卫） ══════════════════════════════════════
-# 冻结债务：P0-B1 之前的直写点。此清单**只许缩短**，不许新增。
-LEGACY_PAPERS_WRITERS = {
-    "tools/migrate_v2_schema.py",
-    "tools/disposition_r06_funnel.py",
-}
+# ══ 唯一生产者守卫已迁移（P0-B1b） ═════════════════════════════════
+# 这里原先用**文本扫描**检查 ``INSERT INTO papers``。P0-B1b 把它整体移到了
+# ``tests/test_p0b1b_static_guards.py``（G1），并改用 AST，原因有两条实证：
+#   1. 文本扫描会误伤「解释旧缺陷」的注释与正则常量本身 ——
+#      本段下方的守卫常量、以及 tools/verify_p0b1_acceptance.py 里的检测模式
+#      都被它报成过违规，逼着白名单越加越长；
+#   2. B1b 之后 tools/ 的直写点已**归零**（W1/W2 全部迁移到入口），
+#      守卫的期望值从「清单只许缩短」变成「必须为空」。
+# 下面保留的是 G1 覆盖不到的**命名陷阱**守卫（两张同名 papers 表，不同库）。
 
-# 事实层 papers 表（knowledge_base.db）的唯一生产写入者
-KB_PAPERS_WRITERS = {"search_engine/paper_writer.py"}
 # 引擎缓存层另有同名 papers 表（scopus_cache.db），schema 完全不同。
 # ⚠️ 命名陷阱：两库同名不同义 —— 直写守卫必须按「库」而非「表名」界定。
 ENGINE_CACHE_PAPERS_WRITERS = {"search_engine/cache.py"}
-
-_INSERT_PAPERS = r"INSERT\s+(OR\s+\w+\s+)?INTO\s+papers\b"
-
-
-def _scan_py(dirpath, pattern):
-    import re
-    pat = re.compile(pattern, re.I)
-    hits = set()
-    for root, dirs, files in os.walk(dirpath):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
-        for fn in files:
-            if not fn.endswith(".py"):
-                continue
-            p = os.path.join(root, fn)
-            with open(p, encoding="utf-8", errors="ignore") as f:
-                if pat.search(f.read()):
-                    hits.add(os.path.relpath(p, BASE).replace("\\", "/"))
-    return hits
-
-
-def test_only_paper_writer_touches_papers_in_production():
-    """A1：search_engine/ 生产代码里 facts 层的 papers 写入者只能是 paper_writer.py。"""
-    hits = _scan_py(os.path.join(BASE, "search_engine"), _INSERT_PAPERS)
-    assert hits == KB_PAPERS_WRITERS | ENGINE_CACHE_PAPERS_WRITERS, \
-        f"生产层出现额外 papers 写入者：{hits - KB_PAPERS_WRITERS - ENGINE_CACHE_PAPERS_WRITERS}"
 
 
 def test_engine_cache_writer_is_confined_to_cache_db():
@@ -557,11 +533,3 @@ def test_facts_layer_and_cache_layer_papers_are_different_tables():
     ident_src = open(os.path.join(BASE, "tools", "migrate_p0a_identifiers.py"),
                      encoding="utf-8").read()
     assert "scopus_eid" in ident_src
-
-
-def test_legacy_writers_list_does_not_grow():
-    """A1：遗留直写点清单只许缩短（当前 2 个，均已记录为 P0-B1b 迁移对象）。"""
-    found = _scan_py(os.path.join(BASE, "tools"), _INSERT_PAPERS)
-    extra = found - LEGACY_PAPERS_WRITERS
-    assert extra == set(), f"新增了未登记的 papers 直写点：{extra}"
-    assert found, "遗留直写点不应为空（迁移工具本身应被识别）"

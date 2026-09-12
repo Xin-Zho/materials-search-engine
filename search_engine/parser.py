@@ -11,6 +11,7 @@ import logging
 from bs4 import BeautifulSoup, Tag
 
 from .models import Paper, Author
+from .identity import make_record_id
 
 logger = logging.getLogger(__name__)
 
@@ -112,8 +113,12 @@ class ScopusParser:
         # 文献类型
         doc_type = self._parse_doc_type(entry)
 
-        # 生成内部 ID
-        paper_id = f"scopus:{doi}" if doi else f"scopus:{title[:80]}"
+        # 生成内部 ID：检索层「源记录标识」，经唯一构造出口（P0-B1b）。
+        # 这是**传输层**记录键，不是 KB 的 paper_uid —— 落库时由
+        # paper_writer.resolve_or_create_paper 按**值形态**重新判定真实身份。
+        # （无 DOI 时借 "scopus" 命名空间装标题是存量债务，值保持原样不变，
+        #   但不再向 KB 传播。）
+        paper_id = make_record_id("scopus", doi or title[:80])
 
         return Paper(
             paper_id=paper_id,

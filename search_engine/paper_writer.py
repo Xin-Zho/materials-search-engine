@@ -11,6 +11,14 @@ R5 旧 uid 不变 已存在的 uid **永不重写**（30 条 ``doi:2-s2.0-*`` �
 R6 幂等        同一 metadata 重复调用不产生新行、不产生新冲突。
 R7 统一查询    身份查询一律经 :func:`resolve_identifier` / :func:`lookup_owners` /
                :func:`find_paper_uid`；**禁止外部自行拼接** ``doi:`` / ``openalex:`` / ``scopus:``。
+R8 权限分离    身份（:func:`resolve_or_create_paper`）与内容（:func:`backfill_paper_fields`）
+               是两个入口；``doi`` / ``openalex_id`` / ``scopus_eid`` / ``paper_id``
+               **永远不可**被补字段入口触碰。
+R9 关系后置    ``topic_papers`` 只能由 :func:`register_topic_paper` 写入，且要求论文已存在
+               （关系不得先于实体，否则等于开了第二个身份生产者）。
+
+uid 拼接字面量（``<prefix>:<value>``）全仓**只剩** :mod:`search_engine.identity` 一处，
+由 ``tests/test_p0b1b_static_guards.py`` 静态守卫持续证明。
 
 背景：P0-A 在真库中发现 30 条 ``doi:2-s2.0-*``——Scopus EID 被写入者放进了 DOI 列。
 根因链是**两级**的：
@@ -23,16 +31,15 @@ R7 统一查询    身份查询一律经 :func:`resolve_identifier` / :func:`loo
 
 from __future__ import annotations
 
-import hashlib
 import json
-import re
 import time
 from dataclasses import dataclass, field as dc_field
 
 from search_engine.identity import (
     COLUMN_SOURCES,
     ID_TYPES,
-    PRIMARY_PRIORITY,
+    LOCAL_UID_PREFIX,
+    UID_PREFIX_BY_TYPE,
     IdentityConflict,
     IdentifierClaim,
     assign_primary,
@@ -40,6 +47,7 @@ from search_engine.identity import (
     normalize_identifier,
     normalize_title,
 )
+from search_engine.identity import make_paper_uid as identity_make_paper_uid
 
 RESOLVER_NAME = "search_engine.paper_writer"
 RESOLVER_VERSION = "p0b1_v1"
@@ -50,18 +58,10 @@ STATUS_REUSED = "REUSED"                   # 命中既有 uid，未新建
 STATUS_CONFLICT_REVIEW = "CONFLICT_REVIEW"  # 一个标识被多个 uid 认领 -> 只记录不合并
 STATUS_DRY_RUN = "DRY_RUN"                 # 计划已产出，零写入
 
-# uid 前缀的**唯一出口**。任何模块需要 uid 字符串都必须经 make_paper_uid()。
-_PREFIX_BY_TYPE = {
-    "DOI": "doi",
-    "OPENALEX": "openalex",
-    "SCOPUS_EID": "scopus",
-    "PUBMED": "pubmed",
-    "ARXIV": "arxiv",
-    "ISBN": "isbn",
-    "URL": "url",
-}
-# 无任何可识别标识时的本地命名空间（绝不借用外部命名空间，避免类型混淆）
-LOCAL_PREFIX = "local"
+# uid 前缀表的权威定义在 identity.UID_PREFIX_BY_TYPE（唯一出口）。
+# 此处保留别名仅为向后兼容既有引用；**不得**在此新增/覆盖前缀。
+_PREFIX_BY_TYPE = UID_PREFIX_BY_TYPE
+LOCAL_PREFIX = LOCAL_UID_PREFIX
 
 _TITLE_HASH_LEN = 16
 
@@ -120,25 +120,11 @@ def paper_exists(conn, paper_uid):
 # uid 生成（R5：稳定规则）
 # ══════════════════════════════════════════════════════════
 
-def make_paper_uid(*, claims=None, title=None, year=None):
-    """由标识集合生成稳定 uid。
-
-    规则（deterministic，与调用顺序无关）：
-      1. 取 ``PRIMARY_PRIORITY`` 最高的可用标识 -> ``<prefix>:<normalized_value>``
-      2. 无任何标识（title-only）-> ``local:<sha256(norm_title|year)[:16]``
-         **绝不**把 title 塞进 ``openalex:`` / ``scopus:`` 命名空间。
-
-    注意：本函数只生成**新** uid。既有 uid 的解析走 ``lookup_owners``，永不重算。
-    """
-    if claims:
-        best = min(claims, key=lambda c: PRIMARY_PRIORITY.get(c.id_type, 99))
-        prefix = _PREFIX_BY_TYPE.get(best.id_type)
-        if prefix is None:
-            raise ValueError(f"no uid prefix for id_type={best.id_type!r}")
-        return f"{prefix}:{best.normalized_value}"
-    key = "|".join([normalize_title(title) or "", str(year or "")])
-    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:_TITLE_HASH_LEN]
-    return f"{LOCAL_PREFIX}:{digest}"
+# ── uid 生成 ────────────────────────────────────────────
+# 实现已收口到纯函数层 search_engine.identity.make_paper_uid（P0-B1b）。
+# 本模块只做 re-export，保持既有调用方（W1/W2/测试）接口不变。
+# 之所以移动：拼接字面量必须**只剩一处**，静态守卫才能证明没有第二个自造命名空间。
+make_paper_uid = identity_make_paper_uid
 
 
 def uid_type_matches_value(paper_uid):
@@ -196,11 +182,14 @@ class ResolutionOutcome:
 # 唯一写入入口
 # ══════════════════════════════════════════════════════════
 
-def _classify_metadata(metadata):
+def classify_metadata(metadata):
     """把 metadata 拆成 claims / anomalies / rejects（纯计算，零写入）。
 
     R2/R3 的落点：每个声明列的值先按声明类型校验；失败则**按真实类型重新归属**，
     并把 (声明列, 原值, 真实类型) 记成一条 ``MISPLACED_IDENTIFIER`` 冲突。
+
+    公开原因（P0-B1b）：迁移脚本需要**在无数据库连接时预演**同一套判定
+    （``--dry-run`` 必须先给出与 commit 完全相同的 uid 规划，否则 dry-run 就是谎言）。
     """
     claims, anomalies = [], []
     seen = set()
@@ -282,7 +271,7 @@ def resolve_or_create_paper(conn, metadata, source, *, dry_run=False,
     if not source or not str(source).strip():
         raise ValueError("source 必填：无溯源的写入不允许进入 KB")
 
-    claims, anomalies = _classify_metadata(metadata or {})
+    claims, anomalies = classify_metadata(metadata or {})
 
     # ── 解析：查既有 owner（R7 + R5）────────────────────
     owner_map = {}          # uid -> [claim]
@@ -443,14 +432,27 @@ def resolve_or_create_paper(conn, metadata, source, *, dry_run=False,
                    "SCOPUS_EID": "scopus_eid"}.get(c.id_type)
             if col and cols[col] is None:
                 cols[col] = c.id_value
+        # 溯源：调用方可经 metadata["source_json"] 透传自己的来源描述
+        # （W1 需要携带 sources / n_kb_records）。入口自身的字段**优先**，
+        # 调用方无法借透传伪造 writer / source。
+        src_obj = {"writer": RESOLVER_NAME, "source": str(source),
+                   "resolver_version": resolver_version}
+        extra = metadata.get("source_json")
+        if extra:
+            if isinstance(extra, str):
+                try:
+                    extra = json.loads(extra)
+                except Exception:
+                    extra = {"raw_source_json": extra}
+            if isinstance(extra, dict):
+                src_obj = {**extra, **src_obj}
         conn.execute(
             "INSERT INTO papers (paper_id, doi, openalex_id, scopus_eid, title, "
             "abstract, year, source_json, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
             (paper_uid, cols["doi"], cols["openalex_id"], cols["scopus_eid"],
              metadata.get("title") or "", metadata.get("abstract") or "",
              metadata.get("year"),
-             json.dumps({"writer": RESOLVER_NAME, "source": str(source),
-                         "resolver_version": resolver_version}, ensure_ascii=False), ts))
+             json.dumps(src_obj, ensure_ascii=False), ts))
         created["papers"] = 1
 
     for c in claims:
@@ -474,6 +476,196 @@ def resolve_or_create_paper(conn, metadata, source, *, dry_run=False,
 
     outcome.created_rows = created
     return outcome
+
+
+# ══════════════════════════════════════════════════════════
+# 受限补字段入口（P0-B1b：权限分离）
+# ══════════════════════════════════════════════════════════
+
+# 允许被补写的**非身份**列。
+BACKFILLABLE_PAPER_FIELDS = ("title", "abstract", "year")
+# 显式列出受保护列，而不是「不在白名单里就拒」——
+# 这样报错信息能点出**越权意图**，而不是让人猜哪个名字打错了。
+PROTECTED_PAPER_FIELDS = ("paper_id", "doi", "openalex_id", "scopus_eid",
+                          "source_json", "created_at")
+
+BACKFILL_APPLIED = "APPLIED"
+BACKFILL_DRY_RUN = "DRY_RUN"
+BACKFILL_NOT_EMPTY = "SKIPPED_NOT_EMPTY"
+BACKFILL_SAME = "SKIPPED_SAME"
+BACKFILL_MISSING = "SKIPPED_MISSING_PAPER"
+
+
+@dataclass
+class BackfillOutcome:
+    """单列补写结果（可审计：谁、对哪一行的哪一列、从什么变成了什么）。"""
+
+    paper_uid: str
+    field: str
+    status: str
+    old_value: object = None
+    new_value: object = None
+
+    @property
+    def applied(self):
+        return self.status == BACKFILL_APPLIED
+
+    def as_dict(self):
+        return {"paper_uid": self.paper_uid, "field": self.field, "status": self.status,
+                "old_value": self.old_value, "new_value": self.new_value}
+
+
+def backfill_paper_fields(conn, paper_uid, fields, source, *, only_if_empty=True,
+                          dry_run=False, now=None):
+    """**受限**的内容补写入口：只允许 ``title`` / ``abstract`` / ``year``。
+
+    为什么必须存在第二个入口（而不是让调用方直接 UPDATE）
+    ------------------------------------------------------
+    ``tools/disposition_r06_funnel.py`` 的真实职责是「给**已存在**的论文补摘要」。
+    它因此需要一个写 papers 的能力，但**不该**、也**不能**因此获得改写身份的权限。
+    把「身份」与「内容」拆成两个入口就是权限分离：
+
+      ``resolve_or_create_paper``  身份 —— 新建 uid / 复用既有 uid
+      ``backfill_paper_fields``    内容 —— 补字段，**永不触碰身份列**
+
+    硬约束
+    ------
+    * 传入 ``PROTECTED_PAPER_FIELDS`` 中任一列 -> ``ValueError``。
+      这里**显式失败而非静默忽略**：静默忽略会把「越权意图」藏起来，
+      而「静默接受一个看起来像 DOI 的 EID」正是那 30 条得以发生的方式。
+    * ``only_if_empty=True``（默认）绝不覆盖既有非空值 —— 与「冲突只记录不覆盖」同源。
+      确实需要覆盖时显式传 ``only_if_empty=False``。
+    * 论文不存在 -> 返回 ``SKIPPED_MISSING_PAPER``，**不新建**：
+      身份只能由 ``resolve_or_create_paper`` 产生（R1）。
+    """
+    if not source or not str(source).strip():
+        raise ValueError("source 必填：无溯源的写入不允许进入 KB")
+
+    fields = dict(fields or {})
+    illegal = sorted(set(fields) & set(PROTECTED_PAPER_FIELDS))
+    if illegal:
+        raise ValueError(
+            f"backfill_paper_fields 拒绝改写身份/溯源列 {illegal}；"
+            f"允许的列仅 {list(BACKFILLABLE_PAPER_FIELDS)}。"
+            "身份变更必须走 resolve_or_create_paper，且永不就地改写既有 uid（R5）。")
+    unknown = sorted(set(fields) - set(BACKFILLABLE_PAPER_FIELDS))
+    if unknown:
+        raise ValueError(f"backfill_paper_fields 不认识列 {unknown}；"
+                         f"允许的列仅 {list(BACKFILLABLE_PAPER_FIELDS)}")
+
+    row = conn.execute(
+        "SELECT title, abstract, year FROM papers WHERE paper_id = ?",
+        (paper_uid,)).fetchone()
+    outcomes = []
+    if row is None:
+        return [BackfillOutcome(paper_uid, k, BACKFILL_MISSING) for k in sorted(fields)]
+
+    current = {"title": row[0], "abstract": row[1], "year": row[2]}
+    ts = float(now if now is not None else time.time())
+    for k in sorted(fields):
+        new = fields[k]
+        old = current.get(k)
+        if new is None:
+            outcomes.append(BackfillOutcome(paper_uid, k, BACKFILL_SAME, old, old))
+            continue
+        if not only_if_empty and str(new) == str(old or ""):
+            outcomes.append(BackfillOutcome(paper_uid, k, BACKFILL_SAME, old, new))
+            continue
+        if only_if_empty and str(old or "").strip():
+            outcomes.append(BackfillOutcome(paper_uid, k, BACKFILL_NOT_EMPTY, old, new))
+            continue
+        if dry_run:
+            outcomes.append(BackfillOutcome(paper_uid, k, BACKFILL_DRY_RUN, old, new))
+            continue
+        conn.execute(f"UPDATE papers SET {k} = ? WHERE paper_id = ?", (new, paper_uid))
+        outcomes.append(BackfillOutcome(paper_uid, k, BACKFILL_APPLIED, old, new))
+    return outcomes
+
+
+# ══════════════════════════════════════════════════════════
+# topic_papers 唯一写入入口（P0-B1b）
+# ══════════════════════════════════════════════════════════
+
+TOPIC_PAPER_CREATED = "CREATED"
+TOPIC_PAPER_REUSED = "REUSED"
+TOPIC_PAPER_DRY_RUN = "DRY_RUN"
+TOPIC_PAPER_REFRESHED = "REFRESHED"
+
+
+@dataclass
+class TopicPaperOutcome:
+    status: str
+    topic_id: str
+    paper_uid: str
+    relevance_label: str
+    evidence_refreshed: bool = False
+    note: str = ""
+
+    def as_dict(self):
+        return {"status": self.status, "topic_id": self.topic_id,
+                "paper_uid": self.paper_uid, "relevance_label": self.relevance_label,
+                "evidence_refreshed": self.evidence_refreshed, "note": self.note}
+
+
+def register_topic_paper(conn, topic_id, paper_uid, relevance_label, *, source,
+                         label_source=None, promotion_status=None,
+                         first_seen_run=None, evidence=None, refresh_evidence=False,
+                         dry_run=False, now=None):
+    """``topic_papers``（论文 × 主题 关系）的**唯一**写入入口。
+
+    语义
+    ----
+    * ``paper_uid`` **必须已存在**于 ``papers`` -> 否则 ``ValueError``。
+      关系不能先于实体：若这里允许自动建论文，就等于在 ``resolve_or_create_paper``
+      之外开了第二个身份生产者（R1 立刻失守）。
+    * 幂等：PK ``(topic_id, paper_uid)`` 已存在 -> ``REUSED``，**不覆盖既有判定**。
+      ``relevance_label`` 是外部审计的结论，覆盖它会静默吞掉诊断信息
+      （与 ``identity_conflicts`` 只记录不覆盖同源纪律）。
+    * ``refresh_evidence=True`` 且 ``evidence`` 非空 -> 允许刷新 ``evidence_json``
+      （这是「摘要补全后同步更新依据」的受限通道），但**绝不改 label**。
+    """
+    if not source or not str(source).strip():
+        raise ValueError("source 必填：无溯源的写入不允许进入 KB")
+    if relevance_label not in ("RELEVANT", "UNCERTAIN", "IRRELEVANT"):
+        raise ValueError(f"relevance_label 非法: {relevance_label!r}")
+
+    if not paper_exists(conn, paper_uid):
+        raise ValueError(
+            f"paper_uid={paper_uid!r} 不在 papers 中。关系不得先于实体："
+            "请先经 resolve_or_create_paper() 建立论文身份。")
+
+    ev_json = evidence if isinstance(evidence, str) else (
+        json.dumps(evidence, ensure_ascii=False) if evidence is not None else None)
+
+    existing = conn.execute(
+        "SELECT evidence_json FROM topic_papers WHERE topic_id = ? AND paper_id = ?",
+        (topic_id, paper_uid)).fetchone()
+
+    if existing is None:
+        if dry_run:
+            return TopicPaperOutcome(TOPIC_PAPER_DRY_RUN, topic_id, paper_uid,
+                                     relevance_label, note="dry-run: zero writes")
+        conn.execute(
+            "INSERT INTO topic_papers (topic_id, paper_id, relevance_label, label_source, "
+            "promotion_status, first_seen_run, evidence_json, created_at) "
+            "VALUES (?,?,?,?,?,?,?,?)",
+            (topic_id, paper_uid, relevance_label, label_source, promotion_status,
+             first_seen_run, ev_json, float(now if now is not None else time.time())))
+        return TopicPaperOutcome(TOPIC_PAPER_CREATED, topic_id, paper_uid, relevance_label)
+
+    if refresh_evidence and ev_json and ev_json != existing[0]:
+        if dry_run:
+            return TopicPaperOutcome(TOPIC_PAPER_DRY_RUN, topic_id, paper_uid,
+                                     relevance_label, note="dry-run: evidence refresh only")
+        conn.execute(
+            "UPDATE topic_papers SET evidence_json = ? WHERE topic_id = ? AND paper_id = ?",
+            (ev_json, topic_id, paper_uid))
+        return TopicPaperOutcome(TOPIC_PAPER_REFRESHED, topic_id, paper_uid,
+                                 relevance_label, evidence_refreshed=True,
+                                 note=f"source={source}")
+
+    return TopicPaperOutcome(TOPIC_PAPER_REUSED, topic_id, paper_uid, relevance_label,
+                             note="existing label preserved (no overwrite)")
 
 
 def _iso(ts):

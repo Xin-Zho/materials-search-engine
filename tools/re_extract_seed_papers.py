@@ -22,6 +22,7 @@ from search_engine.llm import DeepSeekBackend
 from search_engine.knowledge_base import KnowledgeBase
 from search_engine.knowledge_extractor import KnowledgeExtractor
 from search_engine.backends import OpenAlexBackend
+from search_engine.identity import extract_from_paper_uid
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -38,11 +39,12 @@ def _lookup_spec(paper_id: str) -> tuple[str, str] | None:
       '10.xxxx/yyyy'（DOI）                → ('doi', '10.xxxx/yyyy')
     其他（scopus 等）→ None（跳过）
     """
-    if paper_id.startswith("openalex:https://openalex.org/"):
-        return ("openalex_id", paper_id[len("openalex:https://openalex.org/"):])
-    if paper_id.startswith("openalex:"):
-        return ("openalex_id", paper_id[len("openalex:"):])
-    if paper_id.startswith("10."):
+    for t, v in extract_from_paper_uid(paper_id):
+        if t == "OPENALEX":
+            return ("openalex_id", v)
+        if t == "DOI":
+            return ("doi", v)
+    if paper_id.startswith("10."):   # 裸 DOI（无 uid 前缀）
         return ("doi", paper_id)
     return None
 

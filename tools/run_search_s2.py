@@ -38,6 +38,7 @@ from pilot_round3_query_utility import (  # noqa: E402
     IdentityResolver, build_r_old, connect_cache_ro, paper_key_and_info,
     normalize_doi,
 )
+from search_engine.identity import scopus_cache_key  # noqa: E402
 from build_r02_seen import (  # noqa: E402
     build_s1_found_sets as _s1_found, resolve_seen_s1 as _resolve_seen,
     _norm_doi, _norm_title,
@@ -51,7 +52,7 @@ def _usable_text_from_cache(doi: str | None, eid: str | None, con) -> str:
     try:
         if doi:
             row = con.execute("SELECT normalized_json FROM papers WHERE paper_id=?",
-                              (f"scopus:{doi.strip().lower()}",)).fetchone()
+                              (scopus_cache_key(doi),)).fetchone()
         else:
             row = None
         if row:

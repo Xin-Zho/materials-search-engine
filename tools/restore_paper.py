@@ -19,6 +19,7 @@ from search_engine.knowledge_base import KnowledgeBase
 from search_engine.knowledge_extractor import KnowledgeExtractor
 from search_engine.backends import OpenAlexBackend
 from search_engine.models import KnowledgeRecord
+from search_engine.identity import extract_from_paper_uid, make_canonical_uid
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -27,10 +28,14 @@ except Exception:
 
 
 def _strip_openalex_prefix(pid: str) -> str:
-    if pid.startswith("openalex:"):
-        pid = pid[len("openalex:"):]
-    if pid.startswith("https://openalex.org/"):
-        pid = pid[len("https://openalex.org/"):]
+    """去 ``openalex:`` / ``https://openalex.org/`` 前缀取 W-ID。
+
+    P0-B1b：改经 identity.extract_from_paper_uid（uid 反解的唯一出口）——
+    前缀字面量不再散落在业务代码里。
+    """
+    for t, v in extract_from_paper_uid(pid):
+        if t == "OPENALEX":
+            return v
     return pid
 
 
@@ -40,7 +45,7 @@ def _build_minimal_record(paper, pid: str) -> KnowledgeRecord:
     doi = (paper.doi or "").strip()
     rec = KnowledgeRecord(
         paper_id=pid,
-        canonical_paper_id=f"doi:{doi}" if doi else pid,
+        canonical_paper_id=make_canonical_uid(doi=doi),
         doi=doi,
         openalex_id=_strip_openalex_prefix(paper.paper_id or ""),
         problem=paper.title or "",
