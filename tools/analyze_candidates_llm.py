@@ -66,8 +66,10 @@ ST_SCHEMA_INVALID = "SCHEMA_INVALID"
 ST_API_ERROR = "API_ERROR"
 
 REQUIRED_FIELDS = ("candidate", "structural_change", "evidence", "reasoning",
-                   "alternative_explanations", "uncertainty",
+                   "structural_role", "alternative_explanations", "uncertainty",
                    "falsifiable_checks")
+STRUCTURAL_ROLES = ("new_position", "bridge", "bottleneck_solver",
+                    "new_combination", "new_connection", "gap_bridge", "none")
 
 # 只允许这些字段进入模型输入（白名单构造 —— 任何泄漏都不可能"漏出去"）
 PAYLOAD_FIELDS = ("kind", "a", "b", "concept", "type", "support", "first_seen",
@@ -75,7 +77,12 @@ PAYLOAD_FIELDS = ("kind", "a", "b", "concept", "type", "support", "first_seen",
                   "cross_domain", "edge_grade", "typed_relations",
                   "topic_contrast", "home_topic_a", "home_topic_b",
                   "common_neighbors", "n_common_neighbors", "adamic_adar",
-                  "scores", "evidence_papers", "topics")
+                  "scores", "evidence_papers", "topics",
+                  # NODE 结构位置特征（用户 2026-09-12 纠正后的新口径）
+                  "stratum", "degree", "new_edge_share", "bridge_raw",
+                  "problem_raw", "problem_cohesion", "challengers",
+                  "combination_raw", "n_mediated_pairs", "neighbors_by_module",
+                  "method_like", "scores_basis")
 EVIDENCE_FIELDS = ("paper_uid", "year", "title", "snippet", "via", "about")
 
 _CITATION_RE = re.compile(r"cit(e|ed|ation)|impact\s*factor|被引|引用(量|次数)|影响因子",
@@ -184,6 +191,12 @@ def validate_payload(obj, provided_uids):
         if not clean[f]:
             issues.append(f"缺字段或为空: {f}")
     clean["evidence"] = _as_str_list(obj.get("evidence"), 12)
+    role = str(obj.get("structural_role") or "").strip().lower()
+    if role not in STRUCTURAL_ROLES:
+        issues.append(f"structural_role 不在枚举内: {role!r}")
+        clean["structural_role"] = None
+    else:
+        clean["structural_role"] = role
     clean["alternative_explanations"] = _as_str_list(
         obj.get("alternative_explanations"), 6)
     clean["falsifiable_checks"] = _as_str_list(obj.get("falsifiable_checks"), 8)
@@ -271,8 +284,10 @@ def assert_spec_fresh():
 # ══ 分析主循环 ═══════════════════════════════════════════════════════════
 def select_candidates(cand, k_node, k_pair, k_gap):
     sel = []
-    for r in [x for x in cand["node_candidates"]
-              if x["type"] in (cand["thresholds"]["prediction_types"])][:k_node]:
+    # NODE 取产物的**主榜**（small+mid 层且非表征手段）—— 与 P4-3 验证同一个集合
+    for r in (cand.get("prediction_set_node_rows")
+              or [x for x in cand["node_candidates"]
+                  if x["type"] in cand["thresholds"]["prediction_types"]])[:k_node]:
         sel.append(dict(r, _group="NODE"))
     sel += [dict(r, _group="PAIR_PRESENT") for r in cand["pair_candidates"][:k_pair]]
     sel += [dict(r, _group="PAIR_GAP") for r in cand["gap_candidates"][:k_gap]]
@@ -377,6 +392,8 @@ def summarize(rows, spec):
                         "max": max(unc) if unc else None,
                         "high_gt_0_6": sum(1 for u in unc if u > 0.6)},
         "groundedness_mean": (round(sum(grd) / len(grd), 3) if grd else None),
+        "structural_roles": dict(collections.Counter(
+            r["analysis"]["structural_role"] for r in ok if r["analysis"])),
         "issues_total": sum(len(r["issues"]) for r in rows),
         "spec": spec["spec_version"],
     }
@@ -392,6 +409,7 @@ def print_summary(s, rows):
           f"最大 {s['uncertainty']['max']} "
           f"高(>0.6) {s['uncertainty']['high_gt_0_6']}")
     print(f"  接地度均值 {s['groundedness_mean']} | 校验问题 {s['issues_total']} 条")
+    print(f"  结构角色分布 {s['structural_roles']}")
     print("-" * 78)
     for r in rows:
         a = r["analysis"] or {}

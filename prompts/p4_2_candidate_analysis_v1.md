@@ -47,6 +47,40 @@ Knowledge Tree (<=2020)  ->  Graph Evolution / Statistics  ->  Emerging Candidat
 * `0.3 - 0.6`：证据指向同一现象但机制不清，或存在合理解释的替代路径；
 * `> 0.6`：证据稀少、单篇主导、或端点概念含义模糊（例如同一个词在不同子领域指不同东西）。
 
+**问什么要按候选类型区分（用户 2026-09-12 纠正）**：
+
+* `NODE` 候选问的是「**该节点在材料知识树中的位置**是否显示出潜在研究价值」。
+  它的潜力来自结构位置（是否打开新连接、是否连接原本分离的区域、是否在解决已确立的
+  瓶颈、是否引入新的组合），**不是**来自论文数量或增长速度。给定的 `scores` 是
+  **层内结构百分位**（already within-stratum），别把它读成规模。
+  在 `structural_role` 里给出角色，只能从这几个里选：
+  `new_position`（创造了新的知识位置）/ `bridge`（连接原本分离的区域）/
+  `bottleneck_solver`（在解决已确立的瓶颈）/ `new_combination`（引入新的组合）/
+  `none`（看不出上述任何一种）。
+
+* `PAIR` / `GAP` 候选问的是「这条**新连接**意味着什么」。`structural_role` 填
+  `new_connection`（已出现的新边）或 `gap_bridge`（尚未出现、但两端该连）。
+
+  注意 `GAP` 的「尚未共现」是在一份**抽取样本**上成立的，不等于文献里从未同时出现；
+  若你从给定证据里看出它们其实一直在一起被讨论，请直接说出来。
+
+**问什么要按候选类型区分（用户 2026-09-12 纠正）**：
+
+* `NODE` 候选问的是「**该节点在材料知识树中的位置**是否显示出潜在研究价值」。
+  它的潜力来自结构位置（是否打开新连接、是否连接原本分离的区域、是否在解决已确立的
+  瓶颈、是否引入新的组合），**不是**来自论文数量或增长速度。给定的 `scores` 是
+  **层内结构百分位**（already within-stratum），别把它读成规模。
+  在 `structural_role` 里给出角色，只能从这几个里选：
+  `new_position`（创造了新的知识位置）/ `bridge`（连接原本分离的区域）/
+  `bottleneck_solver`（在解决已确立的瓶颈）/ `new_combination`（引入新的组合）/
+  `none`（看不出上述任何一种）。
+
+* `PAIR` / `GAP` 候选问的是「这条**新连接**意味着什么」。`structural_role` 填
+  `new_connection`（已出现的新边）或 `gap_bridge`（尚未出现、但两端该连）。
+
+  注意 `GAP` 的「尚未共现」是在一份**抽取样本**上成立的，不等于文献里从未同时出现；
+  若你从给定证据里看出它们其实一直在一起被讨论，请直接说出来。
+
 关于 `falsifiable_checks`：必须写成**可在 2021-2025 年文献里直接查证**的观测，
 例如「若该对在 2021 年后出现于新论文的同一段落」「若该机制成为某综述的主题章节」。
 不要写「该方向会持续增长」这类无法查证的表述。
@@ -61,6 +95,8 @@ Knowledge Tree (<=2020)  ->  Graph Evolution / Statistics  ->  Emerging Candidat
  "structural_change": "1-3 句：从给定统计里读到的结构变化是什么",
  "evidence": ["[paper_uid] year: 该论文里与此变化相关的具体内容", "..."],
  "reasoning": "为什么这个变化构成 emerging signal；每条都要能追溯到上面的证据",
+ "structural_role": "bridge",
+ "structural_role": "bridge",
  "alternative_explanations": ["同样能解释该观察的其它可能（至少 1 条）"],
  "uncertainty": 0.42,
  "falsifiable_checks": ["2021-2025 里若出现 X 则该解释被支持", "若出现 Y 则被推翻"]
@@ -68,6 +104,8 @@ Knowledge Tree (<=2020)  ->  Graph Evolution / Statistics  ->  Emerging Candidat
 ```
 
 `uncertainty` 是 0 到 1 的**数字**（不是字符串）。
+`structural_role` 只能取上面列出的枚举值之一。
+`structural_role` 只能取上面列出的枚举值之一。
 `evidence` 至少 1 条、`falsifiable_checks` 至少 1 条、`alternative_explanations` 至少 1 条。
 
 ## USER

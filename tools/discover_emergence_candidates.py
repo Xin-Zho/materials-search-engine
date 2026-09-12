@@ -88,8 +88,66 @@ EVIDENCE_MAX = 6
 # v1 已验证的教训：自由的类型混合会让表征手段（SEM / tensile testing /
 # finite element method）因论文数增长而挤满榜单，而它们不是方向。
 PAIR_SEMANTIC_TYPES = ("direction", "challenge", "application")
-# NODE 候选的预测口径（v1 同样的理由：跨类型不可比）
+# NODE 候选的预测口径（v1 同样的理由：跨类型不可比）。
+# ⚠️ P4-3 实测：challenge 型候选 lift 0.750（同层随机节点 0.491），说明
+# 「按规模找问题」找到的是**长期存在的大问题** -> NODE 打分改为知识树位置。
 PREDICTION_TYPES = ("direction", "challenge")
+
+# ── NODE：知识树位置打分（用户 2026-09-12 纠正）──────────────────────
+# growth 压到 0.05（用户明确「w5 -> 0」）；四个结构信号占 0.95。
+NODE_WEIGHTS = {
+    "structural_novelty": 0.25,
+    "bridge": 0.25,
+    "problem": 0.25,
+    "combination": 0.20,
+    "growth_weak": 0.05,
+}
+# 分层：规模决定**在哪个组里竞争**，结构决定组内排名（跨层不可比）
+NODE_STRATUM_SMALL = "small"
+NODE_STRATUM_MID = "mid"
+NODE_STRATUM_LARGE = "large"
+NODE_SMALL_MAX_DEG = 3
+NODE_MID_MAX_DEG = 7
+# 结构量的**可测量下限**（不是规模奖励）：孤点/单边节点上参与系数与中介度无定义
+NODE_MIN_DEGREE = 2
+# 被可测量下限挡掉的计数（构建时填充，写进产物）
+EXCLUDED = collections.Counter()
+
+# ── 「表征/测量手段」标记（**可评审规则**，非隐藏黑名单）────────────────
+# 为什么需要它：`dynamic mechanical analysis` / `scanning electron microscopy`
+# 这类概念的**中介度天生很高** —— 每篇论文都要报告测量，所以它们与谁都共现。
+# 这与「枢纽概念」是同一个病理，但**按度数分层挡不住**（DMA 实测 deg=7 落在 mid 层，
+# 中介度仍 0.57）。按词面模式识别，规则写进产物供评审；被它排除的候选全部列出。
+NODE_METHOD_LIKE_RE = re.compile(
+    r"analy[sz]|spectroscop|microscop|calorimet|diffractomet|chromatograph"
+    r"|rheomet|ellipsomet|tomograph|\btests?\b|\btesting\b|measurement"
+    r"|characteri[sz]ation|\bftir\b|\bnmr\b|\bsem\b|\bdma\b|\bxrd\b",
+    re.I)
+
+
+def is_method_like(name):
+    return bool(NODE_METHOD_LIKE_RE.search(name or ""))
+
+# 主榜定义：small/mid 层 **且** 非表征手段。类型不再受限 ——
+# v1 限制 `direction|challenge` 的理由是**规模类特征**跨类型不可比；
+# 现在特征是结构量且已按层排名，类型不再是混入噪声的通道。
+NODE_PREDICTION_STRATA = (NODE_STRATUM_SMALL, NODE_STRATUM_MID)
+
+# ── 结构打分的**阳性对照**（度量方向校验，不是候选）────────────────────
+# P4-3 实测：新口径候选在「未来伙伴广度」判据上 lift 1.045（p=0.65）—— NULL。
+# 这时有两种完全不同的解释：①特征方向错了 ②数据太薄。
+# 判别办法与词面尺子一样：拿一组**已知在 2020 前后打开新连接**的概念，
+# 看它们在结构打分里排在哪。若它们也不靠前 -> 操作化本身错了（不是功效问题）。
+# ⚠️ 这是**事后构造**的对照（用了 2020 后的知识），只用于校验打分方向，
+#    不构成方法有效性的证据，也不参与任何候选筛选。
+STRUCTURAL_POSITIVE_CONTROL = (
+    "pet-raft polymerization", "photoinduced electron transfer reversible addition",
+    "digital light processing", "vat photopolymerization", "4d printing",
+    "two-photon polymerization", "front photopolymerization",
+    "frontal photopolymerization", "thiol-ene click chemistry",
+    "continuous liquid interface production", "bioprinting",
+    "machine learning", "low shrinkage", "anisotropic shrinkage",
+)
 
 WEIGHTS = {
     "growth": 0.20,
@@ -363,72 +421,161 @@ def _endpoint(name, nodes):
             "first_seen": nd["first_seen"]}
 
 
-def build_node_candidates(nodes, pair_adj, diag, node_papers=None, meta=None):
-    """(1) 节点增长 —— 时间序列信号。所有类型都算，但**同类型内排名**。
+def build_node_candidates(nodes, typed, pairs, adj, diag, node_papers=None,
+                          meta=None):
+    """(1) 节点候选：**知识树位置**打分，不是规模打分。
 
-    每个候选带证据包（早期/晚期各取若干篇，含原文片段）：LLM 分析层要能
-    引用到具体论文，否则它的解释无从接地（实测缺证据包时接地度只有 0.2，
-    校验层直接把这类输出判为无效）。
+    用户 2026-09-12 的纠正：NODE 不该预测「哪些节点会变大」，而该预测
+    「哪些节点处于知识空间中的**高潜力位置**」。
+
+        Potential(node) = f(position in knowledge tree)  !=  f(paper count)
+
+    为什么必须改：按「增长/连通度」排出来的 Top-N 是 polymeri zation shrinkage、
+    secondary caries、shrinkage stress —— **长期存在的大问题**。它们大而熟，
+    规模类特征必然把它们推上去，而这类问题正是**未来不会突然爆发**的那批。
+    P4-3 实测同分层随机节点的命中率反而更高（49% vs 37%），是该缺陷的直接证据。
+
+    ── 规模混淆怎么处理 ──────────────────────────────────────────────
+    第一版直接把参与系数/中介度当分数，立刻被枢纽占据（实测
+    photopolymerization deg=93 而 P=0.91、med=0.97）—— 度数一大，邻居自然横跨
+    多个模块、邻居对自然也大多互不相连。所以不是「不要规模约束」，而是
+    **规模决定你在哪个组里竞争，结构决定你在组内的排名**：
+      stratum = small(deg 2-3) / mid(4-7) / large(>=8)
+    结构特征只在**层内**做百分位排名，跨层不可比；报告主榜取 small+mid
+    （用户目标正是「目前还小、但可能改变知识树结构的方向」），large 层单列。
+
+    ── 四个结构信号（用户定义）+ 弱化的增长 ───────────────────────────
+      structural_novelty 该节点带来了**新连接**吗（新边占比）+ 自身首现新近度
+      bridge             是否连接原本分离的区域（参与系数 P，模块=主场主题）
+      problem            是否在解决**已确立的瓶颈**（typed 关系指向 challenge 型
+                         概念，按挑战成熟度加权 —— 解决老瓶颈比新问题更值钱）
+      combination        是否引入**新组合**（邻居对之间互不相连的比例 = 结构洞）
+      growth_weak        仅弱辅助（权重 0.05），用户明确「w5 -> 0」
+
+    support>=2 与 degree>=2 只作**可测量下限**（结构量在孤点上无定义），
+    被它挡掉的节点数逐项记录 —— 它不是规模奖励而是测量前提，
+    扩量抽取可以直接把它降下来。
     """
-    n_early = diag["period_papers"].get("early") or 1
-    n_late = diag["period_papers"].get("late") or 1
-    degree = {n: len(v) for n, v in pair_adj.items()}
+    n_e = diag["period_papers"].get("early") or 1
+    n_l = diag["period_papers"].get("late") or 1
+
+    # 模块划分：节点的**主场主题**（OpenAlex 自带分类，独立于本图）
+    module = {}
+    for n, nd in nodes.items():
+        module[n] = nd["topics"].most_common(1)[0][0] if nd["topics"] else None
+
+    # typed 关系邻接（带语义）
+    tadj = collections.defaultdict(list)
+    for (a, b), te in typed.items():
+        for r, cnt in te["relations"].most_common():
+            tadj[a].append((b, r, cnt))
+            tadj[b].append((a, r, cnt))
 
     rows = []
-    for name, nd in nodes.items():
-        if nd["support"] < NODE_MIN_SUPPORT:
+    for n, nd in nodes.items():
+        deg = len(adj.get(n) or ())
+        if deg < NODE_MIN_DEGREE:
+            EXCLUDED["node_below_min_degree"] += 1
             continue
+        if nd["support"] < NODE_MIN_SUPPORT:
+            EXCLUDED["node_below_min_support"] += 1
+            continue
+
+        nbrs = sorted(adj[n])
+        # (1) 结构新颖性：该节点的连接有多「新」
+        new_edges = sum(1 for m in nbrs
+                        if (_pair_first_seen(pairs, n, m) or 0) >= NEW_EDGE_SINCE)
+        # (2) 桥梁性：参与系数（邻居落在多少个不同模块里）
+        mod_cnt = collections.Counter(module.get(m) for m in nbrs)
+        bridge = 1.0 - sum((v / deg) ** 2 for v in mod_cnt.values())
+        # (3) 瓶颈解决能力：typed 关系指向 challenge 型概念，按成熟度加权
+        challengers = []
+        for m, r, cnt in tadj.get(n, ()):
+            if nodes.get(m, {}).get("type") == "challenge":
+                challengers.append({"challenge": m, "relation": r, "n": cnt,
+                                    "support": nodes[m]["support"],
+                                    "first_seen": nodes[m]["first_seen"]})
+        problem_raw = sum(math.log1p(c["support"]) * c["n"] for c in challengers)
+        # (4) 组合创新：邻居对互不相连的比例（结构洞 / 中介度）
+        tot = deg * (deg - 1) / 2
+        mediated = sum(1 for i, a in enumerate(nbrs) for b in nbrs[i + 1:]
+                       if b not in adj.get(a, ()))
+        med_frac = mediated / tot if tot else 0.0
+
         de = sum(v for y, v in nd["years"].items() if EARLY[0] <= y <= EARLY[1])
         dl = sum(v for y, v in nd["years"].items() if LATE[0] <= y <= LATE[1])
-        r_e = (de + LAPLACE) / (n_early + 1)
-        r_l = (dl + LAPLACE) / (n_late + 1)
+        r_e = (de + LAPLACE) / (n_e + 1)
+        r_l = (dl + LAPLACE) / (n_l + 1)
+
         rows.append({
-            "cand_id": _cand_id("NODE", name),
+            "cand_id": _cand_id("NODE", n),
             "kind": "NODE",
-            "concept": name,
+            "concept": n,
             "type": nd["type"],
             "support": nd["support"],
             "first_seen": nd["first_seen"],
+            "degree": deg,
+            "stratum": (NODE_STRATUM_SMALL if deg <= NODE_SMALL_MAX_DEG
+                        else NODE_STRATUM_MID if deg <= NODE_MID_MAX_DEG
+                        else NODE_STRATUM_LARGE),
             "df_early": de, "df_late": dl,
-            "rate_early": round(r_e, 6), "rate_late": round(r_l, 6),
             "growth": round(r_l / r_e, 4) if r_e else None,
-            "acceleration": round(_slope(nd["years"]), 6),
-            "connectivity_raw": degree.get(name, 0),
-            "cross_domain_raw": len(nd["topics"]),
+            "new_edge_share": round(new_edges / deg, 4),
+            "n_new_edges": new_edges,
+            "bridge_raw": round(bridge, 4),
+            "n_modules": len([m for m in mod_cnt if m]),
+            "problem_raw": round(problem_raw, 4),
+            "problem_cohesion": len({c["challenge"] for c in challengers}),
+            "challengers": sorted(challengers, key=lambda c: -c["support"])[:6],
+            "combination_raw": round(med_frac, 4),
+            "n_mediated_pairs": mediated,
             "topics": [t for t, _ in nd["topics"].most_common(4)],
-            "evidence_papers": _node_evidence(name, node_papers, meta),
+            "neighbors_by_module": _neighbors_by_module(nbrs, module),
+            "evidence_papers": _node_evidence(n, node_papers, meta),
+            "method_like": is_method_like(n),
+            "scores_basis": "knowledge_tree_position(within-stratum pct)",
         })
 
-    by_type = collections.defaultdict(list)
+    by_stratum = collections.defaultdict(list)
     for r in rows:
-        by_type[r["type"]].append(r)
-    for t, group in by_type.items():
+        by_stratum[r["stratum"]].append(r)
+    for group in by_stratum.values():
+        rn = _pct_rank({r["cand_id"]: 0.5 * r["new_edge_share"]
+                        + 0.5 * (-r["first_seen"]) for r in group})
+        rb = _pct_rank({r["cand_id"]: r["bridge_raw"] for r in group})
+        rp = _pct_rank({r["cand_id"]: r["problem_raw"]
+                        + 0.5 * r["problem_cohesion"] for r in group})
+        rc = _pct_rank({r["cand_id"]: r["combination_raw"] for r in group})
+        rg = _pct_rank({r["cand_id"]: (r["growth"] or 0.0) for r in group})
         for r in group:
-            r["_g"] = r["growth"] if r["growth"] is not None else 0.0
-        rg = _pct_rank({r["cand_id"]: r["_g"] for r in group})
-        ra = _pct_rank({r["cand_id"]: r["acceleration"] for r in group})
-        rc = _pct_rank({r["cand_id"]: r["connectivity_raw"] for r in group})
-        rx = _pct_rank({r["cand_id"]: r["cross_domain_raw"] for r in group})
-        rn = _pct_rank({r["cand_id"]: -r["first_seen"] for r in group})
-        for r in group:
-            r.pop("_g", None)
+            c = r["cand_id"]
             r["scores"] = {
-                "growth": round(rg[r["cand_id"]], 4),
-                "acceleration": round(ra[r["cand_id"]], 4),
-                "connectivity": round(rc[r["cand_id"]], 4),
-                "cross_domain": round(rx[r["cand_id"]], 4),
-                "novelty": round(rn[r["cand_id"]], 4),
+                "structural_novelty": round(rn[c], 4),
+                "bridge": round(rb[c], 4),
+                "problem": round(rp[c], 4),
+                "combination": round(rc[c], 4),
+                "growth_weak": round(rg[c], 4),
             }
-            r["emergence_score"] = round(
-                0.25 * r["scores"]["growth"] + 0.25 * r["scores"]["acceleration"]
-                + 0.20 * r["scores"]["connectivity"]
-                + 0.15 * r["scores"]["cross_domain"]
-                + 0.15 * r["scores"]["novelty"], 6)
+            r["emergence_score"] = round(sum(
+                NODE_WEIGHTS[k] * r["scores"][k] for k in NODE_WEIGHTS), 6)
             r["rank_in_type"] = 0
         group.sort(key=lambda r: (-r["emergence_score"], r["concept"]))
         for i, r in enumerate(group, 1):
             r["rank_in_type"] = i
-    return rows, by_type
+    return rows, by_stratum
+
+
+def _pair_first_seen(pairs, a, b):
+    p = pairs.get((a, b)) or pairs.get((b, a))
+    return min(p["years"]) if p and p["years"] else None
+
+
+def _neighbors_by_module(nbrs, module, limit=10):
+    out = collections.defaultdict(list)
+    for m in nbrs:
+        out[module.get(m) or "(unclassified)"].append(m)
+    return {k: sorted(v)[:limit] for k, v in
+            sorted(out.items(), key=lambda kv: -len(kv[1]))[:5]}
 
 
 def build_pair_candidates(nodes, typed, pairs, meta, diag, excluded, pair_adj):
@@ -667,7 +814,10 @@ def validation_plan():
         "targets": {
             "PAIR_PRESENT": "该对在 EVAL 期间的新论文里是否比 TRAIN 期更常共同出现",
             "PAIR_GAP": "该对（TRAIN 期从未共现）是否在 EVAL 期间**首次出现**",
-            "NODE": "该概念的 EVAL 期份额是否高于 TRAIN 晚期份额",
+            "NODE": ("用户 2026-09-12 纠正：NODE 目标是**结构位置**而非规模，"
+                     "故判据是「该概念在 EVAL 期是否获得**新伙伴**（伙伴广度增长）」，"
+                     "而不是份额增长。两个判据都报，规模判据仅作参考 —— "
+                     "新定义下规模增长**按构造不应是**主判据"),
         },
         "tier1_lexical": {
             "method": "EVAL 论文 title+abstract 里按端点词面（token 前缀匹配）计数",
@@ -692,7 +842,7 @@ def validation_plan():
 
 
 def freeze(rows_node, rows_pair, rows_gap, meta_block, power, diag, excluded,
-           args):
+           args, by_stratum=None):
     import yaml
     yml = os.path.join(BASE, "datasets", "photopolymerization_v1",
                        "scope_allowlist.yaml")
@@ -723,16 +873,20 @@ def freeze(rows_node, rows_pair, rows_gap, meta_block, power, diag, excluded,
             "prediction_types": list(PREDICTION_TYPES),
         },
         "weights": dict(WEIGHTS),
+        "node_weights": dict(NODE_WEIGHTS),
+        "node_method_like_rule": NODE_METHOD_LIKE_RE.pattern,
         "excluded": dict(excluded),
         "power": power,
         "counts": {
             "node_candidates": len(rows_node),
             "pair_present": len(rows_pair),
             "pair_gap": len(rows_gap),
-            "prediction_set_node": sum(1 for r in rows_node
-                                       if r["type"] in PREDICTION_TYPES),
+            "prediction_set_node": len(_node_prediction_rows(rows_node)),
         },
         "node_candidates": rows_node,
+        "structural_positive_control": structural_positive_control(
+            rows_node, by_stratum),
+        "prediction_set_node_rows": _node_prediction_rows(rows_node),
         "pair_candidates": rows_pair,
         "gap_candidates": rows_gap,
         "cross_domain_top": cross_domain_pairs(rows_pair),
@@ -742,6 +896,56 @@ def freeze(rows_node, rows_pair, rows_gap, meta_block, power, diag, excluded,
                  "本产物一旦冻结，P4-3 验证不得调参。"),
     }
     return payload
+
+
+def structural_positive_control(rows_node, by_stratum):
+    """已知在新近打开连接的概念，在结构打分里的位置（度量方向校验）。"""
+    pct = {}
+    for st, group in by_stratum.items():
+        n = len(group)
+        for r in group:
+            pct[r["concept"]] = (round(1.0 - (r["rank_in_type"] - 1) / (n - 1), 3)
+                                 if n > 1 else 1.0)
+    out = []
+    for name in STRUCTURAL_POSITIVE_CONTROL:
+        r = next((x for x in rows_node if x["concept"] == name), None)
+        if r is None:
+            out.append({"concept": name, "in_graph_candidates": False})
+            continue
+        out.append({
+            "concept": name, "in_graph_candidates": True,
+            "stratum": r["stratum"], "degree": r["degree"],
+            "support": r["support"], "first_seen": r["first_seen"],
+            "method_like": r["method_like"],
+            "rank_in_stratum": r["rank_in_type"], "stratum_size": len(
+                by_stratum.get(r["stratum"], [])),
+            "score_percentile_in_stratum": pct.get(name),
+            "emergence_score": r["emergence_score"],
+            "scores": r["scores"],
+            "in_main_board": bool(r["stratum"] in NODE_PREDICTION_STRATA
+                                  and not r["method_like"]),
+        })
+    found = [x for x in out if x["in_graph_candidates"]]
+    ps = [x["score_percentile_in_stratum"] for x in found
+          if x["score_percentile_in_stratum"] is not None]
+    return {
+        "note": ("事后构造的**打分方向校验**，不是候选，不构成方法有效性的证据。"
+                 "若已知扩张的概念也不靠前，说明结构操作化本身有问题（而非功效不足）"),
+        "concepts_total": len(STRUCTURAL_POSITIVE_CONTROL),
+        "in_graph_candidates": len(found),
+        "median_score_percentile_in_stratum": (round(sorted(ps)[len(ps) // 2], 3)
+                                               if ps else None),
+        "in_main_board": sum(1 for x in found if x["in_main_board"]),
+        "detail": out,
+    }
+
+
+def _node_prediction_rows(rows_node):
+    """NODE 主榜：small+mid 层且非表征手段，按层内分数排序（large 层单列）。"""
+    main = [r for r in rows_node
+            if r["stratum"] in NODE_PREDICTION_STRATA and not r["method_like"]]
+    main.sort(key=lambda r: (-r["emergence_score"], r["concept"]))
+    return main
 
 
 def power_report(nodes, pairs, rows_pair, rows_gap, rows_node,
@@ -765,10 +969,17 @@ def power_report(nodes, pairs, rows_pair, rows_gap, rows_node,
         "hub_share_all_pairs": (round(sum(1 for r in rows_pair
                                           if r.get("hub_endpoint"))
                                       / len(rows_pair), 3) if rows_pair else None),
+        "node_strata": dict(collections.Counter(r["stratum"] for r in rows_node)),
+        "node_method_like_excluded": sum(1 for r in rows_node if r["method_like"]),
+        "node_excluded_by_measurability_floor": dict(EXCLUDED),
+        "node_scoring": {"weights": dict(NODE_WEIGHTS),
+                         "strata": {"small": f"deg<= {NODE_SMALL_MAX_DEG}",
+                                    "mid": f"deg<= {NODE_MID_MAX_DEG}",
+                                    "large": "deg> mid"},
+                         "within_stratum_ranking": True},
         "candidate_pool": {
             "NODE": len(rows_node),
-            "NODE_prediction_set": sum(1 for r in rows_node
-                                       if r["type"] in PREDICTION_TYPES),
+            "NODE_prediction_set": len(_node_prediction_rows(rows_node)),
             "PAIR_PRESENT": len(rows_pair),
             "PAIR_PRESENT_new_edge": sum(1 for r in rows_pair if r["new_edge"]),
             "PAIR_PRESENT_cross_domain": sum(1 for r in rows_pair
@@ -794,16 +1005,33 @@ def print_summary(payload, args):
     print("-" * 78)
     c = p["counts"]
     print(f"  候选池: NODE {c['node_candidates']}"
-          f"（预测口径 {c['prediction_set_node']}）| "
+          f"（主榜 {c['prediction_set_node']}）| "
           f"PAIR {c['pair_present']} | GAP {c['pair_gap']}")
     print(f"  被排除: {p['excluded']}")
     print("-" * 78)
-    print("  [信号 1] 节点增长（预测口径 = direction + challenge，同类型内排名）")
-    for r in [x for x in p["node_candidates"]
-              if x["type"] in PREDICTION_TYPES][:args.top_k]:
+    print("  [信号 1] 知识树**位置**候选（不是规模；层内排名，主榜 = small+mid 且非表征手段）")
+    print("    标记: 第1位 S/M/L=度数层(deg<=3 / <=7 / >7) | 第2位 .M=是否表征手段(排除出主榜)")
+    main = p["prediction_set_node_rows"]
+    for r in main[:args.top_k]:
         print(f"    {r['emergence_score']:.3f} #{r['rank_in_type']:<3} "
-              f"sup={r['support']:<3} grw={str(r['growth']):>6} "
-              f"y0={r['first_seen']} [{r['type'][:9]:<9}] {r['concept']}")
+              f"[{ {'small': 'S', 'mid': 'M', 'large': 'L'}[r['stratum']] }"
+              f"{'M' if r['method_like'] else '.'}] "
+              f"deg={r['degree']:<3} sup={r['support']:<3} y0={r['first_seen']} "
+              f"newE={r['new_edge_share']:.2f} brg={r['bridge_raw']:.2f} "
+              f"med={r['combination_raw']:.2f} prob={r['problem_raw']:.1f} "
+              f"[{r['type'][:9]:<9}] {r['concept']}")
+    lg = [x for x in p["node_candidates"] if x["stratum"] == NODE_STRATUM_LARGE]
+    if lg:
+        print(f"    ── large 层（deg>7，单独列出、不与小节点竞争）Top-3：")
+        for r in lg[:3]:
+            print(f"       {r['emergence_score']:.3f} deg={r['degree']:<3} "
+                  f"sup={r['support']:<3} {r['concept'][:44]}")
+    spc = p.get("structural_positive_control")
+    if spc:
+        print(f"    ── 结构打分阳性对照（方向校验）: 命中主榜 {spc['in_main_board']}"
+              f"/{spc['in_graph_candidates']}（在候选内 "
+              f"{spc['in_graph_candidates']}/{spc['concepts_total']}）"
+              f" | 层内分数百分位中位数 {spc['median_score_percentile_in_stratum']}")
     print("-" * 78)
     print("  [信号 2/3] 新边形成 + 跨域连接（PAIR 候选，同 kind 内排名）")
     print(f"    标记: N=新边(>={NEW_EDGE_SINCE}) X=跨域 H=含枢纽端点(p90={p['power']['hub_degree_p90']})")
@@ -835,11 +1063,17 @@ def write_csv(path, rows):
     lines = [",".join(cols)]
     for r in rows:
         if r["kind"] == "NODE":
+            # NODE 的列语义：a=概念名，connectivity_raw 位放 degree，
+            # extra 放结构特征（用户 2026-09-12 纠正后的新口径）
             lines.append(",".join(_cell(x) for x in (
                 r["kind"], r["rank_in_type"], r["emergence_score"], r["concept"],
                 r["type"], "", "", r["support"], r["first_seen"], r["growth"],
-                "", "", "", "", r["scores"]["connectivity"], "", "",
-                "node_growth")))
+                "", "", "", "", r["degree"], "", "",
+                "stratum=%s;deg=%d;newE=%.2f;bridge=%.2f;med=%.2f;prob=%.1f"
+                ";method_like=%s;score_basis=%s" % (
+                    r["stratum"], r["degree"], r["new_edge_share"],
+                    r["bridge_raw"], r["combination_raw"], r["problem_raw"],
+                    r["method_like"], r["scores_basis"]))))
         else:
             sc = r["scores"]
             lines.append(",".join(_cell(x) for x in (
@@ -876,8 +1110,8 @@ def main(argv=None):
     # 枢纽标记取 p95：p90 实测过低（阈值=9），几乎所有候选都会被标成含枢纽，
     # 那样这个诊断量就没有区分度了。
     hub_min = degs[int(len(degs) * 0.95)] if degs else None
-    rows_node, _by_type = build_node_candidates(nodes, pair_adj, diag,
-                                                 node_papers, meta)
+    rows_node, _by_stratum = build_node_candidates(nodes, typed, pairs, pair_adj,
+                                                   diag, node_papers, meta)
     rows_pair = build_pair_candidates(nodes, typed, pairs, meta, diag, excluded,
                                       pair_adj)
     rows_pair = score_pairs(rows_pair[:PAIR_MAX_CANDIDATES], nodes, hub_min)
@@ -886,7 +1120,7 @@ def main(argv=None):
 
     power = power_report(nodes, pairs, rows_pair, rows_gap, rows_node, hub_min)
     payload = freeze(rows_node, rows_pair, rows_gap, guard, power, diag,
-                     excluded, args)
+                     excluded, args, _by_stratum)
     print_summary(payload, args)
 
     tb = collections.Counter(r["type"] for r in rows_node)

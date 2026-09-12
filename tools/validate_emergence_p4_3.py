@@ -226,6 +226,10 @@ class LexIndex:
                 return 0
         return len(d & self._period_set(period))
 
+    def docset(self, name):
+        """某名字命中的论文索引集合（供结构对齐判据直接做集合运算）。"""
+        return self._docset(name)
+
     def _period_set(self, period):
         return self.train if period[1] <= CUTOFF_YEAR else self.eval
 
@@ -445,6 +449,64 @@ def baseline_gap(cands, nodes, adj, rng):
 
 
 # ══ 主流程 ═══════════════════════════════════════════════════════════════
+PARTNER_MIN_SUPPORT = 3      # 伙伴宇宙：图内 support>=3 的概念
+PARTNER_MIN_COOCCUR = 2      # 「成为伙伴」要求 EVAL/TRAIN 内至少共现 2 篇
+
+
+def node_structural_metrics(idx, cand, partner_sets, train, eval_):
+    """节点候选的**结构对齐**度量：伙伴广度增长。
+
+    用户 2026-09-12 纠正后的目标不是「该概念会不会变大」，而是「它是否在
+    知识树里打开新的连接」。故判据换成：
+        train_partners = TRAIN 期与它共现 >= PARTNER_MIN_COOCCUR 篇的概念集合
+        eval_partners  = EVAL 期同上
+        hit            = |eval_partners| > |train_partners|（获得新伙伴）
+    同时给出 new_partner_rate（EVAL 伙伴里 TRAIN 从未出现的比例）。
+    """
+    x_tr = idx.docset(cand["concept"])
+    x_ev = idx.docset(cand["concept"])
+    if x_tr is None:
+        return {"measurable": False}
+    x_tr &= train
+    x_ev &= eval_
+    n_tr = n_ev = 0
+    tr_set, ev_set = set(), set()
+    for name, ds in partner_sets.items():
+        if name == cand["concept"] or ds is None:
+            continue
+        if len(ds & x_tr) >= PARTNER_MIN_COOCCUR:
+            n_tr += 1
+            tr_set.add(name)
+        if len(ds & x_ev) >= PARTNER_MIN_COOCCUR:
+            n_ev += 1
+            ev_set.add(name)
+    new = ev_set - tr_set
+    return {"measurable": True, "train_partners": n_tr, "eval_partners": n_ev,
+            "new_partners": len(new),
+            "new_partner_rate": (round(len(new) / n_ev, 3) if n_ev else None),
+            "breadth_growth": round(n_ev / n_tr, 4) if n_tr else None,
+            "hit": n_ev > n_tr,
+            "new_partner_examples": sorted(new)[:6]}
+
+
+def baseline_node_stratum(cands, nodes, rng):
+    """NODE 结构判据的基线：**同度数层**随机节点（伙伴广度与度数强相关）。"""
+    by_type = collections.defaultdict(list)
+    for n, nd in nodes.items():
+        by_type[nd["type"]].append(n)
+    used = {c["concept"] for c in cands}
+    out = []
+    for c in cands:
+        pool = [n for n in by_type.get(c["type"], []) if n not in used]
+        if not pool:
+            continue
+        n = rng.choice(pool)
+        used.add(n)
+        out.append({"concept": n, "type": c["type"], "support": None,
+                    "stratum": c.get("stratum"), "matched_to": c["cand_id"]})
+    return out
+
+
 def run(args):
     d = _load_discoverer()
     ok, meta = d.load_inputs(str(DB_PATH))
@@ -456,8 +518,12 @@ def run(args):
     real_pair = [r for r in cand["pair_candidates"]
                  if r["support"] >= args.min_pair_support][:top_k]
     real_gap = cand["gap_candidates"][:top_k]
-    real_node = [r for r in cand["node_candidates"]
-                 if r["type"] in cand["thresholds"]["prediction_types"]][:top_k]
+    # NODE 主榜：用户 2026-09-12 纠正后的定义（small+mid 层且非表征手段）。
+    # 用产物里冻结的 prediction_set_node_rows，保证验证对象 = 冻结的主榜，
+    # 而不是"按类型再过滤一次"的另一个集合。
+    real_node = (cand.get("prediction_set_node_rows")
+                 or [r for r in cand["node_candidates"]
+                     if r["type"] in cand["thresholds"]["prediction_types"]])[:top_k]
 
     train_period = (d.EARLY[0], d.CUTOFF_YEAR)
     eval_period = FUTURE
@@ -507,6 +573,59 @@ def run(args):
             "real": eval_node(real_node),
             "baseline": eval_node(b_node),
         },
+    }
+
+    # ── NODE 结构对齐判据（用户纠正后的主判据）────────────────────────
+    universe = [n for n, nd in nodes.items()
+                if nd["support"] >= PARTNER_MIN_SUPPORT]
+    partner_sets = {n: idx.docset(n) for n in universe}
+    tr_nodes = [r for r in real_node]
+    base_nodes = baseline_node_stratum(tr_nodes, nodes, random.Random(args.seed))
+    struct_real = [dict(node_structural_metrics(idx, r, partner_sets,
+                                                idx._period_set(train_period),
+                                                idx._period_set(eval_period)),
+                        cand_id=r["cand_id"], concept=r["concept"],
+                        type=r["type"], support=r["support"],
+                        stratum=r.get("stratum"))
+                   for r in tr_nodes]
+    struct_base = [dict(node_structural_metrics(idx, r, partner_sets,
+                                                idx._period_set(train_period),
+                                                idx._period_set(eval_period)),
+                        cand_id=r["matched_to"], concept=r["concept"],
+                        type=r["type"], support=None, stratum=None)
+                   for r in base_nodes]
+
+    def _struct_group(rows):
+        valid = [r for r in rows if r.get("measurable")]
+        hits = sum(1 for r in valid if r["hit"])
+        growth = [r["breadth_growth"] for r in valid
+                  if r.get("breadth_growth") is not None]
+        rates = [r["new_partner_rate"] for r in valid
+                 if r.get("new_partner_rate") is not None]
+        return {"n": len(valid), "n_immmeasurable": len(rows) - len(valid),
+                "hits": hits,
+                "hit_rate": round(hits / len(valid), 4) if valid else None,
+                "hit_rate_wilson95": wilson(hits, len(valid)),
+                "median_breadth_growth": (round(sorted(growth)[len(growth) // 2], 3)
+                                          if growth else None),
+                "median_new_partner_rate": (round(sorted(rates)[len(rates) // 2], 3)
+                                            if rates else None)}
+
+    sr_s, sb_s = _struct_group(struct_real), _struct_group(struct_base)
+    sig_s = two_proportion_z(sr_s["hits"], sr_s["n"], sb_s["hits"], sb_s["n"])
+    lift_s = (round(sr_s["hit_rate"] / sb_s["hit_rate"], 3)
+              if sr_s["hit_rate"] and sb_s["hit_rate"] else None)
+    node_structural = {
+        "criterion": ("|eval_partners| > |train_partners|（获得新伙伴 = 打开新连接）"),
+        "partner_universe": {"min_support": PARTNER_MIN_SUPPORT,
+                             "size": len(universe),
+                             "min_cooccurrence": PARTNER_MIN_COOCCUR},
+        "real": sr_s, "baseline": sb_s, "lift": lift_s,
+        "significance": sig_s, "verdict": _verdict(lift_s, sig_s),
+        "per_candidate": struct_real,
+        "why": ("用户纠正：NODE 目标是**结构位置**而非规模。规模判据（份额增长）"
+                "在新定义下按构造不应是主判据，故这里给出与目标对齐的判据，"
+                "两者都报、不互相替代"),
     }
 
     groups = {}
@@ -573,6 +692,7 @@ def run(args):
             ],
         },
         "groups": groups,
+        "node_structural": node_structural,
         "positive_control": _pc,
         "sensitivity": sweep_sensitivity(cand, idx, train_period, eval_period,
                                          nodes, all_pairs_support, adj, args),
@@ -629,8 +749,9 @@ def sweep_sensitivity(cand, idx, train_period, eval_period, nodes,
     # NODE 按 type 分层：区分「direction 型候选」与「challenge 型候选」。
     # 动机：challenge 类概念大多是**长期存在的问题**（shrinkage、secondary caries），
     # 它们被选进榜是因为在 993 篇抽样里"出现次数多"，而不是因为正在兴起。
-    nreal = [r for r in cand["node_candidates"]
-             if r["type"] in cand["thresholds"]["prediction_types"]]
+    nreal = (cand.get("prediction_set_node_rows")
+             or [r for r in cand["node_candidates"]
+                 if r["type"] in cand["thresholds"]["prediction_types"]])
     nbase = baseline_node(nreal, nodes, random.Random(args.seed))
     for t in ("direction", "challenge"):
         rr = [{"cand_id": r["cand_id"], "concept": r["concept"],
@@ -699,6 +820,24 @@ def print_report(rep, top_k):
             print(f"    {k:<12} 真实 {r['hits']}/{r['n']}={r['hit_rate']} "
                   f"| 基线 {b['hits']}/{b['n']}={b['hit_rate']} | lift {v['lift']}")
     print("-" * 78)
+    ns = rep.get("node_structural")
+    if ns:
+        print(f"  NODE_structural（结构对齐判据：伙伴广度）| 判据 {ns['criterion']}")
+        print(f"    伙伴宇宙: support>= {ns['partner_universe']['min_support']} 的 "
+              f"{ns['partner_universe']['size']} 个概念，共现 >= "
+              f"{ns['partner_universe']['min_cooccurrence']} 篇算伙伴")
+        print(f"    真实候选: 命中 {ns['real']['hits']}/{ns['real']['n']} = "
+              f"{ns['real']['hit_rate']} CI{ns['real']['hit_rate_wilson95']} "
+              f"| 中位广度增长 {ns['real']['median_breadth_growth']} "
+              f"| 中位新伙伴占比 {ns['real']['median_new_partner_rate']}")
+        print(f"    随机基线: 命中 {ns['baseline']['hits']}/{ns['baseline']['n']} = "
+              f"{ns['baseline']['hit_rate']} CI{ns['baseline']['hit_rate_wilson95']} "
+              f"| 中位广度增长 {ns['baseline']['median_breadth_growth']} "
+              f"| 中位新伙伴占比 {ns['baseline']['median_new_partner_rate']}")
+        print(f"    lift = {ns['lift']} | z={ns['significance']['z']} "
+              f"p={ns['significance']['p_two_sided']}")
+        print(f"    判定: {ns['verdict']}")
+        print("-" * 78)
     for k, g in rep["groups"].items():
         r, b = g["real"], g["baseline"]
         print(f"  {k}")
